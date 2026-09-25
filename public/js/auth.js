@@ -4,10 +4,10 @@ async function login(e, kind){
   const form=e.currentTarget;
   const button=form.querySelector('button[type="submit"]');
   const msg=document.getElementById('msg');
-  const original=button.textContent;
+  const original=button.innerHTML;
   msg.textContent='';
   button.disabled=true;
-  button.textContent='جاري الدخول...';
+  button.innerHTML='جاري التحقق...';
   try{
     const body=Object.fromEntries(new FormData(form).entries());
     if(kind==='superadmin') delete body.academyCode;
@@ -21,6 +21,6 @@ async function login(e, kind){
     msg.textContent='تعذر الاتصال بالسيرفر، جرّب مرة ثانية.';
   }finally{
     button.disabled=false;
-    button.textContent=original;
+    button.innerHTML=original;
   }
 }

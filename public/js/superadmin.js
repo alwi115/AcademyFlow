@@ -13,7 +13,7 @@ async function load(){
     fetch('/api/superadmin/stats',{headers:h}),
     fetch('/api/superadmin/academies',{headers:h})
   ]);
-  if(s.status===401||s.status===403){location.href='/superadmin/login.html';return}
+  if(s.status===401||s.status===403){location.href='/owner/login.html';return}
   const stats=await s.json(),academies=await a.json();
   const cards=[
     ['الإجمالي',stats.total,'A'],
