@@ -1,63 +1,117 @@
-
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#07090f">
-  <title>AcademyFlow | إدارة الأكاديمية من مكان واحد</title>
+  <meta name="theme-color" content="#0f172a">
+  <title>AcademyFlow | منصة إدارة الأكاديميات</title>
   <link rel="stylesheet" href="/css/app.css">
-  <link rel="stylesheet" href="/css/lux.css">
+  <script src="/js/ui.js"></script>
 </head>
-<body class="lux-body">
-  <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
-  <div class="lux-shell">
-    <header class="lux-nav">
-      <a class="brand-lockup" href="/" aria-label="AcademyFlow"><div class="brand-mark">AF</div><div><b>AcademyFlow</b><small>ACADEMY OPERATING SYSTEM</small></div></a>
-      <nav class="lux-nav-links"><a href="#platform">المنصة</a><a href="#features">المميزات</a><a href="#zoom">Zoom</a></nav>
-      <a class="btn gold nav-cta" href="/academy/login.html">دخول الأكاديمية <span>←</span></a>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <a class="brand" href="/">
+        <span class="brand-badge">AF</span>
+        <span class="brand-text"><b>AcademyFlow</b><small>ACADEMY MANAGEMENT PLATFORM</small></span>
+      </a>
+      <nav class="nav-links">
+        <a href="#overview">نظرة عامة</a>
+        <a href="#features">المميزات</a>
+        <a href="#live">Zoom</a>
+      </nav>
+      <div class="actions">
+        <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="تبديل المظهر">◐</button>
+        <a class="btn secondary" href="/superadmin/login.html">دخول مالك النظام</a>
+        <a class="btn primary" href="/academy/login.html">دخول الأكاديمية</a>
+      </div>
     </header>
-    <main>
-      <section class="lux-hero">
-        <div class="lux-copy">
-          <div class="hero-pill"><span></span> نظام إدارة أكاديميات بنمط SaaS</div>
-          <h1>خل إدارة أكاديميتك<br><em>أوضح. أسرع. أفخم.</em></h1>
-          <p>AcademyFlow يجمع الدورات، الطلاب، المدربين، الفروع والمحاضرات المباشرة في لوحة واحدة، مصممة من البداية لتكون خفيفة، مرتبة، وقابلة للتوسع.</p>
-          <div class="actions"><a class="btn gold xl" href="/academy/login.html">دخول الأكاديمية <span>←</span></a><a class="btn secondary xl" href="#platform">استكشف النظام</a></div>
-          <div class="hero-proof"><div><strong>Multi‑Tenant</strong><span>عزل كامل لكل أكاديمية</span></div><i></i><div><strong>Zoom Ready</strong><span>بث مباشر بدون ثقل</span></div><i></i><div><strong>15 + 5</strong><span>تجربة وفترة سماح</span></div></div>
+
+    <section class="hero" id="overview">
+      <div class="hero-copy">
+        <span class="kicker">منصة واحدة لإدارة الأكاديمية بالكامل</span>
+        <h1>إدارة تعليمية <span>مرتبة، راقية، وقابلة للتوسع.</span></h1>
+        <p>
+          AcademyFlow يجمع إدارة الأكاديميات، الطلاب، المدربين، الدورات والمحاضرات المباشرة داخل تجربة احترافية واضحة،
+          مصممة لتظهر كمنتج SaaS حقيقي وتخدم الأكاديميات بشكل يومي بدون تعقيد.
+        </p>
+        <div class="actions" style="margin-top:22px">
+          <a class="btn primary" href="/academy/login.html">ابدأ من بوابة الأكاديمية</a>
+          <a class="btn ghost" href="#features">استكشف المميزات</a>
         </div>
-        <div class="lux-showcase">
-          <div class="lux-window">
-            <div class="window-bar"><div class="window-title"><span class="mini-brand">AF</span><b>AcademyFlow</b></div><div class="window-dots"><i></i><i></i><i></i></div></div>
-            <div class="window-body">
-              <aside class="mock-side"><div class="mock-logo"></div><div class="mock-nav active"><b></b><span></span></div><div class="mock-nav"><b></b><span></span></div><div class="mock-nav"><b></b><span></span></div><div class="mock-nav"><b></b><span></span></div><div class="mock-nav"><b></b><span></span></div></aside>
-              <div class="mock-main">
-                <div class="mock-head"><div><small>ACADEMY DASHBOARD</small><h3>صباح الخير 👋</h3></div><div class="mock-avatar">AF</div></div>
-                <div class="mock-stats"><article><span>الطلاب</span><strong>1,284</strong><small>+12.4%</small></article><article><span>الدورات</span><strong>24</strong><small>نشطة</small></article><article><span>الحضور</span><strong>92%</strong><small>هذا الشهر</small></article></div>
-                <div class="mock-grid">
-                  <div class="mock-chart"><div class="mock-panel-title"><span>نمو التسجيل</span><b>آخر 6 أشهر</b></div><svg viewBox="0 0 560 180" preserveAspectRatio="none"><defs><linearGradient id="line" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#a52445"/><stop offset=".55" stop-color="#d7b56d"/><stop offset="1" stop-color="#f1d79a"/></linearGradient><linearGradient id="area" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#d7b56d" stop-opacity=".22"/><stop offset="1" stop-color="#d7b56d" stop-opacity="0"/></linearGradient></defs><path d="M0 150 C52 145 74 115 116 124 S185 88 232 92 S315 48 355 64 S429 31 560 24 L560 180 L0 180Z" fill="url(#area)"/><path d="M0 150 C52 145 74 115 116 124 S185 88 232 92 S315 48 355 64 S429 31 560 24" fill="none" stroke="url(#line)" stroke-width="5" stroke-linecap="round"/></svg></div>
-                  <div class="mock-sessions"><div class="mock-panel-title"><span>المحاضرات</span><b>Zoom</b></div><div class="session-row"><i></i><div><b>أساسيات الأمن السيبراني</b><small>06:00 م · 60 دقيقة</small></div></div><div class="session-row"><i></i><div><b>UI/UX للمبتدئين</b><small>08:30 م · 45 دقيقة</small></div></div><div class="session-row"><i></i><div><b>برمجة الويب</b><small>غدًا · 90 دقيقة</small></div></div></div>
+        <div class="hero-metrics">
+          <article><strong>Multi‑Tenant</strong><span>كل أكاديمية ببيانات مستقلة</span></article>
+          <article><strong>Zoom Ready</strong><span>محاضرات مباشرة بدون ثقل</span></article>
+          <article><strong>15 يوم</strong><span>تجربة أولية مرنة</span></article>
+        </div>
+      </div>
+
+      <div class="hero-card">
+        <div class="window-head">
+          <div class="panel-title">واجهة مرئية لبوابة الأكاديمية</div>
+          <div class="window-dots"><span></span><span></span><span></span></div>
+        </div>
+        <div class="dashboard-preview">
+          <aside class="preview-side">
+            <div class="preview-nav">
+              <span class="active"></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </aside>
+          <div class="preview-main">
+            <div class="preview-stats">
+              <article><small>الطلاب</small><strong>1,284</strong></article>
+              <article><small>الدورات</small><strong>24</strong></article>
+              <article><small>الحضور</small><strong>92%</strong></article>
+            </div>
+            <div class="preview-layout">
+              <div class="surface-card chart">
+                <small>نمو التسجيل خلال آخر الأشهر</small>
+                <svg viewBox="0 0 520 150" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="line" x1="0" y1="0" x2="1" y2="0">
+                      <stop stop-color="#0f766e"/>
+                      <stop offset="1" stop-color="#d4a373"/>
+                    </linearGradient>
+                    <linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
+                      <stop stop-color="#0f766e" stop-opacity=".18"/>
+                      <stop offset="1" stop-color="#0f766e" stop-opacity="0"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="M0 120 C60 120 75 88 115 98 S190 70 235 76 S310 34 350 48 S420 26 520 16 L520 150 L0 150Z" fill="url(#area)"></path>
+                  <path d="M0 120 C60 120 75 88 115 98 S190 70 235 76 S310 34 350 48 S420 26 520 16" fill="none" stroke="url(#line)" stroke-width="4" stroke-linecap="round"></path>
+                </svg>
+              </div>
+              <div class="surface-card">
+                <small style="margin-bottom:10px">محاضرات اليوم</small>
+                <div class="meeting-list">
+                  <div class="meeting-item"><i></i><div><b>الأمن السيبراني</b><span>06:00 م · Zoom</span></div></div>
+                  <div class="meeting-item"><i></i><div><b>برمجة الويب</b><span>08:30 م · Zoom</span></div></div>
+                  <div class="meeting-item"><i></i><div><b>التصميم الرقمي</b><span>غدًا · 45 دقيقة</span></div></div>
                 </div>
               </div>
             </div>
           </div>
-          <div class="lux-float float-one"><span>●</span><div><b>متصل بـ Zoom</b><small>المحاضرات المباشرة جاهزة</small></div></div><div class="lux-float float-two"><strong>92%</strong><span>نسبة الحضور</span></div>
         </div>
-      </section>
-      <section class="logo-strip"><span>COURSES</span><i></i><span>STUDENTS</span><i></i><span>INSTRUCTORS</span><i></i><span>ZOOM</span><i></i><span>REPORTS</span><i></i><span>SAAS</span></section>
-      <section class="lux-section" id="platform">
-        <div class="section-heading"><div><span class="section-kicker">ONE SYSTEM</span><h2>كل الأكاديمية في لوحة وحدة</h2></div><p>بدل التنقل بين أنظمة وملفات كثيرة، AcademyFlow يرتب العمليات الأساسية في تجربة واحدة واضحة.</p></div>
-        <div class="bento-grid" id="features">
-          <article class="bento bento-wide"><div class="bento-icon">A</div><span class="section-kicker">MULTI‑TENANT</span><h3>كل أكاديمية لها مساحتها الخاصة</h3><p>بيانات مستقلة، مستخدمين وصلاحيات منفصلة، وكود دخول خاص لكل أكاديمية.</p><div class="tenant-stack"><div><i>AF</i><span><b>أكاديمية المستقبل</b><small>AF‑0001 · نشطة</small></span><em>●</em></div><div><i>NX</i><span><b>Next Academy</b><small>AF‑0002 · تجربة</small></span><em>●</em></div><div><i>ED</i><span><b>Edu Center</b><small>AF‑0003 · نشطة</small></span><em>●</em></div></div></article>
-          <article class="bento" id="zoom"><div class="bento-icon gold-icon">Z</div><span class="section-kicker">ZOOM INTEGRATION</span><h3>بث مباشر بدون ما يثقل النظام</h3><p>إنشاء وحفظ المحاضرات عبر Zoom بدل استضافة الفيديو على السيرفر.</p><div class="zoom-card"><span class="zoom-dot"></span><div><b>Live class ready</b><small>Start meeting · 06:00 PM</small></div><strong>↗</strong></div></article>
-          <article class="bento"><div class="bento-icon">R</div><span class="section-kicker">ROLES</span><h3>صلاحيات على حسب الوظيفة</h3><p>مالك، إدارة، مدرب، محاسب، استقبال، دعم وطالب.</p><div class="role-cloud"><span>Owner</span><span>Admin</span><span>Instructor</span><span>Student</span></div></article>
-          <article class="bento bento-dark"><div class="bento-icon gold-icon">15</div><span class="section-kicker">SUBSCRIPTION READY</span><h3>مصمم من البداية كنظام إيجار</h3><p>15 يوم تجربة + 5 أيام سماح، مع بنية جاهزة للباقات والتجميد التلقائي.</p><div class="progress-track"><i></i></div><div class="progress-labels"><span>تجربة</span><span>سماح</span><span>تجميد</span></div></article>
-          <article class="bento bento-wide"><div class="bento-icon">↗</div><span class="section-kicker">BUILT TO SCALE</span><h3>واجهة خفيفة. أساس قوي. توسع بدون إعادة بناء.</h3><p>البنية الحالية جاهزة لإضافة الفروع، الطلاب، الدورات، الاختبارات، الشهادات، المدفوعات والتقارير بنفس الأسلوب.</p><div class="scale-metrics"><div><b>01</b><span>Academies</span></div><div><b>02</b><span>Branches</span></div><div><b>03</b><span>Courses</span></div><div><b>04</b><span>Reports</span></div></div></article>
+        <div class="floating-note"><b>تكامل مع Zoom</b><span>حل عملي وخفيف للمحاضرات المباشرة</span></div>
+      </div>
+    </section>
+
+    <section class="section" id="features">
+      <div class="section-head">
+        <div>
+          <span class="kicker">مصمم للأكاديميات الحديثة</span>
+          <h2>كل شيء مرتب في مكان واحد</h2>
         </div>
-      </section>
-      <section class="lux-cta"><div><span class="section-kicker">ACADEMY PORTAL</span><h2>جاهز تدخل لوحة أكاديميتك؟</h2><p>استخدم كود الأكاديمية والبريد وكلمة المرور للدخول للمساحة الخاصة فيك.</p></div><a class="btn gold xl" href="/academy/login.html">دخول الأكاديمية <span>←</span></a></section>
-    </main>
-    <footer class="lux-footer"><div class="brand-lockup"><div class="brand-mark tiny">AF</div><div><b>AcademyFlow</b><small>© 2026</small></div></div><span>Built for modern academies.</span></footer>
-  </div>
-</body>
-</html>
+        <p>الفكرة مو بس واجهة جميلة، بل تجربة استخدام واضحة ومنظمة، تشبه المنتجات المدفوعة المصممة بواسطة فريق حقيقي.</p>
+      </div>
+
+      <div class="feature-grid">
+        <article class="feature-card">
+          <div class="num">01</div>
+          <h3>متعدد الأكاديميات</h3>
+          <p>كل أكاديمية لها كود دخول، بيانات مستقلة، وصلاحٶ)�*�6ava�`v-va6*H6.va�6.�b�,va�)ˏ����\�X�O��\�X�H�\��H��X]\�KX�\��YH�]�H���]��\��H��[H����]���϶av+v)�-�,v)�*����O�ς��,v*6-�6av*6)�-6,H6a6a6av+v)�-�,v)�*�6)�a6+vb�*H6*6+�b6a�6*�.v`�b�+�6`vb�6)�a6*6a�b�*H6(�b6)�,�*�a�a6)�`�6,�)�)�+�6a6a6,�b�,v`v,K�����\�X�O��\�X�H�\��H��X]\�KX�\����]��\��H��[H����]���϶a6b6+v*H6av)�a6`�6)�a6a�.6)�aO�ς��)v+�)�,v*H6)�a6(�`�)�+�b�avb�)�*�6b6av*�)�*6.v*H6)�a6+v)�a6*H6)�a6.v)�av*H6a6a6ava�-v*H6ava�6b6)�+6a�*H6)v+�)�,vb�*H6b6)�+v+�*K�����\�X�O��\�X�H�\��H��X]\�KX�\����]��\��H��[H���]���϶+6)�a�,�6a6a6*�b6,�.O�ς��)�a6a�b�`�a6)�a6+v)�a6b�6b�,�av+H6*6)v-�)�`v*H6)�a6*6)�`�)�*�6b6)�a6)�-6*�,v)�`�)�*�6b6)�a6*�`�)�,vb�,H6b6)�a6*6b6)�*6)�*�6a6)�+v`�b�)�6*6,�a�b6a6*K�����\�X�O���]����]��\��H��KX�[����]���϶)�*6+�(�6*6b6)�+6a�*H6,v)�`�b�*H6ava�6)�a6(�a��ς��)�a6+�+�b6a6av*�)�+H6+v)�a6b�b�)�6ava�6*6b6)�*6*H6)�a6(�`�)�+�b�avb�*H6(�b6ava�6a6b6+v*H6av)�a6`�6)�a6a�.6)�av#6av.H6+�.vaH6b6-�.H6`v)�*�+H6b6+�)�`�a������]���]��\��H�X�[ۜȏ���]ۈ�\��H����X�ۙ\�H�\OH��]ۈ�ۘ�X��H����U[YJ
+H�]K][YK[X�[�)�a6b6-�.H6)�a6+�)�`�a�؝]ۏ��H�\��H����[X\�H��Y�H��X�Y[^K���[��[��*�,�+6b�a6)�a6+�+�b6a�O���]����]�����X�[ۏ���]��\��H����\�[��H��X�Y[^Q���8�%6b6)�+6a�*H6av+v,�dva�*H6*6*�-vavb�aH6(�`�*�,H6a�+�b6(vb�)�6b6)�+v*�,v)�`vb�*K��]����]���؛�O���[�

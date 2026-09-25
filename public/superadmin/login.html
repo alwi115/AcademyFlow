@@ -1,2 +1,48 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0f172a">
+  <title>دخول مالك النظام | AcademyFlow</title>
+  <link rel="stylesheet" href="/css/app.css">
+  <script src="/js/ui.js"></script>
+</head>
+<body>
+  <main class="auth-shell">
+    <section class="auth-card">
+      <aside class="auth-side">
+        <a class="brand" href="/">
+          <span class="brand-badge">AF</span>
+          <span class="brand-text"><b>AcademyFlow</b><small>OWNER CONTROL CENTER</small></span>
+        </a>
+        <span class="kicker" style="margin-top:28px">بوابة خاصة بمالك النظام</span>
+        <h1>تحكم مركزي في الأكاديميات والمنصة.</h1>
+        <p>صفحة دخول راقية ومباشرة لمالك النظام، تركز على الوضوح والهيبة أكثر من المؤثرات المبالغ فيها.</p>
+        <div class="auth-points">
+          <article><strong>إدارة الأككاديميياات</strong><span>إضافة الأكاديميات ومتابعة حالتها من نفس اللوحة.</span></article>
+          <article><strong>نظرة سريعة على الإحصائيات</strong><span>إجمالي الأكاديميات، النشطة، التجريبية، والموقوفة.</span></article>
+          <article><strong>مرونة في المظهر</strong><span>الوضع الفاتح والداكن مدعومين في كل الصفحات.</span></article>
+        </div>
+      </aside>
 
-<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>AcademyFlow</title><link rel="stylesheet" href="/css/app.css"><link rel="stylesheet" href="/css/lux.css"></head><body class="quiet-page"><main class="quiet-card"><div class="brand-mark">AF</div><h1>الصفحة غير متاحة</h1><p>استخدم بوابة الدخول المخصصة للوصول إلى لوحة التحكم.</p><a class="btn secondary" href="/">الرجوع للرئيسية</a></main></body></html>
+      <div class="auth-form-wrap">
+        <div class="actions" style="justify-content:space-between;margin-bottom:8px">
+          <a class="note-link" href="/">العودة للرئيسية</a>
+          <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="تبديل المظهر">◐</button>
+        </div>
+        <form class="auth-form" onsubmit="login(event,'superadmin')">
+          <span class="kicker">Owner Sign In</span>
+          <h2>دخول مالك النظام</h2>
+          <p class="lead">هذه البوابة مخصصة لإدارة AcademyFlow ومتابعة الأكاديميات من مكان واحد.</p>
+          <div class="field"><label>البريد الإلكتروني</label><input name="email" type="email" placeholder="admin@example.com" autocomplete="email" required></div>
+          <div class="field"><label>كلمة المرور</label><input name="password" type="password" placeholder="••••••••" autocomplete="current-password" required></div>
+          <button class="btn primary wide" type="submit">فتح لوحة التحكم</button>
+          <p id="msg" class="form-msg"></p>
+        </form>
+      </div>
+    </section>
+  </main>
+  <script src="/js/auth.js"></script>
+</body>
+</html>

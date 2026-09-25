@@ -1,84 +1,103 @@
-
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#07090f">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0f172a">
   <title>لوحة الأكاديمية | AcademyFlow</title>
-  <link rel="stylesheet" href="/css/app.css"><link rel="stylesheet" href="/css/academy-lux.css">
+  <link rel="stylesheet" href="/css/app.css">
+  <script src="/js/ui.js"></script>
 </head>
-<body class="academy-premium">
-<div class="app-shell">
-  <aside class="sidebar" id="sidebar">
-    <div class="brand-lockup"><div class="brand-mark">AF</div><div><b>AcademyFlow</b><small>ACADEMY PORTAL</small></div></div>
-    <div class="side-label">ACADEMY</div>
-    <nav class="side-nav">
-      <a class="active" href="#"><span class="ico">⌂</span>لوحة التحكم</a>
-      <a href="#"><span class="ico">C</span>الدورات</a>
-      <a href="#"><span class="ico">S</span>الطلاب</a>
-      <a href="#"><span class="ico">I</span>المدربين</a>
-      <a href="#"><span class="ico">Z</span>المحاضرات</a>
-    </nav>
-    <div class="side-label">MANAGEMENT</div>
-    <nav class="side-nav">
-      <a href="#"><span class="ico">P</span>المدفوعات</a>
-      <a href="#"><span class="ico">R</span>التقارير</a>
-      <a href="#"><span class="ico">⚙</span>الإعدادات</a>
-    </nav>
-    <div class="sidebar-foot">ACADEMY WORKSPACE<br><span class="muted">Powered by AcademyFlow</span></div>
-  </aside>
+<body>
+  <div class="dashboard-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="/academy/dashboard.html">
+        <span class="brand-badge">AF</span>
+        <span class="brand-text"><b>AcademyFlow</b><small>ACADEMY PORTAL</small></span>
+      </a>
+      <div class="side-label">الأقسام</div>
+      <nav class="side-nav">
+        <a class="active" href="#"><span class="side-icon">⌂</span>لوحة التحكم</a>
+        <a href="#"><span class="side-icon">C</span>الدورات</a>
+        <a href="#"><span class="side-icon">S</span>الطلاب</a>
+        <a href="#"><span class="side-icon">I</span>المدربين</a>
+        <a href="#"><span class="side-icon">Z</span>المحاضرات</a>
+      </nav>
+      <div class="side-label">الإدارة</div>
+      <nav class="side-nav">
+        <a href="#"><span class="side-icon">P</span>المدفوعات</a>
+        <a href="#"><span class="side-icon">R</span>التقارير</a>
+        <a href="#"><span class="side-icon">⚙</span>الإعدادات</a>
+      </nav>
+      <div class="sidebar-foot">بوابة الأكاديمية<br><span class="muted">واجهة محدثة مع وضعين فاتح وداكن</span></div>
+    </aside>
 
-  <main class="main-area">
-    <header class="page-top">
-      <div style="display:flex;align-items:center;gap:12px">
-        <button class="mobile-menu" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
-        <div class="page-title"><span class="kicker">ACADEMY DASHBOARD</span><h1>صباح الخير 👋</h1><p>هذي نظرة سريعة على نشاط الأكاديمية اليوم.</p></div>
+    <main class="main-content">
+      <div class="page-head">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <button class="mobile-toggle" type="button" onclick="toggleSidebar()">☰</button>
+          <div>
+            <span class="kicker">ACADEMY DASHBOARD</span>
+            <h1 style="margin:10px 0 0">لوحة الأكاديمية</h1>
+            <p>نظرة سريعة على محتوى الأكاديمية والمحاضرات القادمة.</p>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="تبديل المظهر">◐</button>
+        </div>
       </div>
-      <div class="top-actions"><div class="academy-top-pill"><i></i> الأكاديمية نشطة</div></div>
-    </header>
 
-    <section class="grid">
-      <article class="stat"><div class="stat-head"><small>الدورات</small><span class="stat-icon">C</span></div><strong>—</strong><span class="trend">قريبًا</span></article>
-      <article class="stat"><div class="stat-head"><small>الطلاب</small><span class="stat-icon">S</span></div><strong>—</strong><span class="trend">قريبًا</span></article>
-      <article class="stat"><div class="stat-head"><small>المدربين</small><span class="stat-icon">I</span></div><strong>—</strong><span class="trend">قريبًا</span></article>
-      <article class="stat"><div class="stat-head"><small>المحاضرات</small><span class="stat-icon">Z</span></div><strong id="liveCount">0</strong><span class="trend">Zoom</span></article>
-    </section>
+      <section class="stats-grid">
+        <article class="stat-card"><div class="stat-top"><small>الدورات</small><span class="side-icon">C</span></div><strong>—</strong></article>
+        <article class="stat-card"><div class="stat-top"><small>الطلاب</small><span class="side-icon">S</span></div><strong>—</strong></article>
+        <article class="stat-card"><div class="stat-top"><small>المدربين</small><span class="side-icon">I</span></div><strong>—</strong></article>
+        <article class="stat-card"><div class="stat-top"><small>المحاضرات</small><span class="side-icon">Z</span></div><strong id="liveCount">0</strong></article>
+      </section>
 
-    <section class="panel welcome-card">
-      <div class="welcome-copy"><span class="badge">ACADEMYFLOW</span><h2>كل شغلك التعليمي في مكان واحد</h2><p>من هنا بتدير الطلاب، الدورات، المدربين والمحاضرات المباشرة، ومع كل مرحلة بنضيف لك أدوات أكثر بدون ما نعقد الواجهة.</p></div>
-      <div class="welcome-art"><i>AF</i></div>
-    </section>
+      <section class="content-grid">
+        <article class="card-panel">
+          <span class="kicker">نظرة عامة</span>
+          <h2 style="margin-top:12px">كل شيء مرتب بطريقة أوضح</h2>
+          <p>التصميم الحالي يركز على الوضوح والبساطة مع إحساس فاخر وعملي، عشان الأكاديمية تقدر تتابع أهم المعلومات بدون تشويش.</p>
+          <div class="info-list" style="margin-top:14px">
+            <div class="info-item"><div><b>استقلالية الأكاديمية</b><span>لكل أكاديمية كود دخول وبيانات منفصلة.</span></div><span class="status trial">آمن</span></div>
+            <div class="info-item"><div><b>تجربة سلسة على الجوال</b><span>الواجهة متجاوبة ومناسبة للاستخدام اليومي.</span></div><span class="status active">جاهز</span></div>
+            <div class="info-item"><div><b>تكامل المحاضرات</b><span>المحاضرات المباشرة تعمل عبر Zoom.</span></div><span class="status active">متصل</span></div>
+          </div>
+        </article>
 
-    <section class="academy-action-grid">
-      <a class="academy-action" href="#"><i>C</i><div><b>إدارة الدورات</b><span>الدورات والمحتوى</span></div></a>
-      <a class="academy-action" href="#"><i>S</i><div><b>الطلاب</b><span>التسجيل والمتابعة</span></div></a>
-      <a class="academy-action" href="#"><i>I</i><div><b>المدربين</b><span>الفريق التعليمي</span></div></a>
-      <a class="academy-action" href="#"><i>Z</i><div><b>Zoom</b><span>المحاضرات المباشرة</span></div></a>
-    </section>
+        <article class="card-panel">
+          <span class="kicker">محاضرات اليوم</span>
+          <h2 style="margin-top:12px">جلسات Zoom</h2>
+          <p>تظهر هنا المحاضرات المجدولة مع روابط الانضمام متى ما كانت متوفرة.</p>
+          <div id="liveRows" class="info-list"><div class="empty">جاري تحميل المحاضرات...</div></div>
+        </article>
+      </section>
+    </main>
+  </div>
 
-    <section class="panel academy-live-premium">
-      <div class="panel-head"><div><span class="kicker">LIVE SESSIONS</span><h2 style="margin-top:5px">محاضرات Zoom</h2><p>المواعيد المحفوظة والمحاضرات المباشرة القادمة.</p></div><span class="badge">ZOOM READY</span></div>
-      <div class="section-note">المحاضرات تُدار عن طريق Zoom عشان يبقى AcademyFlow خفيف وسريع بدون استضافة بث مباشر على السيرفر.</div>
-      <div class="divider"></div>
-      <div id="liveRows" class="live-list"><div class="empty-state">جاري تحميل المحاضرات...</div></div>
-    </section>
-  </main>
-</div>
-<script>
-const token=localStorage.getItem('af_token');
-if(!token) location.href='/academy/login.html';
-fetch('/api/live-sessions',{headers:{Authorization:'Bearer '+token}})
-.then(async r=>{
-  if(r.status===401||r.status===403){location.href='/academy/login.html';return;}
-  if(!r.ok) throw new Error();
-  const a=await r.json();
-  document.getElementById('liveCount').textContent=a.length;
-  document.getElementById('liveRows').innerHTML=a.length?a.map(x=>`
-    <article class="live-card">
-      <div><b>${x.title}</b><div class="live-meta">${new Date(x.startAt).toLocaleString('ar-OM')} · ${x.durationMinutes||60} دقيقة</div></div>
-      ${x.zoomJoinUrl?`<a class="btn sm gold" target="_blank" rel="noopener" href="${x.zoomJoinUrl}">دخول Zoom</a>`:'<span class="status-pill status-trial">موعد محفوظ</span>'}
-    </article>`).join(''):'<div class="empty-state">ما عندك محاضرات مجدولة حاليًا.</div>';
-}).catch(()=>{document.getElementById('liveRows').innerHTML='<div class="empty-state">تعذر تحميل المحاضرات حاليًا.</div>'});
-</script>
+  <script>
+    const token = localStorage.getItem('af_token');
+    if(!token) location.href='/academy/login.html';
+    fetch('/api/live-sessions',{headers:{Authorization:'Bearer '+token}})
+      .then(async r=>{
+        if(r.status===401||r.status===403){ location.href='/academy/login.html'; return; }
+        if(!r.ok) throw new Error('fetch failed');
+        const items = await r.json();
+        document.getElementById('liveCount').textContent = items.length;
+        document.getElementById('liveRows').innerHTML = items.length ? items.map(x => `
+          <div class="info-item">
+            <div>
+              <b>${x.title}</b>
+              <span>${new Date(x.startAt).toLocaleString('ar-OM')} · ${x.durationMinutes || 60} دقيقة</span>
+            </div>
+            ${x.zoomJoinUrl ? `<a class="btn soft" target="_blank" rel="noopener" href="${x.zoomJoinUrl}">دخول Zoom</a>` : `<span class="status trial">موعد محفوظ</span>`}
+          </div>
+        `).join('') : '<div class="empty">لا توجد محاضرات مجدولة حاليًا.</div>';
+      })
+      .catch(()=>{
+        document.getElementById('liveRows').innerHTML = '<div class="empty">تعذر تحميل المحاضرات حاليًا.</div>';
+      });
+  </script>
 </body>
 </html>

@@ -1,118 +1,125 @@
-
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#07090f">
-  <meta name="robots" content="noindex,nofollow">
-  <title>Control Center | AcademyFlow</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0f172a">
+  <title>لوحة مالك النظام | AcademyFlow</title>
   <link rel="stylesheet" href="/css/app.css">
-  <link rel="stylesheet" href="/css/lux.css">
+  <script src="/js/ui.js"></script>
 </head>
-<body class="super-lux">
-<div class="app-shell">
-  <aside class="sidebar" id="sidebar">
-    <div class="brand-lockup"><div class="brand-mark">AF</div><div><b>AcademyFlow</b><small>PRIVATE CONTROL</small></div></div>
-    <div class="side-label">CONTROL CENTER</div>
-    <nav class="side-nav">
-      <a class="active" href="#"><span class="ico">⌂</span>نظرة عامة</a>
-      <a href="#"><span class="ico">A</span>الأكاديميات</a>
-      <a href="#"><span class="ico">P</span>الباقات</a>
-      <a href="#"><span class="ico">S</span>الاشتراكات</a>
-    </nav>
-    <div class="side-label">SYSTEM</div>
-    <nav class="side-nav">
-      <a href="#"><span class="ico">H</span>صحة النظام</a>
-      <a href="#"><span class="ico">L</span>سجل النشاط</a>
-      <a href="#"><span class="ico">⚙</span>الإعدادات</a>
-    </nav>
-    <div class="sidebar-foot">OWNER ACCESS<br><span class="muted">AcademyFlow Control v0.1</span></div>
-  </aside>
+<body>
+  <div class="dashboard-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="/superadmin/dashboard.html">
+        <span class="brand-badge">AF</span>
+        <span class="brand-text"><b>AcademyFlow</b><small>OWNER CONTROL</small></span>
+      </a>
+      <div class="side-label">الإدارة</div>
+      <nav class="side-nav">
+        <a class="active" href="#"><span class="side-icon">⌂</span>نظرة عامة</a>
+        <a href="#"><span class="side-icon">A</span>الأكاديميات</a>
+        <a href="#"><span class="side-icon">P</span>الباقات</a>
+        <a href="#"><span class="side-icon">S</span>الاشتراكات</a>
+      </nav>
+      <div class="side-label">النظام</div>
+      <nav class="side-nav">
+        <a href="#"><span class="side-icon">H</span>الصحة</a>
+        <a href="#"><span class="side-icon">⚙</span>الإعدادات</a>
+      </nav>
+      <div class="sidebar-foot">لوحة المالك<br><span class="muted">إدارة مركزية للأكاديميات</span></div>
+    </aside>
 
-  <main class="main-area">
-    <header class="page-top">
-      <div style="display:flex;align-items:center;gap:12px">
-        <button class="mobile-menu" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
-        <div class="page-title"><span class="kicker">OWNER CONTROL CENTER</span><h1>صباح الخير، مالك النظام</h1><p>نظرة مباشرة على الأكاديميات وحالة المنصة.</p></div>
-      </div>
-      <div class="top-actions">
-        <div class="owner-top-status"><i></i> جميع الأنظمة مستقرة</div>
-        <button class="btn gold" onclick="showForm()">+ إضافة أكاديمية</button>
-      </div>
-    </header>
-
-    <section class="grid" id="stats"></section>
-
-    <section class="owner-overview-grid">
-      <article class="panel owner-insight">
-        <div class="owner-insight-head">
-          <div><span>ACADEMIES OVERVIEW</span><h3>نمو المنصة</h3></div>
-          <span class="badge">آخر 6 أشهر</span>
+    <main class="main-content">
+      <div class="page-head">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <button class="mobile-toggle" type="button" onclick="toggleSidebar()">☰</button>
+          <div>
+            <span class="kicker">OWNER CONTROL CENTER</span>
+            <h1 style="margin:10px 0 0">لوحة مالك النظام</h1>
+            <p>إدارة الأكاديميات ومتابعة حالة المنصة من مكان واحد.</p>
+          </div>
         </div>
-        <div class="owner-mini-chart">
-          <svg viewBox="0 0 800 180" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="ownerLine" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#9d2444"/><stop offset="1" stop-color="#e1c17a"/></linearGradient>
-              <linearGradient id="ownerArea" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#d7b56d" stop-opacity=".15"/><stop offset="1" stop-color="#d7b56d" stop-opacity="0"/></linearGradient>
-            </defs>
-            <path d="M0 150 C90 147 110 116 180 124 S295 86 356 95 S464 49 538 62 S654 30 800 20 L800 180 L0 180Z" fill="url(#ownerArea)"/>
-            <path d="M0 150 C90 147 110 116 180 124 S295 86 356 95 S464 49 538 62 S654 30 800 20" fill="none" stroke="url(#ownerLine)" stroke-width="4" stroke-linecap="round"/>
-          </svg>
+        <div class="actions">
+          <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="تبديل المظهر">◐</button>
+          <button class="btn primary" type="button" onclick="showForm()">إضافة أكاديمية</button>
         </div>
-      </article>
+      </div>
 
-      <article class="panel owner-insight">
-        <div class="owner-insight-head">
-          <div><span>SYSTEM HEALTH</span><h3>حالة الخدمات</h3></div>
-          <span class="status-pill status-active">Online</span>
+      <section class="stats-grid" id="stats"></section>
+
+      <section class="content-grid">
+        <article class="card-panel">
+          <span class="kicker">System summary</span>
+          <h2 style="margin-top:12px">ملخص سريع</h2>
+          <p>هذه الواجهة تعطيك ملخص واضح بدل الزحمة البصرية، مع تركيز على الإحصائيات المفيدة والجداول النظيفة.</p>
+          <div class="info-list" style="margin-top:14px">
+            <div class="info-item"><div><b>حالة المنصة</b><span>الخدمات الأساسية شغالة بشكل طبيعي.</span></div><span class="status active">مستقرة</span></div>
+            <div class="info-item"><div><b>إعدادات الاشتراك</b><span>جاهزة للتطوير وإضافة الباقات لاحقًا.</span></div><span class="status trial">جاهزة</span></div>
+            <div class="info-item"><div><b>واجهة متناسقة</b><span>ألوان هادئة مع دعم الفاتح والداكن.</span></div><span class="status active">مفعلة</span></div>
+          </div>
+        </article>
+
+        <article class="card-panel">
+          <span class="kicker">Workflow</span>
+          <h2 style="margin-top:12px">كيف يمشي العمل؟</h2>
+          <p>إضافة أكاديمية جديدة تنشئ مساحة مستقلة مع كود دخول ومالك خاص بالأكاديمية. بعدها تقدر تدخل الأكاديمية من بوابتها المستقلة.</p>
+          <div class="note-box">النسخة الحالية تركز على الأساس الصحيح: تعدد الأكاديميات + الدخول + المحاضرات + لوحة مركزية. وبعدها نقدر نبني فوقها الباقات والاشتراكات والتقارير.</div>
+        </article>
+      </section>
+
+      <section class="card-panel table-panel">
+        <div class="page-head" style="margin-bottom:16px">
+          <div>
+            <h2>الأكاديميات</h2>
+            <p>جميع الأكاديميات المسجلة وحالة كل حساب.</p>
+          </div>
+          <button class="btn secondary" type="button" onclick="load()">تحديث</button>
         </div>
-        <div class="system-stack">
-          <div class="system-row"><i></i><div><b>API Server</b><small>Railway production</small></div><strong>Operational</strong></div>
-          <div class="system-row"><i></i><div><b>MongoDB</b><small>Atlas cluster</small></div><strong>Connected</strong></div>
-          <div class="system-row"><i></i><div><b>Authentication</b><small>JWT security</small></div><strong>Protected</strong></div>
-          <div class="system-row"><i></i><div><b>Zoom Service</b><small>Integration ready</small></div><strong>Ready</strong></div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>الكود</th>
+                <th>الأكاديمية</th>
+                <th>الحالة</th>
+                <th>تنتهي التجربة</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
         </div>
-      </article>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head">
-        <div><span class="kicker">TENANTS</span><h2 style="margin-top:5px">الأكاديميات</h2><p>إدارة الحسابات وحالة التجربة والاشتراك.</p></div>
-        <button class="btn sm secondary" onclick="load()">تحديث البيانات</button>
-      </div>
-      <div class="table-wrap">
-        <table class="table">
-          <thead><tr><th>الكود</th><th>الأكاديمية</th><th>الحالة</th><th>نهاية التجربة</th></tr></thead>
-          <tbody id="rows"></tbody>
-        </table>
-      </div>
-    </section>
-  </main>
-</div>
-
-<section class="modal-panel" id="formPanel" hidden>
-  <div class="modal-card">
-    <div class="modal-title">
-      <div><span class="kicker">CREATE TENANT</span><h2 style="margin:5px 0 0">أكاديمية جديدة</h2><p class="muted" style="font-size:12px;margin:6px 0 0">أنشئ مساحة مستقلة وأضف مالك الأكاديمية.</p></div>
-      <button class="close-btn" type="button" onclick="hideForm()">×</button>
-    </div>
-    <form id="academyForm" class="form-grid">
-      <div class="field"><label>اسم الأكاديمية</label><input name="name" placeholder="أكاديمية المستقبل" required></div>
-      <div class="field"><label>الرابط المختصر</label><input name="slug" placeholder="future-academy" required></div>
-      <div class="field"><label>اسم المالك</label><input name="ownerName" placeholder="الاسم الكامل" required></div>
-      <div class="field"><label>بريد المالك</label><input name="ownerEmail" type="email" placeholder="owner@example.com" required></div>
-      <div class="field"><label>رقم المالك</label><input name="ownerPhone" placeholder="+968..."></div>
-      <div class="field"><label>كلمة مرور مؤقتة</label><input name="ownerPassword" type="password" required></div>
-      <div class="span-2 section-note">سيتم إنشاء كود مستقل للأكاديمية وتفعيل فترة تجربة 15 يوم، ثم فترة سماح 5 أيام.</div>
-      <div class="span-2" style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
-        <button type="button" class="btn secondary" onclick="hideForm()">إلغاء</button>
-        <button class="btn gold">إنشاء الأكاديمية</button>
-      </div>
-    </form>
-    <p id="createMsg" class="form-msg"></p>
+      </section>
+    </main>
   </div>
-</section>
 
-<script src="/js/superadmin.js"></script>
+  <section class="modal" id="formPanel" hidden>
+    <div class="modal-card">
+      <div class="modal-head">
+        <div>
+          <span class="kicker">إضافة أكاديمية جديدة</span>
+          <h2 style="margin:10px 0 0">إنشاء أكاديمية</h2>
+          <p>املأ البيانات الأساسية وسيتم إنشاء كود الأكاديمية وحساب مالكها.</p>
+        </div>
+        <button class="icon-btn" type="button" onclick="hideForm()">×</button>
+      </div>
+      <form id="academyForm" class="form-grid">
+        <div class="field"><label>اسم الأكاديمية</label><input name="name" placeholder="أكاديمية المستقبل" required></div>
+        <div class="field"><label>الرابط المختصر</label><input name="slug" placeholder="future-academy" required></div>
+        <div class="field"><label>اسم المالك</label><input name="ownerName" required></div>
+        <div class="field"><label>بريد المالك</label><input name="ownerEmail" type="email" required></div>
+        <div class="field"><label>رقم المالك</label><input name="ownerPhone"></div>
+        <div class="field"><label>كلمة مرور مؤقتة</label><input name="ownerPassword" type="password" required></div>
+        <div class="span-2 note-box">بعد الإنشاء ستبدأ فترة التجربة الأولية للأكاديمية تلقائيًا.</div>
+        <div class="span-2 actions" style="justify-content:flex-end;margin-top:8px">
+          <button class="btn ghost" type="button" onclick="hideForm()">إلغاء</button>
+          <button class="btn primary" type="submit">إنشاء الأكاديمية</button>
+        </div>
+      </form>
+      <p id="createMsg" class="form-msg"></p>
+    </div>
+  </section>
+
+  <script src="/js/superadmin.js"></script>
 </body>
 </html>
