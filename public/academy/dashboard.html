@@ -3,15 +3,15 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#080a10">
+  <meta name="theme-color" content="#07090f">
   <title>لوحة الأكاديمية | AcademyFlow</title>
-  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/app.css"><link rel="stylesheet" href="/css/academy-lux.css">
 </head>
-<body>
+<body class="academy-premium">
 <div class="app-shell">
   <aside class="sidebar" id="sidebar">
     <div class="brand-lockup"><div class="brand-mark">AF</div><div><b>AcademyFlow</b><small>ACADEMY PORTAL</small></div></div>
-    <div class="side-label">الرئيسية</div>
+    <div class="side-label">ACADEMY</div>
     <nav class="side-nav">
       <a class="active" href="#"><span class="ico">⌂</span>لوحة التحكم</a>
       <a href="#"><span class="ico">C</span>الدورات</a>
@@ -19,22 +19,22 @@
       <a href="#"><span class="ico">I</span>المدربين</a>
       <a href="#"><span class="ico">Z</span>المحاضرات</a>
     </nav>
-    <div class="side-label">الإدارة</div>
+    <div class="side-label">MANAGEMENT</div>
     <nav class="side-nav">
-      <a href="#"><span class="ico">₽</span>المدفوعات</a>
+      <a href="#"><span class="ico">P</span>المدفوعات</a>
       <a href="#"><span class="ico">R</span>التقارير</a>
       <a href="#"><span class="ico">⚙</span>الإعدادات</a>
     </nav>
-    <div class="sidebar-foot">بوابة الأكاديمية<br><span class="muted">Powered by AcademyFlow</span></div>
+    <div class="sidebar-foot">ACADEMY WORKSPACE<br><span class="muted">Powered by AcademyFlow</span></div>
   </aside>
 
   <main class="main-area">
     <header class="page-top">
       <div style="display:flex;align-items:center;gap:12px">
         <button class="mobile-menu" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
-        <div class="page-title"><span class="kicker">ACADEMY DASHBOARD</span><h1>لوحة الأكاديمية</h1><p>نظرة سريعة على نشاط الأكاديمية والمحاضرات القادمة.</p></div>
+        <div class="page-title"><span class="kicker">ACADEMY DASHBOARD</span><h1>صباح الخير 👋</h1><p>هذي نظرة سريعة على نشاط الأكاديمية اليوم.</p></div>
       </div>
-      <div class="top-actions"><a class="btn secondary" href="/">الصفحة الرئيسية</a></div>
+      <div class="top-actions"><div class="academy-top-pill"><i></i> الأكاديمية نشطة</div></div>
     </header>
 
     <section class="grid">
@@ -45,26 +45,25 @@
     </section>
 
     <section class="panel welcome-card">
-      <div class="welcome-copy">
-        <span class="badge">مرحبًا بك</span>
-        <h2>كل شغلك التعليمي في مكان واحد</h2>
-        <p>تابع الدورات والطلاب والمدربين والمحاضرات المباشرة من لوحة مصممة تكون واضحة حتى على الجوال.</p>
-      </div>
+      <div class="welcome-copy"><span class="badge">ACADEMYFLOW</span><h2>كل شغلك التعليمي في مكان واحد</h2><p>من هنا بتدير الطلاب، الدورات، المدربين والمحاضرات المباشرة، ومع كل مرحلة بنضيف لك أدوات أكثر بدون ما نعقد الواجهة.</p></div>
       <div class="welcome-art"><i>AF</i></div>
     </section>
 
-    <section class="panel">
-      <div class="panel-head">
-        <div><h2>محاضرات Zoom</h2><p>المواعيد المحفوظة والمحاضرات المرتبطة بـ Zoom.</p></div>
-        <span class="badge">LIVE SESSIONS</span>
-      </div>
-      <div class="section-note">إذا تم ضبط بيانات Zoom في إعدادات السيرفر، إنشاء المحاضرة ينشئ اجتماع Zoom تلقائيًا. وإذا ما تم ضبطها، النظام يحفظ الموعد بدون تعطيل باقي الوظائف.</div>
+    <section class="academy-action-grid">
+      <a class="academy-action" href="#"><i>C</i><div><b>إدارة الدورات</b><span>الدورات والمحتوى</span></div></a>
+      <a class="academy-action" href="#"><i>S</i><div><b>الطلاب</b><span>التسجيل والمتابعة</span></div></a>
+      <a class="academy-action" href="#"><i>I</i><div><b>المدربين</b><span>الفريق التعليمي</span></div></a>
+      <a class="academy-action" href="#"><i>Z</i><div><b>Zoom</b><span>المحاضرات المباشرة</span></div></a>
+    </section>
+
+    <section class="panel academy-live-premium">
+      <div class="panel-head"><div><span class="kicker">LIVE SESSIONS</span><h2 style="margin-top:5px">محاضرات Zoom</h2><p>المواعيد المحفوظة والمحاضرات المباشرة القادمة.</p></div><span class="badge">ZOOM READY</span></div>
+      <div class="section-note">المحاضرات تُدار عن طريق Zoom عشان يبقى AcademyFlow خفيف وسريع بدون استضافة بث مباشر على السيرفر.</div>
       <div class="divider"></div>
       <div id="liveRows" class="live-list"><div class="empty-state">جاري تحميل المحاضرات...</div></div>
     </section>
   </main>
 </div>
-
 <script>
 const token=localStorage.getItem('af_token');
 if(!token) location.href='/academy/login.html';

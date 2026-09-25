@@ -3,38 +3,38 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#080a10">
+  <meta name="theme-color" content="#07090f">
   <title>دخول الأكاديمية | AcademyFlow</title>
-  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/app.css"><link rel="stylesheet" href="/css/academy-lux.css">
 </head>
-<body>
-<main class="center">
-  <section class="auth-shell">
-    <aside class="auth-side">
-      <div class="brand-lockup"><div class="brand-mark">AF</div><div><b>AcademyFlow</b><small>ACADEMY PORTAL</small></div></div>
-      <h2>كل أكاديميتك<br>من شاشة واحدة.</h2>
-      <p>ادخل إلى مساحة الأكاديمية الخاصة فيك لإدارة المحاضرات والطلاب والدورات بدون تعقيد.</p>
-      <div class="auth-points">
-        <div class="auth-point"><i>✓</i><span>بيانات الأكاديمية معزولة ومستقلة</span></div>
-        <div class="auth-point"><i>✓</i><span>وصول سريع للمحاضرات المباشرة</span></div>
-        <div class="auth-point"><i>✓</i><span>واجهة مصممة للجوال والكمبيوتر</span></div>
+<body class="academy-login-premium">
+  <main class="academy-login-wrap">
+    <section class="academy-login-visual">
+      <div class="brand-lockup"><div class="brand-mark">AF</div><div><b>AcademyFlow</b><small>ACADEMY OPERATING SYSTEM</small></div></div>
+      <div class="login-showcase">
+        <span class="section-kicker">YOUR ACADEMY. ONE PLACE.</span>
+        <h2>أدر أكاديميتك<br><span>بوضوح كامل.</span></h2>
+        <p>لوحة مصممة تجمع كل التفاصيل المهمة وتخليك توصل للمعلومة بسرعة، من المحاضرات إلى الطلاب والدورات.</p>
+        <div class="login-feature-row"><div><b>Multi‑Tenant</b><span>مساحة مستقلة</span></div><div><b>Zoom Ready</b><span>بث مباشر</span></div><div><b>Responsive</b><span>جوال وكمبيوتر</span></div></div>
       </div>
-    </aside>
-    <div class="auth-card">
-      <form class="auth-form" onsubmit="login(event,'academy')">
+      <div class="login-orbit"><span class="circle c1"></span><span class="circle c2"></span><span class="circle c3">AF</span><span class="dot"></span></div>
+    </section>
+
+    <section class="academy-login-formside">
+      <form class="academy-login-card" onsubmit="login(event,'academy')">
+        <div class="brand-lockup"><div class="brand-mark">AF</div><div><b>AcademyFlow</b><small>ACADEMY PORTAL</small></div></div>
         <span class="badge">بوابة الأكاديمية</span>
         <h1>أهلًا برجعتك</h1>
-        <p class="lead">أدخل بيانات الأكاديمية عشان تنتقل للوحة التحكم الخاصة فيك.</p>
+        <p>أدخل كود الأكاديمية وبيانات حسابك للانتقال إلى لوحة التحكم.</p>
         <div class="field"><label>كود الأكاديمية</label><input name="academyCode" placeholder="AF-0001" autocomplete="organization" required></div>
         <div class="field"><label>البريد الإلكتروني</label><input name="email" type="email" placeholder="name@academy.com" autocomplete="email" required></div>
-        <div class="field"><label>كلمة المرور</label><input name="password" type="password" placeholder="••••••••" autocomplete="current-password" required></div>
-        <button class="btn gold" style="width:100%" type="submit">دخول إلى الأكاديمية</button>
+        <div class="field"><label>كلمة المرور</label><input name="password" type="password" placeholder="••••••••••••" autocomplete="current-password" required></div>
+        <button class="btn gold" style="width:100%" type="submit">دخول إلى الأكاديمية <span>←</span></button>
         <p id="msg" class="form-msg"></p>
-        <a class="back-home" href="/">← الرجوع للصفحة الرئيسية</a>
+        <div class="academy-signin-note"><i></i> Secure academy access</div>
       </form>
-    </div>
-  </section>
-</main>
-<script src="/js/auth.js"></script>
+    </section>
+  </main>
+  <script src="/js/auth.js"></script>
 </body>
 </html>
