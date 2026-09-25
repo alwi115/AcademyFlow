@@ -23,13 +23,14 @@ async function login(req, res) {
   }
 
   let user;
+  let academy = null;
 
   if (academyCode) {
     if (!email) {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    const academy = await Academy.findOne({
+    academy = await Academy.findOne({
       code: academyCode.trim().toUpperCase()
     });
 
@@ -72,9 +73,12 @@ async function login(req, res) {
     user: {
       id: user._id,
       name: user.name,
+      email: user.email,
       username: user.username || null,
       role: user.role,
-      academyId: user.academyId
+      academyId: user.academyId,
+      academyCode: academy?.code || null,
+      academyName: academy?.name || null
     }
   });
 }

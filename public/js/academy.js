@@ -8,6 +8,11 @@ const AF = (() => {
     return {};
   }
 
+  if (user.role === 'student') {
+    location.href = '/student/dashboard.html';
+    return {};
+  }
+
   const page = document.body.dataset.page || 'dashboard';
   const optionsCache = { value: null };
 
