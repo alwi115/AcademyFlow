@@ -808,3 +808,633 @@ body.academy-app {
   .academy-main { padding-left: 42px; padding-right: 42px; }
   .academy-content { max-width: 1500px; margin: 0 auto; }
 }
+
+
+/* =========================================================
+   Academy Workspace — refined proportions
+   ========================================================= */
+
+body.academy-app {
+  font-size: 14px;
+}
+
+.academy-layout {
+  grid-template-columns: 248px minmax(0,1fr);
+}
+
+.academy-sidebar {
+  padding: 16px 11px;
+}
+
+.academy-sidebar .brand {
+  padding: 2px 7px 15px;
+}
+
+.academy-nav-section {
+  margin: 14px 8px 6px;
+  font-size: 9px;
+  letter-spacing: .06em;
+}
+
+.academy-nav {
+  gap: 3px;
+}
+
+.academy-nav a {
+  min-height: 41px;
+  padding: 0 10px;
+  gap: 8px;
+  border-radius: 11px;
+  font-size: 12px;
+}
+
+.academy-nav-icon {
+  width: 27px;
+  height: 27px;
+  border-radius: 8px;
+  font-size: 9.5px;
+}
+
+.academy-sidebar-footer {
+  margin: 15px 4px 0;
+  padding: 11px;
+  border-radius: 13px;
+  font-size: 9.5px;
+  line-height: 1.65;
+}
+
+.academy-main {
+  padding: 17px 22px 34px;
+}
+
+.academy-content {
+  width: 100%;
+  max-width: 1480px;
+  margin-inline: auto;
+}
+
+.academy-topbar {
+  min-height: 56px;
+  gap: 12px;
+  margin-bottom: 17px;
+}
+
+.academy-heading .eyebrow {
+  font-size: 9px;
+}
+
+.academy-heading h1 {
+  margin: 4px 0 3px;
+  font-size: clamp(24px,2.5vw,31px);
+  line-height: 1.25;
+}
+
+.academy-heading p {
+  font-size: 11.5px;
+  line-height: 1.65;
+}
+
+.academy-toolbar {
+  gap: 7px;
+}
+
+.academy-toolbar .btn {
+  min-height: 39px;
+  padding-inline: 12px;
+  font-size: 11.5px;
+}
+
+.academy-user {
+  gap: 7px;
+  padding: 5px 8px;
+  border-radius: 12px;
+}
+
+.academy-user-avatar {
+  width: 31px;
+  height: 31px;
+  border-radius: 9px;
+  font-size: 10px;
+}
+
+.academy-user b {
+  font-size: 10.5px;
+}
+
+.academy-user span {
+  font-size: 8.5px;
+}
+
+.academy-mobile-menu {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+}
+
+.academy-kpis {
+  gap: 10px;
+  margin-bottom: 11px;
+}
+
+.academy-kpi {
+  min-height: 112px;
+  padding: 15px;
+  border-radius: 17px;
+}
+
+.academy-kpi::after {
+  width: 76px;
+  height: 76px;
+}
+
+.academy-kpi small {
+  font-size: 10.5px;
+}
+
+.academy-kpi-icon {
+  width: 31px;
+  height: 31px;
+  border-radius: 9px;
+  font-size: 9.5px;
+}
+
+.academy-kpi strong {
+  margin-top: 10px;
+  font-size: 26px;
+}
+
+.academy-grid-2 {
+  gap: 11px;
+}
+
+.academy-card {
+  padding: 15px;
+  border-radius: 18px;
+}
+
+.academy-card-head {
+  gap: 10px;
+  margin-bottom: 13px;
+}
+
+.academy-card-head h2 {
+  font-size: 16px;
+}
+
+.academy-card-head p {
+  margin-top: 4px;
+  font-size: 10.5px;
+  line-height: 1.65;
+}
+
+.academy-section {
+  margin-top: 11px;
+}
+
+.academy-quick-grid {
+  gap: 8px;
+}
+
+.academy-quick {
+  min-height: 62px;
+  padding: 10px;
+  gap: 8px;
+  border-radius: 13px;
+}
+
+.academy-quick i {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  font-size: 10px;
+}
+
+.academy-quick b {
+  font-size: 11px;
+}
+
+.academy-quick span {
+  font-size: 9px;
+}
+
+.academy-empty {
+  padding: 26px 13px;
+  font-size: 11.5px;
+}
+
+.academy-list {
+  gap: 7px;
+}
+
+.academy-list-row {
+  gap: 10px;
+  padding: 10px 11px;
+  border-radius: 12px;
+}
+
+.academy-list-row b {
+  font-size: 11px;
+}
+
+.academy-list-row span,
+.academy-list-row small {
+  font-size: 9px;
+}
+
+.academy-list-row .btn {
+  min-height: 35px;
+  padding-inline: 10px;
+  font-size: 10px;
+}
+
+.academy-table-wrap {
+  border-radius: 13px;
+}
+
+.academy-table {
+  min-width: 680px;
+}
+
+.academy-table th,
+.academy-table td {
+  padding: 10px 12px;
+  font-size: 11px;
+}
+
+.academy-table th {
+  font-size: 9.5px;
+}
+
+.academy-status {
+  gap: 5px;
+  padding: 5px 8px;
+  font-size: 9px;
+}
+
+.academy-status::before {
+  width: 5px;
+  height: 5px;
+}
+
+.academy-entity-grid {
+  gap: 10px;
+}
+
+.academy-entity-card {
+  border-radius: 17px;
+}
+
+.academy-entity-body {
+  padding: 13px;
+}
+
+.academy-entity-body h3 {
+  margin-bottom: 5px;
+  font-size: 13.5px;
+}
+
+.academy-entity-body p {
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.academy-meta {
+  gap: 5px;
+  margin-top: 9px;
+}
+
+.academy-meta span {
+  padding: 5px 7px;
+  border-radius: 8px;
+  font-size: 8.5px;
+}
+
+.academy-video-grid {
+  gap: 11px;
+}
+
+.academy-video-card {
+  border-radius: 17px;
+}
+
+.academy-video-info {
+  padding: 13px;
+}
+
+.academy-video-info h3 {
+  font-size: 13.5px;
+}
+
+.academy-video-info p {
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.academy-note {
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 10px;
+  line-height: 1.75;
+}
+
+.academy-modal {
+  padding: 12px;
+}
+
+.academy-modal-card {
+  width: min(700px,100%);
+  padding: 18px;
+  border-radius: 20px;
+}
+
+.academy-modal-head {
+  margin-bottom: 13px;
+}
+
+.academy-modal-head h2 {
+  font-size: 17px;
+}
+
+.academy-modal-head p {
+  font-size: 10px;
+}
+
+.academy-form-grid {
+  gap: 0 10px;
+}
+
+.academy-form-actions {
+  gap: 7px;
+  margin-top: 6px;
+}
+
+.academy-form-message {
+  min-height: 16px;
+  font-size: 10px;
+}
+
+.academy-filter-row {
+  gap: 7px;
+}
+
+.academy-search {
+  min-width: min(260px,100%);
+  min-height: 40px;
+  padding: 0 11px;
+  border-radius: 10px;
+  font-size: 11.5px;
+}
+
+.academy-report-grid {
+  gap: 10px;
+}
+
+.academy-report-card {
+  padding: 15px;
+  border-radius: 16px;
+}
+
+.academy-report-card small {
+  font-size: 10px;
+}
+
+.academy-report-card strong {
+  margin-top: 8px;
+  font-size: 24px;
+}
+
+.academy-settings-grid {
+  gap: 11px;
+}
+
+.academy-settings-section {
+  padding: 15px;
+  border-radius: 17px;
+}
+
+.academy-settings-section h3 {
+  margin-bottom: 11px;
+  font-size: 14px;
+}
+
+.academy-footer {
+  margin-top: 18px;
+  font-size: 9px;
+}
+
+/* Laptop */
+@media (max-width: 1180px) {
+  .academy-layout {
+    grid-template-columns: 224px minmax(0,1fr);
+  }
+  .academy-main {
+    padding-inline: 17px;
+  }
+}
+
+/* Tablet & mobile drawer */
+@media (max-width: 900px) {
+  .academy-sidebar {
+    width: min(280px,86vw);
+    padding: 15px 10px;
+  }
+  .academy-main {
+    padding: 13px 12px 28px;
+  }
+  .academy-topbar {
+    min-height: 50px;
+  }
+}
+
+/* Phones */
+@media (max-width: 640px) {
+  body.academy-app {
+    font-size: 13px;
+  }
+
+  .academy-main {
+    padding-left: max(9px,env(safe-area-inset-left));
+    padding-right: max(9px,env(safe-area-inset-right));
+    padding-top: max(9px,env(safe-area-inset-top));
+  }
+
+  .academy-topbar {
+    gap: 8px;
+    margin-bottom: 13px;
+  }
+
+  .academy-heading h1 {
+    font-size: 22px;
+  }
+
+  .academy-heading p {
+    font-size: 10.5px;
+    max-width: 230px;
+  }
+
+  .academy-mobile-menu {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+  }
+
+  .academy-toolbar .theme-toggle {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+  }
+
+  .academy-toolbar .btn {
+    min-height: 38px;
+    padding-inline: 10px;
+  }
+
+  .academy-kpis,
+  .academy-report-grid {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 8px;
+  }
+
+  .academy-kpi {
+    min-height: 102px;
+    padding: 13px;
+    border-radius: 15px;
+  }
+
+  .academy-kpi strong {
+    font-size: 23px;
+  }
+
+  .academy-card {
+    padding: 12px;
+    border-radius: 15px;
+  }
+
+  .academy-card-head {
+    flex-direction: column;
+    align-items: stretch;
+    margin-bottom: 11px;
+  }
+
+  .academy-card-head h2 {
+    font-size: 15px;
+  }
+
+  .academy-filter-row {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto;
+  }
+
+  .academy-search {
+    min-width: 0;
+    width: 100%;
+    font-size: 16px; /* avoid mobile browser zoom */
+  }
+
+  .academy-filter-row .btn {
+    min-height: 40px;
+    white-space: nowrap;
+  }
+
+  .academy-list-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .academy-list-row > :last-child {
+    align-self: flex-start;
+  }
+
+  .academy-entity-grid,
+  .academy-video-grid,
+  .academy-settings-grid,
+  .academy-grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .academy-modal {
+    padding: 6px;
+    align-items: end;
+  }
+
+  .academy-modal-card {
+    max-height: 91dvh;
+    padding: 15px;
+    border-radius: 20px 20px 10px 10px;
+  }
+
+  .academy-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .academy-form-grid .full,
+  .academy-form-actions,
+  .academy-form-message {
+    grid-column: 1;
+  }
+
+  .academy-form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .academy-form-actions .btn {
+    width: 100%;
+  }
+
+  .academy-form-grid .field input,
+  .academy-form-grid .field select,
+  .academy-form-grid .field textarea {
+    font-size: 16px;
+  }
+}
+
+/* Compact phones */
+@media (max-width: 420px) {
+  .academy-topbar {
+    align-items: flex-start;
+  }
+
+  .academy-heading h1 {
+    font-size: 20px;
+  }
+
+  .academy-heading p {
+    display: none;
+  }
+
+  .academy-toolbar {
+    gap: 5px;
+  }
+
+  .academy-kpis,
+  .academy-report-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .academy-kpi {
+    min-height: 90px;
+  }
+
+  .academy-filter-row {
+    grid-template-columns: 1fr;
+  }
+
+  .academy-filter-row .btn {
+    width: 100%;
+  }
+
+  .academy-table {
+    min-width: 620px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .academy-layout {
+    grid-template-columns: 260px minmax(0,1fr);
+  }
+  .academy-main {
+    padding-left: 34px;
+    padding-right: 34px;
+  }
+}

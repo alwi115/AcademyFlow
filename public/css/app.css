@@ -1073,3 +1073,610 @@ h1, h2, h3, h4, p, span, a, b, strong, small, label, td, th {
     animation-iteration-count: 1 !important;
   }
 }
+
+
+/* =========================================================
+   AcademyFlow — Precision sizing pass
+   Balanced typography, controls and spacing across devices
+   ========================================================= */
+
+:root {
+  --control-h: 42px;
+  --control-h-lg: 46px;
+  --page-max: 1360px;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.page-shell {
+  width: min(100%, var(--page-max));
+  max-width: var(--page-max);
+  padding: 18px 22px 40px;
+}
+
+.topbar {
+  min-height: 62px;
+  padding: 9px 12px;
+  gap: 12px;
+  border-radius: 18px;
+}
+
+.brand {
+  gap: 10px;
+  min-width: 0;
+}
+
+.brand-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  font-size: 12px;
+  flex: 0 0 auto;
+}
+
+.brand-text {
+  min-width: 0;
+}
+
+.brand-text b {
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.brand-text small {
+  margin-top: 2px;
+  font-size: 9px;
+  letter-spacing: .055em;
+  white-space: nowrap;
+}
+
+.nav-links a {
+  padding: 8px 11px;
+  font-size: 12.5px;
+}
+
+.actions {
+  gap: 8px;
+}
+
+.theme-toggle {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 12px;
+  font-size: 15px;
+}
+
+.btn {
+  min-height: var(--control-h);
+  padding: 0 15px;
+  border-radius: 12px;
+  gap: 7px;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.kicker {
+  min-height: 30px;
+  padding: 0 12px;
+  gap: 7px;
+  font-size: 10.5px;
+}
+
+.kicker::before {
+  width: 7px;
+  height: 7px;
+}
+
+.hero {
+  gap: 38px;
+  padding: 60px 4px 36px;
+}
+
+.hero-copy h1 {
+  font-size: clamp(38px, 5vw, 64px);
+  line-height: 1.12;
+  margin: 15px 0 15px;
+  max-width: 760px;
+}
+
+.hero-copy p {
+  font-size: 15px;
+  line-height: 1.9;
+  max-width: 620px;
+}
+
+.hero-metrics {
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.hero-metrics article {
+  min-width: 136px;
+  padding: 12px 14px;
+  border-radius: 15px;
+}
+
+.hero-metrics strong {
+  font-size: 19px;
+}
+
+.hero-metrics span {
+  font-size: 11px;
+}
+
+.hero-card {
+  padding: 15px;
+  border-radius: 24px;
+}
+
+.preview-side {
+  padding: 13px 8px;
+  border-radius: 16px;
+}
+
+.preview-nav span {
+  height: 31px;
+  border-radius: 10px;
+}
+
+.preview-stats article,
+.surface-card {
+  padding: 13px;
+  border-radius: 15px;
+}
+
+.preview-stats article strong {
+  font-size: 21px;
+}
+
+.panel-title,
+.preview-stats article small,
+.surface-card small {
+  font-size: 11px;
+}
+
+.meeting-item {
+  padding: 10px;
+  border-radius: 12px;
+}
+
+.meeting-item b {
+  font-size: 11.5px;
+}
+
+.meeting-item span {
+  font-size: 10px;
+}
+
+.floating-note {
+  padding: 11px 13px;
+  border-radius: 14px;
+}
+
+.floating-note b {
+  font-size: 12px;
+}
+
+.floating-note span {
+  font-size: 10px;
+}
+
+.section {
+  padding-top: 34px;
+}
+
+.section-head {
+  gap: 16px;
+  margin-bottom: 15px;
+}
+
+.section-head h2 {
+  font-size: clamp(25px, 2.5vw, 36px);
+}
+
+.section-head p {
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.feature-grid {
+  gap: 11px;
+}
+
+.feature-card {
+  padding: 18px;
+  border-radius: 18px;
+}
+
+.feature-card .num {
+  width: 36px;
+  height: 36px;
+  margin-bottom: 14px;
+  border-radius: 11px;
+  font-size: 11px;
+}
+
+.feature-card h3 {
+  margin-bottom: 7px;
+  font-size: 16px;
+}
+
+.feature-card p {
+  font-size: 12.5px;
+  line-height: 1.8;
+}
+
+.cta-band {
+  padding: 22px;
+  border-radius: 22px;
+}
+
+.cta-band h3 {
+  font-size: 23px;
+}
+
+.cta-band p {
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+/* Auth */
+.auth-shell {
+  padding: 18px;
+}
+
+.auth-card {
+  width: min(1000px, 100%);
+  grid-template-columns: minmax(0,1fr) 390px;
+  border-radius: 26px;
+}
+
+.auth-side {
+  padding: 32px;
+}
+
+.auth-side h1 {
+  font-size: clamp(30px, 3.3vw, 46px);
+  line-height: 1.25;
+  margin: 15px 0 11px;
+}
+
+.auth-side p {
+  font-size: 13.5px;
+  line-height: 1.85;
+}
+
+.auth-points {
+  gap: 9px;
+  margin-top: 20px;
+}
+
+.auth-points article {
+  padding: 11px 13px;
+  border-radius: 13px;
+}
+
+.auth-points strong {
+  margin-bottom: 3px;
+  font-size: 12.5px;
+}
+
+.auth-points span {
+  font-size: 11px;
+}
+
+.auth-form-wrap {
+  padding: 28px;
+}
+
+.auth-form h2 {
+  margin: 13px 0 6px;
+  font-size: 26px;
+}
+
+.auth-form .lead {
+  margin-bottom: 18px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.field {
+  gap: 6px;
+  margin-bottom: 11px;
+}
+
+.field label {
+  font-size: 11.5px;
+}
+
+.field input,
+.field select,
+.field textarea {
+  min-height: var(--control-h-lg);
+  padding: 0 12px;
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+.field textarea {
+  min-height: 104px;
+  padding: 12px;
+  line-height: 1.7;
+}
+
+.form-msg {
+  font-size: 11.5px;
+  margin-top: 9px;
+}
+
+/* Legacy/admin dashboard sizing */
+.dashboard-shell {
+  grid-template-columns: 240px minmax(0,1fr);
+}
+
+.sidebar {
+  padding: 18px 13px;
+}
+
+.sidebar .brand {
+  margin-bottom: 20px;
+}
+
+.side-label {
+  margin: 14px 10px 8px;
+  font-size: 9.5px;
+}
+
+.side-nav {
+  gap: 4px;
+}
+
+.side-nav a {
+  min-height: 42px;
+  padding: 0 11px;
+  border-radius: 12px;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.side-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  font-size: 10px;
+}
+
+.sidebar-foot {
+  right: 13px;
+  left: 13px;
+  bottom: 14px;
+  padding: 11px;
+  font-size: 10.5px;
+}
+
+.main-content {
+  width: 100%;
+  max-width: 1540px;
+  margin-inline: auto;
+  padding: 18px 24px 36px;
+}
+
+.page-head {
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.page-head h1 {
+  font-size: clamp(25px, 2.8vw, 34px);
+}
+
+.page-head p {
+  margin-top: 5px;
+  font-size: 12.5px;
+}
+
+.stats-grid {
+  gap: 11px;
+}
+
+.stat-card {
+  padding: 17px;
+  border-radius: 18px;
+}
+
+.stat-card strong {
+  margin-top: 11px;
+  font-size: 28px;
+}
+
+.stat-card small {
+  font-size: 11px;
+}
+
+.content-grid {
+  gap: 11px;
+  margin-top: 11px;
+}
+
+.card-panel {
+  padding: 17px;
+  border-radius: 19px;
+}
+
+.card-panel h2 {
+  font-size: 17px;
+}
+
+.card-panel p {
+  font-size: 12.5px;
+}
+
+.info-list {
+  gap: 9px;
+}
+
+.info-item {
+  padding: 11px 12px;
+  border-radius: 13px;
+}
+
+.info-item b {
+  font-size: 12.5px;
+}
+
+.info-item span {
+  font-size: 10.5px;
+}
+
+.table-wrap {
+  border-radius: 14px;
+}
+
+.table th,
+.table td {
+  padding: 11px 13px;
+  font-size: 11.5px;
+}
+
+.table th {
+  font-size: 10.5px;
+}
+
+.status {
+  gap: 6px;
+  padding: 5px 8px;
+  font-size: 10.5px;
+}
+
+.status::before {
+  width: 6px;
+  height: 6px;
+}
+
+.modal {
+  padding: 14px;
+}
+
+.modal-card {
+  width: min(700px,100%);
+  padding: 20px;
+  border-radius: 22px;
+}
+
+.icon-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+}
+
+/* Tablet */
+@media (max-width: 1080px) {
+  .page-shell { padding-inline: 18px; }
+  .hero { gap: 28px; padding-top: 48px; }
+  .auth-card { width: min(760px,100%); }
+  .auth-side,
+  .auth-form-wrap { padding: 26px; }
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  body { font-size: 14px; }
+  .page-shell {
+    padding: 9px 10px 24px;
+  }
+  .topbar {
+    min-height: 56px;
+    padding: 8px 9px;
+    border-radius: 15px;
+  }
+  .brand-badge {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+  }
+  .brand-text b { font-size: 13px; }
+  .brand-text small { display: none; }
+  .theme-toggle {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+  }
+  .btn {
+    min-height: 40px;
+    padding-inline: 12px;
+    font-size: 12px;
+    border-radius: 11px;
+  }
+  .hero {
+    padding-top: 34px;
+    gap: 22px;
+  }
+  .hero-copy h1 {
+    font-size: clamp(31px, 9.5vw, 39px);
+    line-height: 1.18;
+  }
+  .hero-copy p {
+    font-size: 13.5px;
+    line-height: 1.85;
+  }
+  .auth-shell {
+    padding: max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));
+  }
+  .auth-card {
+    width: 100%;
+    border-radius: 20px;
+  }
+  .auth-side,
+  .auth-form-wrap {
+    padding: 18px;
+  }
+  .auth-side h1 {
+    font-size: 27px;
+  }
+  .auth-form h2 {
+    font-size: 23px;
+  }
+  .field input,
+  .field select,
+  .field textarea {
+    font-size: 16px; /* prevents iOS auto-zoom */
+  }
+  .main-content {
+    padding: 13px 10px 28px;
+  }
+  .page-head h1 {
+    font-size: 24px;
+  }
+  .stat-card {
+    padding: 14px;
+    border-radius: 16px;
+  }
+  .stat-card strong {
+    font-size: 25px;
+  }
+  .card-panel {
+    padding: 14px;
+    border-radius: 17px;
+  }
+}
+
+/* Small phones */
+@media (max-width: 390px) {
+  .actions { gap: 6px; }
+  .btn { padding-inline: 10px; }
+  .hero-copy h1 { font-size: 30px; }
+  .auth-side,
+  .auth-form-wrap { padding: 15px; }
+  .auth-side h1 { font-size: 25px; }
+  .auth-form h2 { font-size: 22px; }
+}
