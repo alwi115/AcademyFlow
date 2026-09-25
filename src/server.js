@@ -32,11 +32,15 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/superadmin', require('./routes/superadmin.routes'));
+app.use('/api/academy', require('./routes/academy.routes'));
 app.use('/api/live-sessions', require('./routes/live.routes'));
 
 app.use((err, req, res, next) => {
   console.error(err);
-  res.status(500).json({ message: 'Internal server error' });
+  const status = Number(err.status || 500);
+  res.status(status).json({
+    message: status >= 500 ? 'Internal server error' : err.message
+  });
 });
 
 const port = Number(process.env.PORT || 3000);
