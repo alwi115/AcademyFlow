@@ -1,0 +1,27 @@
+const mongoose = require('mongoose');
+
+const AcademySchema = new mongoose.Schema({
+  code: { type: String, unique: true, required: true, uppercase: true, trim: true },
+  name: { type: String, required: true, trim: true },
+  nameEn: { type: String, trim: true },
+  slug: { type: String, unique: true, required: true, lowercase: true, trim: true },
+  logoUrl: String,
+  phone: String,
+  email: String,
+  country: { type: String, default: 'Oman' },
+  city: String,
+  currency: { type: String, default: 'OMR' },
+  timezone: { type: String, default: 'Asia/Muscat' },
+  status: { type: String, enum: ['trial','active','grace','frozen','suspended'], default: 'trial' },
+  trialEndsAt: Date,
+  graceEndsAt: Date,
+  subscriptionEndsAt: Date,
+  planId: { type: mongoose.Schema.Types.ObjectId, ref: 'Plan' },
+  branding: {
+    primaryColor: { type: String, default: '#8B1E2D' },
+    secondaryColor: { type: String, default: '#111827' },
+    coverUrl: String
+  }
+}, { timestamps: true });
+
+module.exports = mongoose.model('Academy', AcademySchema);

@@ -1,0 +1,10 @@
+const router = require('express').Router();
+const { auth, allowRoles } = require('../middleware/auth');
+const c = require('../controllers/superadmin.controller');
+router.use(auth, allowRoles('superadmin'));
+router.get('/stats', c.stats);
+router.get('/academies', c.listAcademies);
+router.post('/academies', c.createAcademy);
+router.patch('/academies/:id/status', c.updateStatus);
+router.get('/plans', c.plans);
+module.exports = router;
