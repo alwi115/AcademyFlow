@@ -1,1 +1,89 @@
-<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>لوحة السوبر أدمن</title><link rel="stylesheet" href="/css/app.css"></head><body><div class="wrap"><div class="top"><div><span class="badge">Super Admin</span><h1>الأكاديميات</h1></div><button class="btn" onclick="showForm()">+ إضافة أكاديمية</button></div><div class="grid" id="stats"></div><section class="panel" id="formPanel" hidden><h2>أكاديمية جديدة</h2><form id="academyForm" class="grid"><div class="field"><label>اسم الأكاديمية</label><input name="name" required></div><div class="field"><label>الرابط المختصر</label><input name="slug" placeholder="future-academy" required></div><div class="field"><label>اسم المالك</label><input name="ownerName" required></div><div class="field"><label>بريد المالك</label><input name="ownerEmail" type="email" required></div><div class="field"><label>رقم المالك</label><input name="ownerPhone"></div><div class="field"><label>كلمة مرور مؤقتة</label><input name="ownerPassword" type="password" required></div><div><button class="btn">إنشاء الأكاديمية</button></div></form><p id="createMsg" class="muted"></p></section><section class="panel"><div style="overflow:auto"><table class="table"><thead><tr><th>الكود</th><th>الأكاديمية</th><th>الحالة</th><th>التجربة تنتهي</th></tr></thead><tbody id="rows"></tbody></table></div></section></div><script src="/js/superadmin.js"></script></body></html>
+
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#080a10">
+  <title>لوحة مالك النظام | AcademyFlow</title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand-lockup"><div class="brand-mark">AF</div><div><b>AcademyFlow</b><small>SUPER ADMIN</small></div></div>
+    <div class="side-label">الإدارة</div>
+    <nav class="side-nav">
+      <a class="active" href="#"><span class="ico">⌂</span>نظرة عامة</a>
+      <a href="#"><span class="ico">A</span>الأكاديميات</a>
+      <a href="#"><span class="ico">P</span>الباقات</a>
+      <a href="#"><span class="ico">S</span>الاشتراكات</a>
+    </nav>
+    <div class="side-label">النظام</div>
+    <nav class="side-nav">
+      <a href="#"><span class="ico">H</span>صحة النظام</a>
+      <a href="#"><span class="ico">⚙</span>الإعدادات</a>
+    </nav>
+    <div class="sidebar-foot">AcademyFlow v0.1<br><span class="muted">Multi-tenant SaaS</span></div>
+  </aside>
+
+  <main class="main-area">
+    <header class="page-top">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="mobile-menu" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+        <div class="page-title"><span class="kicker">CONTROL CENTER</span><h1>لوحة مالك النظام</h1><p>إدارة الأكاديميات ومتابعة حالة المنصة من مكان واحد.</p></div>
+      </div>
+      <div class="top-actions"><button class="btn gold" onclick="showForm()">+ إضافة أكاديمية</button></div>
+    </header>
+
+    <section class="grid" id="stats"></section>
+
+    <section class="panel welcome-card">
+      <div class="welcome-copy">
+        <span class="badge">AcademyFlow</span>
+        <h2>منصة جاهزة للتوسع</h2>
+        <p>النسخة الحالية تأسيسية، ومع المرحلة الجاية بنضيف الباقات والاشتراكات والتجميد التلقائي والتقارير بشكل متكامل.</p>
+      </div>
+      <div class="welcome-art"><i>AF</i></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div><h2>الأكاديميات</h2><p>آخر الأكاديميات المسجلة وحالة كل حساب.</p></div>
+        <button class="btn sm secondary" onclick="load()">تحديث</button>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>الكود</th><th>الأكاديمية</th><th>الحالة</th><th>نهاية التجربة</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<section class="modal-panel" id="formPanel" hidden>
+  <div class="modal-card">
+    <div class="modal-title">
+      <div><span class="kicker">NEW ACADEMY</span><h2 style="margin:5px 0 0">إضافة أكاديمية جديدة</h2></div>
+      <button class="close-btn" type="button" onclick="hideForm()">×</button>
+    </div>
+    <form id="academyForm" class="form-grid">
+      <div class="field"><label>اسم الأكاديمية</label><input name="name" placeholder="أكاديمية المستقبل" required></div>
+      <div class="field"><label>الرابط المختصر</label><input name="slug" placeholder="future-academy" required></div>
+      <div class="field"><label>اسم المالك</label><input name="ownerName" required></div>
+      <div class="field"><label>بريد المالك</label><input name="ownerEmail" type="email" required></div>
+      <div class="field"><label>رقم المالك</label><input name="ownerPhone" placeholder="+968..."></div>
+      <div class="field"><label>كلمة مرور مؤقتة</label><input name="ownerPassword" type="password" required></div>
+      <div class="span-2 section-note">بعد الإنشاء، النظام يعطي الأكاديمية كود مستقل ويبدأ لها فترة تجربة 15 يوم تلقائيًا.</div>
+      <div class="span-2" style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+        <button type="button" class="btn secondary" onclick="hideForm()">إلغاء</button>
+        <button class="btn gold">إنشاء الأكاديمية</button>
+      </div>
+    </form>
+    <p id="createMsg" class="form-msg"></p>
+  </div>
+</section>
+
+<script src="/js/superadmin.js"></script>
+</body>
+</html>

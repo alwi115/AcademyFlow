@@ -1,1 +1,85 @@
-<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>لوحة الأكاديمية</title><link rel="stylesheet" href="/css/app.css"></head><body><div class="wrap"><div class="top"><div><span class="badge">Academy Dashboard</span><h1>لوحة الأكاديمية</h1><p class="muted">النسخة التأسيسية: المحاضرات المباشرة + بنية الأكاديمية المستقلة.</p></div></div><div class="grid"><div class="stat"><span class="muted">الدورات</span><strong>—</strong></div><div class="stat"><span class="muted">الطلاب</span><strong>—</strong></div><div class="stat"><span class="muted">المدربين</span><strong>—</strong></div><div class="stat"><span class="muted">المحاضرات</span><strong id="liveCount">0</strong></div></div><section class="panel"><h2>محاضرات Zoom</h2><p class="muted">إذا تم ضبط بيانات Zoom في .env، إنشاء المحاضرة ينشئ اجتماع Zoom تلقائيًا. وإذا ما تم ضبطها، يحفظ الموعد فقط بدون تعطيل بقية النظام.</p><div id="liveRows"></div></section></div><script>const token=localStorage.getItem('af_token');if(!token)location.href='/academy/login.html';fetch('/api/live-sessions',{headers:{Authorization:'Bearer '+token}}).then(async r=>{if(!r.ok)return;const a=await r.json();document.getElementById('liveCount').textContent=a.length;document.getElementById('liveRows').innerHTML=a.map(x=>`<div class="panel"><b>${x.title}</b><div class="muted">${new Date(x.startAt).toLocaleString('ar-OM')}</div>${x.zoomJoinUrl?`<a class="btn" target="_blank" rel="noopener" href="${x.zoomJoinUrl}">دخول Zoom</a>`:''}</div>`).join('')});</script></body></html>
+
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#080a10">
+  <title>لوحة الأكاديمية | AcademyFlow</title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand-lockup"><div class="brand-mark">AF</div><div><b>AcademyFlow</b><small>ACADEMY PORTAL</small></div></div>
+    <div class="side-label">الرئيسية</div>
+    <nav class="side-nav">
+      <a class="active" href="#"><span class="ico">⌂</span>لوحة التحكم</a>
+      <a href="#"><span class="ico">C</span>الدورات</a>
+      <a href="#"><span class="ico">S</span>الطلاب</a>
+      <a href="#"><span class="ico">I</span>المدربين</a>
+      <a href="#"><span class="ico">Z</span>المحاضرات</a>
+    </nav>
+    <div class="side-label">الإدارة</div>
+    <nav class="side-nav">
+      <a href="#"><span class="ico">₽</span>المدفوعات</a>
+      <a href="#"><span class="ico">R</span>التقارير</a>
+      <a href="#"><span class="ico">⚙</span>الإعدادات</a>
+    </nav>
+    <div class="sidebar-foot">بوابة الأكاديمية<br><span class="muted">Powered by AcademyFlow</span></div>
+  </aside>
+
+  <main class="main-area">
+    <header class="page-top">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="mobile-menu" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+        <div class="page-title"><span class="kicker">ACADEMY DASHBOARD</span><h1>لوحة الأكاديمية</h1><p>نظرة سريعة على نشاط الأكاديمية والمحاضرات القادمة.</p></div>
+      </div>
+      <div class="top-actions"><a class="btn secondary" href="/">الصفحة الرئيسية</a></div>
+    </header>
+
+    <section class="grid">
+      <article class="stat"><div class="stat-head"><small>الدورات</small><span class="stat-icon">C</span></div><strong>—</strong><span class="trend">قريبًا</span></article>
+      <article class="stat"><div class="stat-head"><small>الطلاب</small><span class="stat-icon">S</span></div><strong>—</strong><span class="trend">قريبًا</span></article>
+      <article class="stat"><div class="stat-head"><small>المدربين</small><span class="stat-icon">I</span></div><strong>—</strong><span class="trend">قريبًا</span></article>
+      <article class="stat"><div class="stat-head"><small>المحاضرات</small><span class="stat-icon">Z</span></div><strong id="liveCount">0</strong><span class="trend">Zoom</span></article>
+    </section>
+
+    <section class="panel welcome-card">
+      <div class="welcome-copy">
+        <span class="badge">مرحبًا بك</span>
+        <h2>كل شغلك التعليمي في مكان واحد</h2>
+        <p>تابع الدورات والطلاب والمدربين والمحاضرات المباشرة من لوحة مصممة تكون واضحة حتى على الجوال.</p>
+      </div>
+      <div class="welcome-art"><i>AF</i></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div><h2>محاضرات Zoom</h2><p>المواعيد المحفوظة والمحاضرات المرتبطة بـ Zoom.</p></div>
+        <span class="badge">LIVE SESSIONS</span>
+      </div>
+      <div class="section-note">إذا تم ضبط بيانات Zoom في إعدادات السيرفر، إنشاء المحاضرة ينشئ اجتماع Zoom تلقائيًا. وإذا ما تم ضبطها، النظام يحفظ الموعد بدون تعطيل باقي الوظائف.</div>
+      <div class="divider"></div>
+      <div id="liveRows" class="live-list"><div class="empty-state">جاري تحميل المحاضرات...</div></div>
+    </section>
+  </main>
+</div>
+
+<script>
+const token=localStorage.getItem('af_token');
+if(!token) location.href='/academy/login.html';
+fetch('/api/live-sessions',{headers:{Authorization:'Bearer '+token}})
+.then(async r=>{
+  if(r.status===401||r.status===403){location.href='/academy/login.html';return;}
+  if(!r.ok) throw new Error();
+  const a=await r.json();
+  document.getElementById('liveCount').textContent=a.length;
+  document.getElementById('liveRows').innerHTML=a.length?a.map(x=>`
+    <article class="live-card">
+      <div><b>${x.title}</b><div class="live-meta">${new Date(x.startAt).toLocaleString('ar-OM')} · ${x.durationMinutes||60} دقيقة</div></div>
+      ${x.zoomJoinUrl?`<a class="btn sm gold" target="_blank" rel="noopener" href="${x.zoomJoinUrl}">دخول Zoom</a>`:'<span class="status-pill status-trial">موعد محفوظ</span>'}
+    </article>`).join(''):'<div class="empty-state">ما عندك محاضرات مجدولة حاليًا.</div>';
+}).catch(()=>{document.getElementById('liveRows').innerHTML='<div class="empty-state">تعذر تحميل المحاضرات حاليًا.</div>'});
+</script>
+</body>
+</html>
