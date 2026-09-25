@@ -2,76 +2,122 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
   <meta name="color-scheme" content="light dark">
   <meta name="robots" content="noindex,nofollow">
-  <title>Control Access | AcademyFlow</title>
+  <title>دخول مالك النظام | AcademyFlow</title>
   <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/owner-login.css">
   <script src="/js/ui.js"></script>
 </head>
-<body>
-  <main class="auth-shell">
-    <section class="auth-card">
-      <aside class="auth-side">
-        <div class="brand">
-          <span class="brand-badge">AF</span>
-          <span class="brand-text"><b>AcademyFlow</b><small>PRIVATE OWNER ACCESS</small></span>
+<body class="owner-login-page">
+  <main class="owner-login-shell">
+    <section class="owner-login-card" aria-label="تسجيل دخول مالك AcademyFlow">
+      <aside class="owner-login-visual">
+        <div>
+          <div class="owner-brand">
+            <span class="owner-brand-mark">AF</span>
+            <span class="owner-brand-copy">
+              <b>AcademyFlow</b>
+              <span>OWNER CONTROL CENTER</span>
+            </span>
+          </div>
+
+          <div class="owner-intro">
+            <span class="owner-private-chip">بوابة خاصة بمالك النظام</span>
+            <h1>إدارة المنصة تبدأ من هنا.</h1>
+            <p>وصول مركزي لإدارة الأكاديميات والباقات والاشتراكات وصحة النظام من مساحة واحدة مخصصة لمالك AcademyFlow.</p>
+          </div>
         </div>
 
-        <span class="kicker auth-kicker">بوابة خاصة وغير ظاهرة للعامة</span>
-        <h1>مركز تحكم مالك النظام.</h1>
-        <p>دخول السوبر أدمن أصبح باسم المستخدم وكلمة المرور، بدون الحاجة إلى كتابة البريد الإلكتروني في صفحة الدخول.</p>
-
-        <div class="auth-points">
-          <article><strong>اسم مستخدم خاص</strong><span>يُستخدم فقط للدخول إلى مركز تحكم مالك النظام.</span></article>
-          <article><strong>كلمات مرور محمية</strong><span>كلمات المرور لا تُحفظ كنص صريح داخل قاعدة البيانات.</span></article>
-          <article><strong>وصول مركزي</strong><span>إدارة الأكاديميات ومتابعة حالتها من مكان واحد.</span></article>
+        <div class="owner-security-grid">
+          <article class="owner-security-item">
+            <span class="owner-security-icon">ID</span>
+            <b>دخول باسم المستخدم</b>
+            <span>حساب مستقل عن حسابات الأكاديميات.</span>
+          </article>
+          <article class="owner-security-item">
+            <span class="owner-security-icon">#</span>
+            <b>كلمة مرور مشفرة</b>
+            <span>تُخزن بصيغة bcrypt hash داخل قاعدة البيانات.</span>
+          </article>
+          <article class="owner-security-item">
+            <span class="owner-security-icon">SA</span>
+            <b>صلاحية Super Admin</b>
+            <span>الوصول المركزي محصور بحساب مالك النظام.</span>
+          </article>
         </div>
       </aside>
 
-      <div class="auth-form-wrap">
-        <div class="auth-toolbar owner-toolbar">
-          <span class="private-label">PRIVATE ACCESS</span>
-          <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="تبديل المظهر" title="تبديل المظهر">◐</button>
+      <section class="owner-login-panel">
+        <div class="owner-panel-tools">
+          <span class="owner-panel-label">PRIVATE ACCESS</span>
+          <button class="owner-theme-button theme-toggle" type="button" onclick="toggleTheme()" aria-label="تبديل الوضع" title="تبديل الوضع">◐</button>
         </div>
 
-        <form class="auth-form" onsubmit="login(event,'superadmin')">
-          <span class="kicker">Owner Access</span>
-          <h2>دخول مالك النظام</h2>
-          <p class="lead">أدخل اسم المستخدم وكلمة المرور لفتح مركز التحكم الخاص.</p>
-
-          <div class="field">
-            <label>اسم المستخدم</label>
-            <input
-              name="username"
-              type="text"
-              autocomplete="username"
-              autocapitalize="none"
-              spellcheck="false"
-              placeholder="academyflow_admin"
-              required
-            >
+        <form onsubmit="login(event,'superadmin')" autocomplete="on">
+          <div class="owner-form-head">
+            <span class="owner-form-eyebrow">OWNER SIGN IN</span>
+            <h2>دخول مالك النظام</h2>
+            <p>أدخل بيانات حساب المالك للوصول إلى مركز التحكم.</p>
           </div>
 
-          <div class="field">
-            <label>كلمة المرور</label>
-            <input
-              name="password"
-              type="password"
-              autocomplete="current-password"
-              placeholder="••••••••••••"
-              required
-            >
+          <div class="owner-field">
+            <label for="ownerUsername">اسم المستخدم</label>
+            <div class="owner-input-wrap">
+              <input
+                class="owner-ltr"
+                id="ownerUsername"
+                name="username"
+                type="text"
+                inputmode="text"
+                autocomplete="username"
+                autocapitalize="none"
+                spellcheck="false"
+                maxlength="40"
+                placeholder="academyflow_admin"
+                aria-describedby="ownerLoginHint"
+                required
+              >
+            </div>
           </div>
 
-          <button class="btn primary wide" type="submit">فتح مركز التحكم</button>
-          <p id="msg" class="form-msg" aria-live="polite"></p>
+          <div class="owner-field">
+            <label for="ownerPassword">كلمة المرور</label>
+            <div class="owner-input-wrap">
+              <input
+                class="owner-ltr owner-password-input"
+                id="ownerPassword"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                placeholder="••••••••••••"
+                required
+              >
+              <button
+                class="owner-password-toggle"
+                id="ownerPasswordToggle"
+                type="button"
+                aria-controls="ownerPassword"
+                aria-pressed="false"
+              >إظهار</button>
+            </div>
+          </div>
+
+          <button class="owner-submit" type="submit">دخول إلى مركز التحكم</button>
+          <p class="owner-form-message" id="msg" aria-live="polite"></p>
         </form>
-      </div>
+
+        <div class="owner-login-note" id="ownerLoginHint">
+          <i>!</i>
+          <span>هذه الصفحة مخصصة لمالك النظام فقط. حسابات الأكاديميات تدخل من بوابة الأكاديمية باستخدام كود الأكاديمية.</span>
+        </div>
+      </section>
     </section>
   </main>
 
+  <script src="/js/owner-login.js"></script>
   <script src="/js/auth.js"></script>
 </body>
 </html>
