@@ -18,13 +18,15 @@
           <span class="brand-badge">AF</span>
           <span class="brand-text"><b>AcademyFlow</b><small>PRIVATE OWNER ACCESS</small></span>
         </div>
+
         <span class="kicker auth-kicker">بوابة خاصة وغير ظاهرة للعامة</span>
         <h1>مركز تحكم مالك النظام.</h1>
-        <p>هذا المسار مخصص لإدارة AcademyFlow والأكاديميات المرتبطة به، ولا يظهر كرابط في الصفحة العامة.</p>
+        <p>دخول السوبر أدمن أصبح باسم المستخدم وكلمة المرور، بدون الحاجة إلى كتابة البريد الإلكتروني في صفحة الدخول.</p>
+
         <div class="auth-points">
-          <article><strong>وصول خاص</strong><span>الرابط غير ظاهر في واجهة الموقع العامة.</span></article>
-          <article><strong>إدارة مركزية</strong><span>إضافة الأكاديميات ومتابعة حالتها من مكان واحد.</span></article>
-          <article><strong>فاتح وداكن</strong><span>نفس الهوية الجديدة على جميع الأجهزة.</span></article>
+          <article><strong>اسم مستخدم خاص</strong><span>يُستخدم فقط للدخول إلى مركز تحكم مالك النظام.</span></article>
+          <article><strong>كلمات مرور محمية</strong><span>كلمات المرور لا تُحفظ كنص صريح داخل قاعدة البيانات.</span></article>
+          <article><strong>وصول مركزي</strong><span>إدارة الأكاديميات ومتابعة حالتها من مكان واحد.</span></article>
         </div>
       </aside>
 
@@ -33,18 +35,43 @@
           <span class="private-label">PRIVATE ACCESS</span>
           <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="تبديل المظهر" title="تبديل المظهر">◐</button>
         </div>
+
         <form class="auth-form" onsubmit="login(event,'superadmin')">
           <span class="kicker">Owner Access</span>
           <h2>دخول مالك النظام</h2>
-          <p class="lead">أدخل بيانات حساب المالك لفتح مركز التحكم الخاص.</p>
-          <div class="field"><label>البريد الإلكتروني</label><input name="email" type="email" autocomplete="email" required></div>
-          <div class="field"><label>كلمة المرور</label><input name="password" type="password" autocomplete="current-password" required></div>
+          <p class="lead">أدخل اسم المستخدم وكلمة المرور لفتح مركز التحكم الخاص.</p>
+
+          <div class="field">
+            <label>اسم المستخدم</label>
+            <input
+              name="username"
+              type="text"
+              autocomplete="username"
+              autocapitalize="none"
+              spellcheck="false"
+              placeholder="academyflow_admin"
+              required
+            >
+          </div>
+
+          <div class="field">
+            <label>كلمة المرور</label>
+            <input
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              placeholder="••••••••••••"
+              required
+            >
+          </div>
+
           <button class="btn primary wide" type="submit">فتح مركز التحكم</button>
           <p id="msg" class="form-msg" aria-live="polite"></p>
         </form>
       </div>
     </section>
   </main>
+
   <script src="/js/auth.js"></script>
 </body>
 </html>
