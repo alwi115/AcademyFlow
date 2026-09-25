@@ -23,7 +23,7 @@ async function load(){
   ]);
 
   if(statsRes.status === 401 || statsRes.status === 403){
-    location.href = '/superadmin/login.html';
+    location.href = '/owner/login.html';
     return;
   }
 

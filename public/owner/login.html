@@ -1,28 +1,45 @@
-
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#07090f"><meta name="robots" content="noindex,nofollow">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="robots" content="noindex,nofollow">
   <title>Control Access | AcademyFlow</title>
-  <link rel="stylesheet" href="/css/app.css"><link rel="stylesheet" href="/css/lux.css">
+  <link rel="stylesheet" href="/css/app.css">
+  <script src="/js/ui.js"></script>
 </head>
-<body class="owner-body">
-  <div class="owner-grid"></div>
-  <main class="owner-access">
-    <section class="owner-card">
-      <div class="owner-brand"><div class="brand-mark">AF</div><div><b>AcademyFlow</b><small>PRIVATE CONTROL ACCESS</small></div></div>
-      <div class="owner-lock"><span>◆</span></div>
-      <span class="owner-eyebrow">AUTHORIZED ACCESS ONLY</span>
-      <h1>لوحة مالك النظام</h1>
-      <p>بوابة خاصة لإدارة منصة AcademyFlow والأكاديميات المرتبطة بها.</p>
-      <form onsubmit="login(event,'superadmin')" class="owner-form">
-        <div class="field owner-field"><label>البريد الإلكتروني</label><input name="email" type="email" autocomplete="email" placeholder="admin@academyflow.com" required></div>
-        <div class="field owner-field"><label>كلمة المرور</label><input name="password" type="password" autocomplete="current-password" placeholder="••••••••••••" required></div>
-        <button class="btn gold owner-submit" type="submit">فتح لوحة التحكم <span>←</span></button>
-        <p id="msg" class="form-msg owner-msg"></p>
-      </form>
-      <div class="owner-security"><i></i><span>Secure owner gateway · Session protected</span></div>
+<body>
+  <main class="auth-shell">
+    <section class="auth-card">
+      <aside class="auth-side">
+        <div class="brand">
+          <span class="brand-badge">AF</span>
+          <span class="brand-text"><b>AcademyFlow</b><small>PRIVATE OWNER ACCESS</small></span>
+        </div>
+        <span class="kicker" style="margin-top:28px">بوابة خاصة وغير ظاهرة للعامة</span>
+        <h1>مركز تحكم مالك النظام.</h1>
+        <p>هذا المسار مخصص لإدارة AcademyFlow والأكاديميات المرتبطة به، ولا يظهر كرابط في الصفحة العامة.</p>
+        <div class="auth-points">
+          <article><strong>وصول خاص</strong><span>الرابط غير ظاهر في واجهة الموقع العامة.</span></article>
+          <article><strong>إدارة مركزية</strong><span>إضافة الأكاديميات ومتابعة حالتها من مكان واحد.</span></article>
+          <article><strong>فاتح وداكن</strong><span>نفس الهوية الجديدة في بوابة المالك أيضًا.</span></article>
+        </div>
+      </aside>
+      <div class="auth-form-wrap">
+        <div class="actions" style="justify-content:flex-end;margin-bottom:8px">
+          <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="تبديل المظهر">◐</button>
+        </div>
+        <form class="auth-form" onsubmit="login(event,'superadmin')">
+          <span class="kicker">Owner Access</span>
+          <h2>دخول مالك النظام</h2>
+          <p class="lead">أدخل بيانات حساب المالك لفتح مركز التحكم الخاص.</p>
+          <div class="field"><label>البريد الإلكتروني</label><input name="email" type="email" autocomplete="email" required></div>
+          <div class="field"><label>كلمة المرور</label><input name="password" type="password" autocomplete="current-password" required></div>
+          <button class="btn primary wide" type="submit">فتح مركز التحكم</button>
+          <p id="msg" class="form-msg"></p>
+        </form>
+      </div>
     </section>
   </main>
   <script src="/js/auth.js"></script>
