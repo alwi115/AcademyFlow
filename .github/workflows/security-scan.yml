@@ -1,0 +1,95 @@
+name: AcademyFlow Security Scan
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sast:
+    name: SAST and dependency scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare report directory
+        run: mkdir -p security-reports
+
+      - name: NPM dependency audit
+        shell: bash
+        run: |
+          set +e
+          npm audit --json > security-reports/npm-audit.json
+          npm audit > security-reports/npm-audit.txt
+          echo "npm audit exit code: $?" >> security-reports/npm-audit.txt
+          exit 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Semgrep
+        run: python -m pip install --disable-pip-version-check semgrep
+
+      - name: Run Semgrep OWASP scan
+        shell: bash
+        run: |
+          set +e
+          semgrep scan             --config p/owasp-top-ten             --config p/nodejs             --json             --output security-reports/semgrep.json             .
+          semgrep scan             --config p/owasp-top-ten             --config p/nodejs             --text             --output security-reports/semgrep.txt             .
+          exit 0
+
+      - name: Upload SAST reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: academyflow-sast-reports
+          path: security-reports/
+          if-no-files-found: error
+          retention-days: 30
+
+  dast:
+    name: DAST - OWASP ZAP baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Prepare report directory
+        run: mkdir -p security-reports
+
+      - name: Capture security headers
+        shell: bash
+        run: |
+          set +e
+          curl -sS -D security-reports/headers.txt -o /dev/null https://academyflow.up.railway.app/
+          curl -sS -L --max-time 30 https://academyflow.up.railway.app/ -o security-reports/homepage.html
+          exit 0
+
+      - name: OWASP ZAP baseline scan
+        shell: bash
+        run: |
+          set +e
+          docker run --rm             -v "$PWD/security-reports:/zap/wrk/:rw"             -t ghcr.io/zaproxy/zaproxy:stable             zap-baseline.py             -t https://academyflow.up.railway.app             -r zap-report.html             -J zap-report.json             -w zap-report.md             -I
+          echo "ZAP exit code: $?" > security-reports/zap-exit-code.txt
+          exit 0
+
+      - name: Upload DAST reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: academyflow-dast-reports
+          path: security-reports/
+          if-no-files-found: error
+          retention-days: 30
