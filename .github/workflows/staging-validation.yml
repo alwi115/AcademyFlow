@@ -1,6 +1,8 @@
 name: AcademyFlow Staging Validation
 
 on:
+  push:
+    branches: [ "main" ]
   workflow_dispatch:
 
 permissions:
@@ -12,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      STAGING_BASE_URL: ${{ vars.STAGING_BASE_URL }}
+      STAGING_BASE_URL: https://academyflow-staging-production.up.railway.app
     steps:
       - name: Validate staging target
         shell: bash
