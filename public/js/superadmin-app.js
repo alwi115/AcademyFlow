@@ -810,6 +810,7 @@ const SA = (() => {
 
         const issues = h.academyIssues || [];
         const errors = h.recentErrors || [];
+        const activeAlerts = h.monitoring?.activeAlerts || [];
 
         document.getElementById('healthRows').innerHTML = `
           <div class="sa-health-grid">
@@ -853,7 +854,33 @@ const SA = (() => {
               <strong>${esc(issues.length)}</strong>
               <p>تعليق / اشتراك / Zoom</p>
             </article>
+            <article class="sa-health-item">
+              <small>تنبيهات المراقبة</small>
+              <strong>${esc(activeAlerts.length)}</strong>
+              <p>${activeAlerts.some(x => x.severity === 'critical') ? 'يوجد تنبيه حرج' : 'الحالة تحت المراقبة'}</p>
+            </article>
           </div>
+
+          <section class="sa-card sa-section" style="box-shadow:none">
+            <div class="sa-card-head">
+              <div><h2>تنبيهات المراقبة</h2><p>التنبيهات النشطة فقط، مع منع التكرار المزعج عبر فترة تهدئة.</p></div>
+            </div>
+            <div class="sa-table-wrap">
+              <table class="sa-table">
+                <thead><tr><th>الشدة</th><th>التنبيه</th><th>آخر ظهور</th><th>التكرار</th></tr></thead>
+                <tbody>
+                  ${activeAlerts.length ? activeAlerts.map(x => `
+                    <tr>
+                      <td><span class="sa-status ${x.severity === 'critical' ? 'bad' : x.severity === 'warning' ? 'warn' : 'info'}">${esc(x.severity)}</span></td>
+                      <td class="sa-row-title"><b>${esc(x.title)}</b><small>${esc(x.message)}</small></td>
+                      <td>${fmtDate(x.lastSeenAt,true)}</td>
+                      <td>${esc(x.occurrences || 1)}</td>
+                    </tr>
+                  `).join('') : '<tr><td colspan="4" class="sa-empty">لا توجد تنبيهات نشطة.</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+          </section>
 
           <div class="sa-grid-2 sa-section">
             <article class="sa-card" style="box-shadow:none">
@@ -1038,7 +1065,18 @@ const SA = (() => {
 
       if (action === 'refresh-health') {
         event.preventDefault();
-        await load();
+        actionButton.disabled = true;
+        actionButton.textContent = 'جاري الفحص...';
+        try {
+          await api('/api/superadmin/health/run',{method:'POST'});
+          toast('تم تشغيل فحص المراقبة');
+          await load();
+        } catch (err) {
+          toast(err.message,'error');
+        } finally {
+          actionButton.disabled = false;
+          actionButton.textContent = 'فحص الآن';
+        }
         return;
       }
 
