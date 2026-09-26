@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: academyflow-security-main
+  cancel-in-progress: true
+
 jobs:
   sast:
     name: SAST and dependency scan
