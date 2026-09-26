@@ -5,6 +5,7 @@ const core = require('../controllers/instructor-core.controller');
 const teaching = require('../controllers/instructor-teaching.controller');
 const live = require('../controllers/instructor-live.controller');
 const profile = require('../controllers/instructor-profile.controller');
+const quizzes = require('../controllers/academy-quiz.controller');
 
 router.use(auth, tenant, allowRoles('instructor'));
 
@@ -42,6 +43,17 @@ router.patch('/live/:id', live.updateLiveSession);
 router.get('/live/:id/start', live.liveStart);
 router.get('/live/:id/attendance', live.liveAttendance);
 router.patch('/live/:id/attendance/:studentId', live.updateLiveAttendance);
+
+router.get('/quizzes', quizzes.listQuizzes);
+router.post('/quizzes', quizzes.createQuiz);
+router.get('/quizzes/:id', quizzes.quizDetails);
+router.patch('/quizzes/:id', quizzes.updateQuiz);
+router.post('/quizzes/:id/questions', quizzes.createQuestion);
+router.patch('/quizzes/:id/questions/:questionId', quizzes.updateQuestion);
+router.delete('/quizzes/:id/questions/:questionId', quizzes.deleteQuestion);
+router.get('/quizzes/:id/attempts', quizzes.listAttempts);
+router.get('/quizzes/:id/attempts/:attemptId', quizzes.attemptDetails);
+router.patch('/quizzes/:id/attempts/:attemptId/questions/:questionId/grade', quizzes.gradeShortAnswer);
 
 router.get('/profile', profile.profile);
 router.patch('/profile', profile.updateProfile);
