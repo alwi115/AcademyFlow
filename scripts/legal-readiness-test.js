@@ -155,6 +155,19 @@ async function main() {
     });
     assert.strictEqual(superLogin.status, 200);
     const superSessionCookie = activeSessionCookie(superLogin);
+    const superSessionToken = decodeURIComponent(
+      superSessionCookie.slice('af_session='.length)
+    );
+    const decodedSuperSession = jwt.decode(superSessionToken);
+    const freshSuperadmin = await User.findById(superadmin._id).lean();
+    console.log('Superadmin session scope diagnostic', {
+      tokenRole: decodedSuperSession?.role ?? null,
+      dbRole: freshSuperadmin?.role ?? null,
+      tokenAcademyId: decodedSuperSession?.academyId ?? null,
+      dbAcademyId: freshSuperadmin?.academyId ? String(freshSuperadmin.academyId) : null,
+      tokenBranchId: decodedSuperSession?.branchId ?? null,
+      dbBranchId: freshSuperadmin?.branchId ? String(freshSuperadmin.branchId) : null
+    });
 
     const superMeClean = await fetch(base + '/api/auth/me', {
       headers: { Cookie: superSessionCookie }
