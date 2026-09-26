@@ -75,6 +75,11 @@ async function academyFlowLogin(event, kind){
     localStorage.removeItem('af_token');
     localStorage.setItem('af_user', JSON.stringify(data.user));
 
+    if (data.user.role === 'owner' && data.user.legalAcceptanceRequired) {
+      location.replace('/academy/legal-acceptance.html');
+      return;
+    }
+
     const destinations = {
       superadmin: '/superadmin/dashboard.html',
       student: '/student/dashboard.html',
