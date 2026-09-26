@@ -93,7 +93,7 @@ const SA = (() => {
       }
     });
 
-    if (response.status === 401 || response.status === 403) {
+    if (response.status === 401) {
       localStorage.removeItem('af_token');
       localStorage.removeItem('af_user');
       location.href = '/owner/login.html';
@@ -765,13 +765,28 @@ const SA = (() => {
     return (days ? days+' يوم ' : '')+(hours ? hours+' س ' : '')+minutes+' د';
   }
 
+  function fmtBytes(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < 0) return '—';
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    if (n < 1024 * 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + ' MB';
+    return (n / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+  }
+
   async function renderHealth() {
     const target = document.getElementById('saPageContent');
     target.innerHTML = `
       <section class="sa-card">
         <div class="sa-card-head">
-          <div><h2>فحص المنصة</h2><p>بيانات حقيقية من السيرفر الحالي وليست مؤشرات شكلية.</p></div>
-          <button class="btn primary" id="healthRefresh">فحص الآن</button>
+          <div>
+            <h2>مركز صحة النظام</h2>
+            <p>قاعدة البيانات، النسخ الاحتياطي، البريد، Zoom، التخزين وأخطاء السيرفر.</p>
+          </div>
+          <div class="sa-actions">
+            <button class="btn secondary" id="backupCreate" type="button">إنشاء Backup الآن</button>
+            <button class="btn primary" id="healthRefresh" type="button">فحص الآن</button>
+          </div>
         </div>
         <div id="healthRows"><div class="sa-empty">جاري الفحص...</div></div>
       </section>
@@ -779,50 +794,244 @@ const SA = (() => {
 
     const load = async () => {
       document.getElementById('healthRows').innerHTML = '<div class="sa-empty">جاري الفحص...</div>';
+
       try {
-        const h = await api('/api/superadmin/health');
+        const [h, backupData] = await Promise.all([
+          api('/api/superadmin/health'),
+          api('/api/superadmin/backups')
+        ]);
+
+        const backupRows = backupData.rows || [];
+        const statusLabel =
+          h.status === 'healthy' ? '<span class="sa-status good">سليم</span>' :
+          h.status === 'degraded' ? '<span class="sa-status warn">يحتاج انتباه</span>' :
+          '<span class="sa-status bad">حرج</span>';
+
+        const issues = h.academyIssues || [];
+        const errors = h.recentErrors || [];
 
         document.getElementById('healthRows').innerHTML = `
           <div class="sa-health-grid">
-            <article class="sa-health-item"><small>MongoDB</small><strong>${esc(h.database.state)}</strong><p>${esc(h.database.name || 'Database')}</p></article>
-            <article class="sa-health-item"><small>مدة تشغيل السيرفر</small><strong>${esc(uptime(h.server.uptimeSeconds))}</strong><p>${esc(h.server.node)}</p></article>
-            <article class="sa-health-item"><small>الذاكرة المستخدمة</small><strong>${esc(h.server.memoryMb.rss)} MB</strong><p>Heap: ${esc(h.server.memoryMb.heapUsed)} / ${esc(h.server.memoryMb.heapTotal)} MB</p></article>
-            <article class="sa-health-item"><small>الأكاديميات</small><strong>${esc(h.counts.academies)}</strong><p>إجمالي الحسابات</p></article>
-            <article class="sa-health-item"><small>المستخدمين</small><strong>${esc(h.counts.users)}</strong><p>جميع أدوار النظام</p></article>
-            <article class="sa-health-item"><small>سجل العمليات</small><strong>${esc(h.counts.auditLogs)}</strong><p>إجراءات موثقة</p></article>
+            <article class="sa-health-item">
+              <small>الحالة العامة</small>
+              <strong>${statusLabel}</strong>
+              <p>آخر فحص: ${fmtDate(h.checkedAt,true)}</p>
+            </article>
+            <article class="sa-health-item">
+              <small>MongoDB</small>
+              <strong>${esc(h.database.state)}</strong>
+              <p>Ping: ${h.database.pingMs == null ? '—' : esc(h.database.pingMs)+' ms'}</p>
+            </article>
+            <article class="sa-health-item">
+              <small>آخر Backup</small>
+              <strong>${h.backups.latest ? fmtDate(h.backups.latest.createdAt,true) : 'لا يوجد'}</strong>
+              <p>${h.backups.latest ? fmtBytes(h.backups.latest.sizeBytes) : 'أنشئ أول نسخة الآن'}</p>
+            </article>
+            <article class="sa-health-item">
+              <small>التخزين</small>
+              <strong>${h.storage.writable ? 'قابل للكتابة' : 'غير متاح'}</strong>
+              <p>المتاح: ${h.storage.freeMb == null ? '—' : esc(h.storage.freeMb)+' MB'}</p>
+            </article>
+            <article class="sa-health-item">
+              <small>البريد</small>
+              <strong>${h.email.configured ? 'SendGrid جاهز' : 'غير مكتمل'}</strong>
+              <p>${h.email.configured ? 'الإرسال مضبوط' : esc((h.email.missing || []).join(', ') || 'تحقق من الإعدادات')}</p>
+            </article>
+            <article class="sa-health-item">
+              <small>Zoom</small>
+              <strong>${esc(h.zoom.connectedAcademies)} أكاديمية مربوطة</strong>
+              <p>تنتهي خلال 24س: ${esc(h.zoom.expiringWithin24Hours)}</p>
+            </article>
+            <article class="sa-health-item">
+              <small>أخطاء السيرفر</small>
+              <strong>${esc(errors.length)}</strong>
+              <p>آخر الأخطاء المسجلة</p>
+            </article>
+            <article class="sa-health-item">
+              <small>أكاديميات تحتاج انتباه</small>
+              <strong>${esc(issues.length)}</strong>
+              <p>تعليق / اشتراك / Zoom</p>
+            </article>
           </div>
 
           <div class="sa-grid-2 sa-section">
             <article class="sa-card" style="box-shadow:none">
-              <div class="sa-card-head"><div><h2>الإعدادات الحساسة</h2><p>يظهر فقط هل المتغير مضبوط أم لا، بدون كشف القيم.</p></div></div>
+              <div class="sa-card-head">
+                <div><h2>النسخ الاحتياطي</h2><p>نسخ مضغوطة مع SHA-256 وتحقق قبل الاسترجاع.</p></div>
+              </div>
+              <div class="sa-config-list">
+                <div class="sa-config-row"><b>BACKUP_DIR دائم</b>${yesNo(h.configuration.backupDirectoryConfigured)}</div>
+                <div class="sa-config-row"><b>التخزين قابل للكتابة</b>${yesNo(h.storage.writable)}</div>
+                <div class="sa-config-row"><b>النسخ التلقائي</b>${yesNo(h.backups.automaticEnabled)}</div>
+                <div class="sa-config-row"><b>الاحتفاظ</b><span>${esc(h.backups.retentionCount)} نسخة</span></div>
+                <div class="sa-config-row"><b>كل</b><span>${esc(h.backups.intervalHours)} ساعة</span></div>
+                <div class="sa-config-row"><b>Restore في الإنتاج</b>${yesNo(h.backups.productionRestoreEnabled)}</div>
+              </div>
+              ${!h.storage.explicitlyConfigured ? `
+                <div class="sa-note sa-danger-note" style="margin-top:14px">
+                  BACKUP_DIR غير مضبوط. النسخ الحالية قد تكون على تخزين مؤقت. اربطه بمسار Railway Volume دائم.
+                </div>
+              ` : ''}
+            </article>
+
+            <article class="sa-card" style="box-shadow:none">
+              <div class="sa-card-head">
+                <div><h2>الخدمات الحساسة</h2><p>لا يتم عرض أي قيمة سرية.</p></div>
+              </div>
               <div class="sa-config-list">
                 <div class="sa-config-row"><b>JWT_SECRET</b>${yesNo(h.configuration.jwtConfigured)}</div>
                 <div class="sa-config-row"><b>MONGODB_URI</b>${yesNo(h.configuration.mongoConfigured)}</div>
                 <div class="sa-config-row"><b>ALLOWED_ORIGINS</b>${yesNo(h.configuration.allowedOriginsConfigured)}</div>
                 <div class="sa-config-row"><b>Super Admin</b>${yesNo(h.configuration.superAdminConfigured)}</div>
-                <div class="sa-config-row"><b>Zoom Server-to-Server</b>${yesNo(h.configuration.zoomConfigured)}</div>
-                <div class="sa-config-row"><b>Zoom Attendance Webhook</b>${yesNo(h.configuration.zoomWebhookConfigured)}</div>
-                <div class="sa-config-row"><b>SendGrid Email API</b>${yesNo(h.configuration.sendgridConfigured)}</div>
+                <div class="sa-config-row"><b>Zoom OAuth</b>${yesNo(h.configuration.zoomConfigured)}</div>
+                <div class="sa-config-row"><b>Zoom Webhook</b>${yesNo(h.configuration.zoomWebhookConfigured)}</div>
+                <div class="sa-config-row"><b>Zoom Token Encryption</b>${yesNo(h.configuration.zoomTokenEncryptionConfigured)}</div>
+                <div class="sa-config-row"><b>SendGrid</b>${yesNo(h.configuration.sendgridConfigured)}</div>
+              </div>
+            </article>
+          </div>
+
+          <section class="sa-card sa-section" style="box-shadow:none">
+            <div class="sa-card-head">
+              <div><h2>Backup + Restore</h2><p>أي Restore ينشئ نسخة أمان تلقائية من الحالة الحالية قبل الاسترجاع.</p></div>
+            </div>
+            <div class="sa-table-wrap">
+              <table class="sa-table">
+                <thead><tr><th>النسخة</th><th>الوقت</th><th>الحجم</th><th>المستندات</th><th>السبب</th><th>إجراءات</th></tr></thead>
+                <tbody>
+                  ${backupRows.length ? backupRows.map(row => `
+                    <tr>
+                      <td class="sa-row-title"><b>${esc(row.id)}</b><small>SHA-256: ${esc(String(row.sha256 || '').slice(0,16))}…</small></td>
+                      <td>${fmtDate(row.createdAt,true)}</td>
+                      <td>${fmtBytes(row.sizeBytes)}</td>
+                      <td>${esc(row.documentCount || 0)}</td>
+                      <td>${esc(row.reason || 'manual')}</td>
+                      <td>
+                        <div class="sa-actions">
+                          <button class="btn soft backup-validate" data-id="${esc(row.id)}" type="button">تحقق</button>
+                          <button class="btn ghost backup-restore" data-id="${esc(row.id)}" type="button">Restore</button>
+                        </div>
+                      </td>
+                    </tr>
+                  `).join('') : '<tr><td colspan="6" class="sa-empty">لا توجد نسخ احتياطية حتى الآن.</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <div class="sa-grid-2 sa-section">
+            <article class="sa-card" style="box-shadow:none">
+              <div class="sa-card-head"><div><h2>آخر أخطاء السيرفر</h2><p>يتم تسجيل أخطاء HTTP 500+ فقط، بدون جسم الطلب أو الأسرار.</p></div></div>
+              <div class="sa-table-wrap">
+                <table class="sa-table">
+                  <thead><tr><th>الوقت</th><th>الحالة</th><th>المسار</th><th>الرسالة</th></tr></thead>
+                  <tbody>
+                    ${errors.length ? errors.map(x => `
+                      <tr>
+                        <td>${fmtDate(x.createdAt,true)}</td>
+                        <td><span class="sa-status bad">${esc(x.status)}</span></td>
+                        <td><small>${esc(x.method)} ${esc(x.path)}</small></td>
+                        <td>${esc(x.message)}</td>
+                      </tr>
+                    `).join('') : '<tr><td colspan="4" class="sa-empty">لا توجد أخطاء 500 مسجلة.</td></tr>'}
+                  </tbody>
+                </table>
               </div>
             </article>
 
             <article class="sa-card" style="box-shadow:none">
-              <div class="sa-card-head"><div><h2>نتيجة الفحص</h2><p>آخر فحص: ${fmtDate(h.checkedAt,true)}</p></div></div>
-              <div class="sa-note ${h.ok ? '' : 'sa-danger-note'}">
-                ${h.ok
-                  ? 'قاعدة البيانات متصلة والسيرفر استجاب لفحص الصحة بنجاح.'
-                  : 'يوجد خلل في اتصال قاعدة البيانات. راجع Railway Logs وMongoDB Atlas.'}
+              <div class="sa-card-head"><div><h2>أكاديميات تحتاج انتباه</h2><p>حالة الحساب، الاشتراك أو تكامل Zoom.</p></div></div>
+              <div class="sa-table-wrap">
+                <table class="sa-table">
+                  <thead><tr><th>الأكاديمية</th><th>الحالة</th><th>الاشتراك</th><th>Zoom</th></tr></thead>
+                  <tbody>
+                    ${issues.length ? issues.map(x => `
+                      <tr>
+                        <td class="sa-row-title"><b>${esc(x.name)}</b><small>${esc(x.code)}</small></td>
+                        <td>${statusBadge(x.status)}</td>
+                        <td>${fmtDate(x.subscriptionEndsAt)}</td>
+                        <td>${x.zoomIntegration?.connected ? 'مربوط' : '—'}</td>
+                      </tr>
+                    `).join('') : '<tr><td colspan="4" class="sa-empty">لا توجد أكاديميات تحتاج انتباه حسب الفحص الحالي.</td></tr>'}
+                  </tbody>
+                </table>
               </div>
             </article>
           </div>
         `;
-        toast('تم تحديث فحص النظام');
+
+        document.querySelectorAll('.backup-validate').forEach(button => {
+          button.onclick = async () => {
+            try {
+              await api('/api/superadmin/backups/'+encodeURIComponent(button.dataset.id)+'/validate',{method:'POST'});
+              toast('النسخة سليمة وتم التحقق من SHA-256');
+            } catch (err) {
+              toast(err.message,'error');
+            }
+          };
+        });
+
+        document.querySelectorAll('.backup-restore').forEach(button => {
+          button.onclick = async () => {
+            const id = button.dataset.id;
+
+            if (!backupData.productionRestoreEnabled) {
+              toast('Restore الإنتاج معطل. فعّل ENABLE_PRODUCTION_RESTORE=true مؤقتًا أولًا.','error');
+              return;
+            }
+
+            const expected = 'RESTORE '+id;
+            const confirmation = prompt(
+              'تحذير: سيتم استبدال بيانات قاعدة البيانات بهذه النسخة.\n' +
+              'سيتم إنشاء Safety Backup تلقائيًا قبل التنفيذ.\n\n' +
+              'للتأكيد اكتب بالضبط:\n' + expected
+            );
+
+            if (confirmation !== expected) {
+              if (confirmation !== null) toast('تم إلغاء الاسترجاع: نص التأكيد غير مطابق','error');
+              return;
+            }
+
+            if (!confirm('تأكيد أخير: هل تريد تنفيذ Restore الآن؟')) return;
+
+            button.disabled = true;
+            try {
+              const result = await api('/api/superadmin/backups/'+encodeURIComponent(id)+'/restore',{
+                method:'POST',
+                body:JSON.stringify({ confirmation })
+              });
+              toast('تم الاسترجاع بنجاح. Safety Backup: '+result.safetyBackup.id);
+              await load();
+            } catch (err) {
+              toast(err.message,'error');
+            } finally {
+              button.disabled = false;
+            }
+          };
+        });
       } catch (err) {
         document.getElementById('healthRows').innerHTML = '<div class="sa-empty">'+esc(err.message)+'</div>';
       }
     };
 
     document.getElementById('healthRefresh').onclick = load;
+    document.getElementById('backupCreate').onclick = async () => {
+      const button = document.getElementById('backupCreate');
+      button.disabled = true;
+      button.textContent = 'جاري إنشاء النسخة...';
+
+      try {
+        await api('/api/superadmin/backups',{method:'POST'});
+        toast('تم إنشاء Backup والتحقق منه');
+        await load();
+      } catch (err) {
+        toast(err.message,'error');
+      } finally {
+        button.disabled = false;
+        button.textContent = 'إنشاء Backup الآن';
+      }
+    };
+
     await load();
   }
 
