@@ -894,7 +894,11 @@ const SA = (() => {
                 <div class="sa-config-row"><b>النسخ التلقائي</b>${yesNo(h.backups.automaticEnabled)}</div>
                 <div class="sa-config-row"><b>الاحتفاظ</b><span>${esc(h.backups.retentionCount)} نسخة</span></div>
                 <div class="sa-config-row"><b>كل</b><span>${esc(h.backups.intervalHours)} ساعة</span></div>
-                <div class="sa-config-row"><b>Restore في الإنتاج</b>${yesNo(h.backups.productionRestoreEnabled)}</div>
+                <div class="sa-config-row"><b>Restore في الإنتاج</b>${
+                  h.backups.productionRestoreEnabled
+                    ? '<span class="sa-status warn">مفتوح مؤقتًا</span>'
+                    : '<span class="sa-status good">مغلق للأمان</span>'
+                }</div>
               </div>
               ${!h.storage.explicitlyConfigured ? `
                 <div class="sa-note sa-danger-note" style="margin-top:14px">
