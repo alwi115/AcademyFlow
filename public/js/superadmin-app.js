@@ -784,10 +784,11 @@ const SA = (() => {
             <p>قاعدة البيانات، النسخ الاحتياطي، البريد، Zoom، التخزين وأخطاء السيرفر.</p>
           </div>
           <div class="sa-actions">
-            <button class="btn secondary" id="backupCreate" type="button">إنشاء Backup الآن</button>
-            <button class="btn primary" id="healthRefresh" type="button">فحص الآن</button>
+            <button class="btn secondary" id="backupCreate" data-action="create-backup" type="button">إنشاء Backup الآن</button>
+            <button class="btn primary" id="healthRefresh" data-action="refresh-health" type="button">فحص الآن</button>
           </div>
         </div>
+        <div id="backupActionStatus" class="sa-note" style="display:none;margin-bottom:12px"></div>
         <div id="healthRows"><div class="sa-empty">جاري الفحص...</div></div>
       </section>
     `;
@@ -1020,23 +1021,51 @@ const SA = (() => {
       }
     };
 
-    document.getElementById('healthRefresh').onclick = load;
-    document.getElementById('backupCreate').onclick = async () => {
-      const button = document.getElementById('backupCreate');
-      button.disabled = true;
-      button.textContent = 'جاري إنشاء النسخة...';
+    const setBackupStatus = (message, type = 'info') => {
+      const box = document.getElementById('backupActionStatus');
+      if (!box) return;
+
+      box.style.display = 'block';
+      box.textContent = message;
+      box.classList.toggle('sa-danger-note', type === 'error');
+    };
+
+    target.addEventListener('click', async event => {
+      const actionButton = event.target.closest('[data-action]');
+      if (!actionButton || !target.contains(actionButton)) return;
+
+      const action = actionButton.dataset.action;
+
+      if (action === 'refresh-health') {
+        event.preventDefault();
+        await load();
+        return;
+      }
+
+      if (action !== 'create-backup') return;
+
+      event.preventDefault();
+      if (actionButton.disabled) return;
+
+      actionButton.disabled = true;
+      actionButton.setAttribute('aria-busy', 'true');
+      actionButton.textContent = 'جاري إنشاء النسخة...';
+      setBackupStatus('بدأ إنشاء النسخة الاحتياطية. لا تغلق الصفحة حتى تظهر النتيجة.');
 
       try {
-        await api('/api/superadmin/backups',{method:'POST'});
-        toast('تم إنشاء Backup والتحقق منه');
+        const result = await api('/api/superadmin/backups',{method:'POST'});
+        setBackupStatus('تم إنشاء النسخة بنجاح: ' + (result?.id || 'Backup جديد'));
+        toast('تم إنشاء Backup بنجاح');
         await load();
       } catch (err) {
+        setBackupStatus('فشل إنشاء النسخة: ' + err.message, 'error');
         toast(err.message,'error');
       } finally {
-        button.disabled = false;
-        button.textContent = 'إنشاء Backup الآن';
+        actionButton.disabled = false;
+        actionButton.removeAttribute('aria-busy');
+        actionButton.textContent = 'إنشاء Backup الآن';
       }
-    };
+    });
 
     await load();
   }
