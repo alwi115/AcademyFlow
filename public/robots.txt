@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /academy/
+Disallow: /owner/
+Disallow: /student/
+Disallow: /instructor/
+Disallow: /superadmin/
+
+Sitemap: https://academyflow.up.railway.app/sitemap.xml

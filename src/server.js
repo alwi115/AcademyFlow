@@ -42,6 +42,43 @@ app.use(cors({
   credentials: true
 }));
 
+const STRICT_PUBLIC_CSP = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "form-action 'self'",
+  "script-src 'self'",
+  "script-src-attr 'none'",
+  "style-src 'self' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com data:",
+  "img-src 'self' data:",
+  "connect-src 'self'",
+  "frame-src 'none'",
+  "worker-src 'self'",
+  "manifest-src 'self'",
+  "media-src 'self'",
+  'upgrade-insecure-requests'
+].join('; ');
+
+const HARDENED_PUBLIC_PATHS = new Set([
+  '/',
+  '/index.html',
+  '/academy/login.html',
+  '/owner/login.html',
+  '/superadmin/login.html',
+  '/robots.txt',
+  '/sitemap.xml'
+]);
+
+app.use((req, res, next) => {
+  if (HARDENED_PUBLIC_PATHS.has(req.path)) {
+    res.setHeader('Content-Security-Policy', STRICT_PUBLIC_CSP);
+    res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+  }
+  next();
+});
+
 app.use((req, res, next) => {
   res.setHeader(
     'Permissions-Policy',
