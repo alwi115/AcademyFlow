@@ -22,6 +22,7 @@ const SA = (() => {
     health: ['صحة النظام','فحص فعلي لاتصال قاعدة البيانات والسيرفر والإعدادات الأساسية.'],
     audit: ['سجل العمليات','سجل إجراءات مالك النظام على الأكاديميات والباقات والإعدادات.'],
     privacy: ['طلبات الخصوصية','متابعة طلبات الوصول والتصحيح والحذف والنقل والاعتراض.'],
+    compliance: ['الامتثال والخصوصية','سجل أنشطة المعالجة وحوادث البيانات ومهل الإخطار.'],
     settings: ['إعدادات المنصة','إعدادات التجربة والسماح والدعم والهوية العامة للمنصة.']
   };
 
@@ -33,6 +34,7 @@ const SA = (() => {
     ['health','صحة النظام','H'],
     ['audit','سجل العمليات','L'],
     ['privacy','طلبات الخصوصية','P'],
+    ['compliance','الامتثال والخصوصية','C'],
     ['settings','الإعدادات','⚙']
   ];
 
@@ -1317,6 +1319,213 @@ const SA = (() => {
     await load();
   }
 
+  async function renderCompliance() {
+    const target = document.getElementById('saPageContent');
+    target.innerHTML = `
+      <div class="sa-grid-2">
+        <section class="sa-card">
+          <div class="sa-card-head">
+            <div>
+              <h2>سجل أنشطة معالجة البيانات</h2>
+              <p>سجل تشغيلي مستمر لفئات البيانات والأغراض والاحتفاظ والمستلمين والتحويلات والضوابط.</p>
+            </div>
+            <button class="btn secondary" id="processingRefresh" type="button">تحديث</button>
+          </div>
+          <div id="processingRows"><div class="sa-empty">جاري التحميل...</div></div>
+        </section>
+
+        <section class="sa-card">
+          <div class="sa-card-head">
+            <div>
+              <h2>سجل حوادث البيانات</h2>
+              <p>وثّق أي اختراق أو وصول غير مصرح به، وراقب مهلة 72 ساعة عندما تنطبق.</p>
+            </div>
+            <button class="btn primary" id="incidentCreate" type="button">تسجيل حادث</button>
+          </div>
+          <div id="incidentRows"><div class="sa-empty">جاري التحميل...</div></div>
+        </section>
+      </div>
+    `;
+
+    let activities = [];
+    let incidents = [];
+
+    const incidentDeadline = row => {
+      if (!row.detectedAt || (!row.rightsRisk && !row.highRiskToSubjects)) return '—';
+      const deadline = new Date(new Date(row.detectedAt).getTime() + 72 * 60 * 60 * 1000);
+      const overdue =
+        Date.now() > deadline.getTime() &&
+        (
+          (row.authorityNotificationRequired && !row.authorityNotifiedAt) ||
+          (row.subjectsNotificationRequired && !row.subjectsNotifiedAt)
+        );
+      return (overdue ? 'متأخر · ' : '') + fmtDate(deadline,true);
+    };
+
+    const drawActivities = () => {
+      document.getElementById('processingRows').innerHTML = `
+        <div class="sa-table-wrap">
+          <table class="sa-table">
+            <thead><tr><th>النشاط</th><th>الغرض</th><th>الاحتفاظ</th><th>المستلمون / النقل</th><th>آخر مراجعة</th><th></th></tr></thead>
+            <tbody>
+              ${activities.length ? activities.map(x => `
+                <tr>
+                  <td class="sa-row-title"><b>${esc(x.name)}</b><small>${esc((x.dataCategories || []).join('، '))}</small></td>
+                  <td>${esc(x.purpose)}</td>
+                  <td>${esc(x.retentionPeriod)}</td>
+                  <td><small style="display:block">${esc((x.recipients || []).join('، ') || '—')}</small><small style="display:block;color:var(--text-mute)">${esc((x.transferDestinations || []).join('، ') || 'بدون تحويل مسجل')}</small></td>
+                  <td>${fmtDate(x.lastReviewedAt,true)}</td>
+                  <td><button class="btn ghost processing-review" data-id="${esc(x._id)}" type="button">تأكيد المراجعة</button></td>
+                </tr>
+              `).join('') : '<tr><td colspan="6" class="sa-empty">لا توجد أنشطة مسجلة.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      document.querySelectorAll('.processing-review').forEach(button => {
+        button.onclick = async () => {
+          button.disabled = true;
+          try {
+            await api('/api/superadmin/compliance/processing-activities/'+encodeURIComponent(button.dataset.id)+'/review',{method:'POST'});
+            toast('تم تسجيل مراجعة نشاط المعالجة');
+            await loadActivities();
+          } catch (err) {
+            toast(err.message,'error');
+          } finally {
+            button.disabled = false;
+          }
+        };
+      });
+    };
+
+    const drawIncidents = () => {
+      document.getElementById('incidentRows').innerHTML = `
+        <div class="sa-table-wrap">
+          <table class="sa-table">
+            <thead><tr><th>الحادث</th><th>الخطر</th><th>الحالة</th><th>مهلة 72 ساعة</th><th>الإخطارات</th><th></th></tr></thead>
+            <tbody>
+              ${incidents.length ? incidents.map(x => `
+                <tr>
+                  <td class="sa-row-title"><b>${esc(x.incidentNumber)}</b><small>${esc(x.title)}</small></td>
+                  <td><span class="sa-status ${['high','critical'].includes(x.riskLevel) ? 'bad' : x.riskLevel === 'medium' ? 'warn' : 'info'}">${esc(x.riskLevel)}</span></td>
+                  <td>${esc(x.status)}</td>
+                  <td>${esc(incidentDeadline(x))}</td>
+                  <td><small style="display:block">الجهة: ${x.authorityNotifiedAt ? fmtDate(x.authorityNotifiedAt,true) : x.authorityNotificationRequired ? 'مطلوب' : 'غير مطلوب'}</small><small style="display:block;color:var(--text-mute)">الأشخاص: ${x.subjectsNotifiedAt ? fmtDate(x.subjectsNotifiedAt,true) : x.subjectsNotificationRequired ? 'مطلوب' : 'غير مطلوب'}</small></td>
+                  <td><button class="btn ghost incident-open" data-id="${esc(x._id)}" type="button">تحديث</button></td>
+                </tr>
+              `).join('') : '<tr><td colspan="6" class="sa-empty">لا توجد حوادث بيانات مسجلة.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      document.querySelectorAll('.incident-open').forEach(button => {
+        button.onclick = async () => {
+          const row = incidents.find(x => x._id === button.dataset.id);
+          if (!row) return;
+
+          await openModal({
+            title: row.incidentNumber+' · '+row.title,
+            subtitle: 'تم اكتشافه '+fmtDate(row.detectedAt,true),
+            values: {
+              status: row.status,
+              riskLevel: row.riskLevel,
+              rightsRisk: row.rightsRisk,
+              highRiskToSubjects: row.highRiskToSubjects,
+              authorityNotificationRequired: row.authorityNotificationRequired,
+              subjectsNotificationRequired: row.subjectsNotificationRequired,
+              authorityNotifiedAt: row.authorityNotifiedAt ? String(row.authorityNotifiedAt).slice(0,16) : '',
+              subjectsNotifiedAt: row.subjectsNotifiedAt ? String(row.subjectsNotifiedAt).slice(0,16) : '',
+              containmentActions: row.containmentActions || '',
+              correctiveActions: row.correctiveActions || ''
+            },
+            fields: [
+              ['status','الحالة','select',true,[['open','مفتوح'],['contained','تم الاحتواء'],['closed','مغلق']]],
+              ['riskLevel','مستوى الخطر','select',true,[['low','منخفض'],['medium','متوسط'],['high','عالٍ'],['critical','حرج']]],
+              ['rightsRisk','يوجد خطر على حقوق أصحاب البيانات','checkbox',false,'قد يتطلب إخطار الجهة المختصة خلال 72 ساعة.',true],
+              ['highRiskToSubjects','قد يسبب ضررًا جسيمًا أو مخاطر عالية','checkbox',false,'قد يتطلب إخطار أصحاب البيانات خلال 72 ساعة.',true],
+              ['authorityNotificationRequired','إخطار الجهة المختصة مطلوب','checkbox',false,'سجّل وقت الإخطار بعد تنفيذه.',true],
+              ['subjectsNotificationRequired','إخطار أصحاب البيانات مطلوب','checkbox',false,'سجّل وقت الإخطار بعد تنفيذه.',true],
+              ['authorityNotifiedAt','وقت إخطار الجهة المختصة','datetime-local',false],
+              ['subjectsNotifiedAt','وقت إخطار أصحاب البيانات','datetime-local',false],
+              ['containmentActions','إجراءات الاحتواء','textarea',false,null,true],
+              ['correctiveActions','الإجراءات التصحيحية','textarea',false,null,true]
+            ],
+            submitLabel: 'حفظ سجل الحادث',
+            onSubmit: async data => {
+              ['rightsRisk','highRiskToSubjects','authorityNotificationRequired','subjectsNotificationRequired']
+                .forEach(key => data[key] = Boolean(data[key]));
+              await api('/api/superadmin/compliance/incidents/'+encodeURIComponent(row._id),{
+                method:'PATCH',
+                body:JSON.stringify(data)
+              });
+              toast('تم تحديث سجل الحادث');
+              await loadIncidents();
+            }
+          });
+        };
+      });
+    };
+
+    const loadActivities = async () => {
+      activities = await api('/api/superadmin/compliance/processing-activities');
+      drawActivities();
+    };
+
+    const loadIncidents = async () => {
+      incidents = await api('/api/superadmin/compliance/incidents');
+      drawIncidents();
+    };
+
+    document.getElementById('processingRefresh').onclick = async () => {
+      try { await loadActivities(); } catch (err) { toast(err.message,'error'); }
+    };
+
+    document.getElementById('incidentCreate').onclick = async () => {
+      await openModal({
+        title: 'تسجيل حادث بيانات',
+        subtitle: 'سجّل الواقعة فور العلم بها. لا تنتظر اكتمال التحقيق لبدء التوثيق.',
+        values: {
+          detectedAt: new Date().toISOString().slice(0,16),
+          riskLevel: 'medium'
+        },
+        fields: [
+          ['title','عنوان مختصر','text',true],
+          ['detectedAt','وقت الاكتشاف','datetime-local',true],
+          ['occurredAt','وقت وقوع الحادث إن عُرف','datetime-local',false],
+          ['riskLevel','مستوى الخطر الأولي','select',true,[['low','منخفض'],['medium','متوسط'],['high','عالٍ'],['critical','حرج']]],
+          ['affectedSubjectsEstimate','عدد أصحاب البيانات التقريبي','number',false],
+          ['rightsRisk','قد يهدد حقوق أصحاب البيانات','checkbox',false,'قد تبدأ مهلة إخطار 72 ساعة للجهة المختصة.',true],
+          ['highRiskToSubjects','قد يسبب ضررًا جسيمًا أو مخاطر عالية','checkbox',false,'قد يتطلب إخطار أصحاب البيانات خلال 72 ساعة.',true],
+          ['authorityNotificationRequired','إخطار الجهة المختصة مطلوب','checkbox',false,'حدد وفق تقييم الواقعة والقانون.',true],
+          ['subjectsNotificationRequired','إخطار أصحاب البيانات مطلوب','checkbox',false,'حدد وفق تقييم الواقعة والقانون.',true],
+          ['dataCategories','فئات البيانات المتأثرة (سطر لكل فئة)','textarea',false,null,true],
+          ['description','وصف الحادث','textarea',true,null,true],
+          ['containmentActions','إجراءات الاحتواء الأولية','textarea',false,null,true],
+          ['correctiveActions','الإجراءات التصحيحية المخططة','textarea',false,null,true]
+        ],
+        submitLabel: 'إنشاء سجل الحادث',
+        onSubmit: async data => {
+          ['rightsRisk','highRiskToSubjects','authorityNotificationRequired','subjectsNotificationRequired']
+            .forEach(key => data[key] = Boolean(data[key]));
+          await api('/api/superadmin/compliance/incidents',{
+            method:'POST',
+            body:JSON.stringify(data)
+          });
+          toast('تم إنشاء سجل الحادث');
+          await loadIncidents();
+        }
+      });
+    };
+
+    try {
+      await Promise.all([loadActivities(),loadIncidents()]);
+    } catch (err) {
+      toast(err.message,'error');
+    }
+  }
+
   async function renderSettings() {
     const target = document.getElementById('saPageContent');
     target.innerHTML = '<div class="sa-empty">جاري تحميل الإعدادات...</div>';
@@ -1419,6 +1628,7 @@ const SA = (() => {
     if (page === 'health') return renderHealth();
     if (page === 'audit') return renderAudit();
     if (page === 'privacy') return renderPrivacy();
+    if (page === 'compliance') return renderCompliance();
     if (page === 'settings') return renderSettings();
 
     document.getElementById('saPageContent').innerHTML = '<div class="sa-card sa-empty">الصفحة غير موجودة.</div>';
