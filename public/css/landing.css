@@ -349,6 +349,15 @@ body.visitor-home::before{content:none!important}
   transition:transform .72s cubic-bezier(.18,.82,.18,1);
   pointer-events:none;z-index:1;
 }
+.visitor-home .system-wheel[data-angle="0"] .wheel-rotor{transform:rotate(0deg)}
+.visitor-home .system-wheel[data-angle="45"] .wheel-rotor{transform:rotate(45deg)}
+.visitor-home .system-wheel[data-angle="90"] .wheel-rotor{transform:rotate(90deg)}
+.visitor-home .system-wheel[data-angle="135"] .wheel-rotor{transform:rotate(135deg)}
+.visitor-home .system-wheel[data-angle="180"] .wheel-rotor{transform:rotate(180deg)}
+.visitor-home .system-wheel[data-angle="225"] .wheel-rotor{transform:rotate(225deg)}
+.visitor-home .system-wheel[data-angle="270"] .wheel-rotor{transform:rotate(270deg)}
+.visitor-home .system-wheel[data-angle="315"] .wheel-rotor{transform:rotate(315deg)}
+
 .visitor-home .rotor-line{
   position:absolute;right:50%;top:50%;
   width:41%;height:1px;background:linear-gradient(90deg,var(--forest),transparent);
