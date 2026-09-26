@@ -102,7 +102,10 @@ async function main() {
   }
 
   users.branch_manager = await makeUser('branch_manager', 'branch_manager', branchA._id);
+  users.group_instructor = await makeUser('instructor', 'Group-only Instructor');
 
+  const groupOnlyStudent = await makeUser('student', 'Group-only Student');
+  const otherGroupStudent = await makeUser('student', 'Other Group Student');
   const unEnrolledStudent = await makeUser('student', 'Unenrolled student');
   const branchBInstructor = await makeUser('instructor', 'Branch B Instructor');
   const branchBStudent = await makeUser('student', 'Branch B Student');
@@ -143,6 +146,24 @@ async function main() {
     status: 'active'
   });
 
+  const groupOnly = await Group.create({
+    academyId: academy._id,
+    branchId: branchA._id,
+    courseId: course._id,
+    instructorId: users.group_instructor._id,
+    name: 'Group-only Instructor Group',
+    status: 'active'
+  });
+
+  const otherCourseGroup = await Group.create({
+    academyId: academy._id,
+    branchId: branchA._id,
+    courseId: course._id,
+    instructorId: users.instructor._id,
+    name: 'Other Group Same Course',
+    status: 'active'
+  });
+
   await Enrollment.create({
     academyId: academy._id,
     studentId: users.student._id,
@@ -156,6 +177,22 @@ async function main() {
     studentId: branchBStudent._id,
     courseId: courseB._id,
     groupId: groupB._id,
+    status: 'active'
+  });
+
+  await Enrollment.create({
+    academyId: academy._id,
+    studentId: groupOnlyStudent._id,
+    courseId: course._id,
+    groupId: groupOnly._id,
+    status: 'active'
+  });
+
+  await Enrollment.create({
+    academyId: academy._id,
+    studentId: otherGroupStudent._id,
+    courseId: course._id,
+    groupId: otherCourseGroup._id,
     status: 'active'
   });
 
@@ -177,6 +214,19 @@ async function main() {
     assessmentId: quiz._id,
     courseId: course._id,
     studentId: users.student._id,
+    attemptNumber: 1,
+    status: 'pending_review',
+    totalMarks: 10,
+    score: 0,
+    percentage: 0,
+    requiresManualReview: true
+  });
+
+  const groupOnlyQuizAttempt = await QuizAttempt.create({
+    academyId: academy._id,
+    assessmentId: quiz._id,
+    courseId: course._id,
+    studentId: groupOnlyStudent._id,
     attemptNumber: 1,
     status: 'pending_review',
     totalMarks: 10,
@@ -269,6 +319,105 @@ async function main() {
     await expect('instructor', 'GET', '/api/instructor/options', 200);
     await expect('instructor', 'GET', '/api/instructor/quizzes', 200);
     await expect('instructor', 'GET', '/api/instructor/live', 200);
+
+    // Group-only instructors can work with their group, but never inherit whole-course data or write privileges.
+    const scopedStudents = await expect('group_instructor', 'GET', '/api/instructor/students', 200);
+    assert.strictEqual(scopedStudents.body.length, 1);
+    assert.strictEqual(String(scopedStudents.body[0].studentId._id), String(groupOnlyStudent._id));
+
+    const scopedGroups = await expect('group_instructor', 'GET', '/api/instructor/groups', 200);
+    assert.strictEqual(scopedGroups.body.length, 1);
+    assert.strictEqual(String(scopedGroups.body[0]._id), String(groupOnly._id));
+
+    const scopedGradebook = await expect('group_instructor', 'GET', '/api/instructor/gradebook', 200);
+    assert.strictEqual(scopedGradebook.body.length, 1);
+    assert.strictEqual(String(scopedGradebook.body[0].student._id), String(groupOnlyStudent._id));
+
+    const scopedAttempts = await expect(
+      'group_instructor',
+      'GET',
+      '/api/instructor/quizzes/' + quiz._id + '/attempts',
+      200
+    );
+    assert.strictEqual(scopedAttempts.body.length, 1);
+    assert.strictEqual(String(scopedAttempts.body[0].student._id), String(groupOnlyStudent._id));
+
+    await expect(
+      'group_instructor',
+      'GET',
+      '/api/instructor/quizzes/' + quiz._id + '/attempts/' + quizAttempt._id,
+      404
+    );
+
+    await expect('group_instructor', 'POST', '/api/instructor/lessons', 403, {
+      courseId: String(course._id),
+      title: 'Forbidden group-level lesson'
+    });
+
+    await expect('group_instructor', 'POST', '/api/instructor/assignments', 403, {
+      courseId: String(course._id),
+      title: 'Forbidden group-level assignment'
+    });
+
+    await expect('group_instructor', 'POST', '/api/instructor/quizzes', 403, {
+      courseId: String(course._id),
+      title: 'Forbidden group-level quiz'
+    });
+
+    await expect('group_instructor', 'POST', '/api/instructor/notifications', 403, {
+      courseId: String(course._id),
+      title: 'Forbidden course announcement',
+      message: 'Should not reach the whole course'
+    });
+
+    await expect('group_instructor', 'POST', '/api/instructor/attendance', 403, {
+      studentId: String(otherGroupStudent._id),
+      courseId: String(course._id),
+      groupId: String(otherCourseGroup._id),
+      date: new Date().toISOString(),
+      status: 'present'
+    });
+
+    await expect('group_instructor', 'POST', '/api/instructor/attendance', 201, {
+      studentId: String(groupOnlyStudent._id),
+      courseId: String(course._id),
+      groupId: String(groupOnly._id),
+      date: new Date().toISOString(),
+      status: 'present'
+    });
+
+    await expect('group_instructor', 'POST', '/api/instructor/live', 403, {
+      courseId: String(course._id),
+      title: 'Forbidden course-wide live',
+      startAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
+    });
+
+    await expect('group_instructor', 'POST', '/api/instructor/live', 403, {
+      courseId: String(course._id),
+      groupId: String(otherCourseGroup._id),
+      title: 'Forbidden other-group live',
+      startAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
+    });
+
+    const ownGroupLive = await expect('group_instructor', 'POST', '/api/instructor/live', 201, {
+      courseId: String(course._id),
+      groupId: String(groupOnly._id),
+      title: 'Allowed own-group live',
+      startAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
+    });
+    assert.strictEqual(String(ownGroupLive.body.group._id), String(groupOnly._id));
+
+    // The direct course instructor retains full course-level content rights.
+    await expect('instructor', 'POST', '/api/instructor/lessons', 201, {
+      courseId: String(course._id),
+      title: 'Direct instructor lesson'
+    });
+
+    await expect('instructor', 'POST', '/api/instructor/notifications', 201, {
+      courseId: String(course._id),
+      title: 'Direct instructor announcement',
+      message: 'Allowed'
+    });
 
     // Accountant: financial access only, no teaching/people administration.
     await expect('accountant', 'GET', '/api/academy/payments', 200);
