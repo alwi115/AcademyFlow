@@ -7,6 +7,9 @@ const path = require('path');
 const connectDB = require('./config/db');
 const bootstrapSuperAdmin = require('./services/superadmin-bootstrap.service');
 const liveReminderWorker = require('./services/live-reminder.service');
+const backupWorker = require('./services/backup-worker.service');
+const backupService = require('./services/backup.service');
+const SystemError = require('./models/SystemError');
 
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 64) {
   throw new Error('JWT_SECRET must be at least 64 characters');
@@ -87,6 +90,22 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use((req, res, next) => {
+  if (
+    backupService.isBusy() &&
+    backupService.operation() === 'restore' &&
+    req.path.startsWith('/api/') &&
+    !req.path.startsWith('/api/superadmin/')
+  ) {
+    res.setHeader('Retry-After', '60');
+    return res.status(503).json({
+      message: 'System restore is in progress. Please retry shortly.'
+    });
+  }
+
+  next();
+});
+
 app.post('/api/webhooks/zoom', express.raw({ type: 'application/json', limit: '1mb' }), require('./controllers/zoom-webhook.controller').handle);
 
 app.use(express.json({ limit: '1mb' }));
@@ -145,6 +164,21 @@ app.use((err, req, res, next) => {
   console.error(err);
   const status = Number(err.status || 500);
 
+  if (status >= 500) {
+    SystemError.create({
+      status,
+      method: String(req.method || '').slice(0, 16),
+      path: String(req.path || '').slice(0, 1000),
+      message: String(err.message || 'Internal server error').slice(0, 1500),
+      code: String(err.code || '').slice(0, 120),
+      actorId: req.user?.sub || null,
+      actorRole: req.user?.role || '',
+      academyId: req.user?.academyId || null
+    }).catch(logErr => {
+      console.error('[system-error-log]', logErr.message);
+    });
+  }
+
   res.status(status).json({
     message: status >= 500 ? 'Internal server error' : err.message
   });
@@ -156,6 +190,7 @@ async function start() {
   await connectDB();
   await bootstrapSuperAdmin();
   liveReminderWorker.start();
+  backupWorker.start();
 
   app.listen(port, () => {
     console.log(`AcademyFlow running on http://localhost:${port}`);
