@@ -1475,6 +1475,7 @@ const AF = (() => {
           <div class="academy-detail-item"><small>مزود البريد</small><div>Resend</div></div>
           <div class="academy-detail-item"><small>البريد المرسل منه</small><div>—</div></div>
           <div class="academy-detail-item"><small>API Key</small><div>—</div></div>
+          <div class="academy-detail-item"><small>بريد الاختبار</small><div>—</div></div>
         </div>
 
         <div class="academy-note" style="margin-top:12px">
@@ -1482,11 +1483,13 @@ const AF = (() => {
           <code>RESEND_API_KEY</code> +
           <code>EMAIL_FROM</code> +
           <code>PUBLIC_URL</code>.
+          وللاختبار باستخدام <code>onboarding@resend.dev</code> أضف:
+          <code>RESEND_TEST_TO</code>.
           لا تضع مفتاح Resend داخل الموقع أو ترسله لأي شخص.
         </div>
 
         <div class="academy-row-actions" style="margin-top:12px">
-          <button class="btn primary" id="academyTestEmail" type="button">إرسال بريد تجريبي إلى حسابي</button>
+          <button class="btn primary" id="academyTestEmail" type="button">إرسال بريد تجريبي</button>
           <button class="btn soft" id="academyRefreshEmailStatus" type="button">تحديث حالة البريد</button>
           <span id="academyTestEmailMsg" class="academy-note"></span>
         </div>
@@ -1524,6 +1527,7 @@ const AF = (() => {
           <div class="academy-detail-item"><small>مزود البريد</small><div>Resend · HTTPS API</div></div>
           <div class="academy-detail-item"><small>البريد المرسل منه</small><div>${esc(emailStatus.from || '—')}</div></div>
           <div class="academy-detail-item"><small>API Key</small><div>${emailStatus.apiKeyPresent ? 'موجود ومخفي' : 'غير موجود'}</div></div>
+          <div class="academy-detail-item"><small>بريد الاختبار</small><div>${esc(emailStatus.testTo || 'سيستخدم بريد حساب AcademyFlow')}</div></div>
         `;
       } catch (err) {
         state.innerHTML = '<span class="academy-status bad">تعذر قراءة حالة البريد</span>';

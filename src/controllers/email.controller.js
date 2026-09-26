@@ -4,13 +4,16 @@ const mailer = require('../services/mailer.service');
 
 async function status(req, res) {
   const info = mailer.configStatus();
+  const testTo = String(process.env.RESEND_TEST_TO || '').trim();
 
   res.json({
     provider: info.provider,
     configured: info.configured,
     missing: info.missing,
     from: info.from || '',
-    apiKeyPresent: Boolean(info.apiKeyPresent)
+    apiKeyPresent: Boolean(info.apiKeyPresent),
+    testTo,
+    testToConfigured: Boolean(testTo)
   });
 }
 
@@ -24,9 +27,12 @@ async function test(req, res) {
     }).select('name email')
   ]);
 
-  if (!user?.email) {
+  const configuredTestTo = String(process.env.RESEND_TEST_TO || '').trim();
+  const recipient = configuredTestTo || String(user?.email || '').trim();
+
+  if (!recipient) {
     return res.status(400).json({
-      message: 'حسابك لا يحتوي على بريد إلكتروني صالح للاختبار'
+      message: 'لا يوجد بريد مخصص للاختبار. أضف RESEND_TEST_TO في Railway.'
     });
   }
 
@@ -41,14 +47,15 @@ async function test(req, res) {
 
   try {
     const result = await mailer.sendTestEmail({
-      to: user.email,
+      to: recipient,
       academyName: academy?.name || 'AcademyFlow'
     });
 
     res.json({
       ok: true,
       provider: 'resend',
-      to: user.email,
+      to: recipient,
+      usedDedicatedTestAddress: Boolean(configuredTestTo),
       messageId: result?.messageId || ''
     });
   } catch (err) {
@@ -57,7 +64,8 @@ async function test(req, res) {
     res.status(502).json({
       message: 'فشل إرسال البريد التجريبي عبر Resend',
       error: String(err.message || 'Resend error').slice(0,500),
-      code: String(err.code || '').slice(0,120)
+      code: String(err.code || '').slice(0,120),
+      to: recipient
     });
   }
 }
