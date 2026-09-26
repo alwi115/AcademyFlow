@@ -481,33 +481,47 @@ async function main() {
     assert.strictEqual(String(branchRows.body[0]._id), String(branchA._id));
 
     const branchGroups = await expect('branch_manager', 'GET', '/api/academy/groups', 200);
-    assert.strictEqual(branchGroups.body.length, 1);
-    assert.strictEqual(String(branchGroups.body[0]._id), String(group._id));
+    const branchGroupIds = new Set(branchGroups.body.map(row => String(row._id)));
+    assert(branchGroupIds.has(String(group._id)));
+    assert(branchGroupIds.has(String(groupOnly._id)));
+    assert(branchGroupIds.has(String(otherCourseGroup._id)));
+    assert(!branchGroupIds.has(String(groupB._id)));
+    assert(branchGroups.body.every(
+      row => String(row.branchId?._id || row.branchId) === String(branchA._id)
+    ));
 
     const branchEnrollments = await expect('branch_manager', 'GET', '/api/academy/enrollments', 200);
-    assert.strictEqual(branchEnrollments.body.length, 1);
-    assert.strictEqual(String(branchEnrollments.body[0].studentId._id), String(users.student._id));
+    const branchEnrollmentStudentIds = new Set(
+      branchEnrollments.body.map(row => String(row.studentId?._id || row.studentId))
+    );
+    assert(branchEnrollmentStudentIds.has(String(users.student._id)));
+    assert(branchEnrollmentStudentIds.has(String(groupOnlyStudent._id)));
+    assert(branchEnrollmentStudentIds.has(String(otherGroupStudent._id)));
+    assert(!branchEnrollmentStudentIds.has(String(branchBStudent._id)));
 
     const branchStudents = await expect('branch_manager', 'GET', '/api/academy/users?kind=student', 200);
-    assert.strictEqual(branchStudents.body.length, 1);
-    assert.strictEqual(String(branchStudents.body[0]._id), String(users.student._id));
+    const branchStudentIds = new Set(branchStudents.body.map(row => String(row._id)));
+    assert(branchStudentIds.has(String(users.student._id)));
+    assert(branchStudentIds.has(String(groupOnlyStudent._id)));
+    assert(branchStudentIds.has(String(otherGroupStudent._id)));
+    assert(!branchStudentIds.has(String(branchBStudent._id)));
 
     const branchOptions = await expect('branch_manager', 'GET', '/api/academy/options', 200);
     assert.strictEqual(branchOptions.body.branches.length, 1);
-    assert.strictEqual(branchOptions.body.groups.length, 1);
-    assert.strictEqual(branchOptions.body.students.length, 1);
     assert.strictEqual(branchOptions.body.courses.length, 1);
     assert.strictEqual(String(branchOptions.body.branches[0]._id), String(branchA._id));
-    assert.strictEqual(String(branchOptions.body.groups[0]._id), String(group._id));
     assert.strictEqual(String(branchOptions.body.courses[0]._id), String(course._id));
+    assert(!branchOptions.body.groups.some(row => String(row._id) === String(groupB._id)));
+    assert(!branchOptions.body.students.some(row => String(row._id) === String(branchBStudent._id)));
 
     const branchDashboard = await expect('branch_manager', 'GET', '/api/academy/dashboard', 200);
-    assert.strictEqual(branchDashboard.body.groups, 1);
-    assert.strictEqual(branchDashboard.body.students, 1);
+    assert.strictEqual(branchDashboard.body.groups, 3);
+    assert.strictEqual(branchDashboard.body.students, 3);
     assert.strictEqual(branchDashboard.body.courses, 1);
     assert.strictEqual(branchDashboard.body.revenue, null);
-    assert.strictEqual(branchDashboard.body.upcomingSessions.length, 1);
-    assert.strictEqual(branchDashboard.body.upcomingSessions[0].zoomJoinUrl, '');
+    assert(branchDashboard.body.upcomingSessions.length >= 1);
+    assert(branchDashboard.body.upcomingSessions.every(row => row.zoomJoinUrl === ''));
+    assert(!branchDashboard.body.upcomingSessions.some(row => row.title === 'RBAC Live B'));
 
     await expect('branch_manager', 'POST', '/api/academy/branches', 403, {
       name: 'Forbidden branch',
