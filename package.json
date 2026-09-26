@@ -23,7 +23,8 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.0",
-    "bson": "^6.10.4"
+    "bson": "^6.10.4",
+    "@aws-sdk/client-s3": "^3.883.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
