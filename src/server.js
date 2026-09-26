@@ -42,9 +42,18 @@ app.use(cors({
   credentials: true
 }));
 
+app.use((req, res, next) => {
+  res.setHeader(
+    'Permissions-Policy',
+    'camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()'
+  );
+  next();
+});
+
 app.post('/api/webhooks/zoom', express.raw({ type: 'application/json', limit: '1mb' }), require('./controllers/zoom-webhook.controller').handle);
 
 app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: false, limit: '16kb' }));
 
 app.use(rateLimit({
   windowMs: 15 * 60 * 1000,
