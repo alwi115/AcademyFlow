@@ -154,7 +154,7 @@ async function attendance(req, res) {
   const rows = await Attendance.find(query)
     .populate('studentId', 'name email')
     .populate('courseId', 'title code')
-    .populate('groupId', 'name')
+    .populate({ path: 'groupId', match: { academyId: req.academyId }, select: 'name' })
     .sort({ date: -1 })
     .limit(500);
 
