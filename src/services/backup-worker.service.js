@@ -37,6 +37,17 @@ function start() {
   timer = setInterval(run, intervalMs());
   timer.unref?.();
 
+  backups.listBackups()
+    .then(rows => {
+      console.log('[backup] persistent storage check existing backups:', rows.length);
+      if (rows[0]?.id) {
+        console.log('[backup] latest existing backup:', rows[0].id);
+      }
+    })
+    .catch(err => {
+      console.error('[backup] persistent storage check failed', err.message);
+    });
+
   console.log('[backup] automatic backups enabled');
 }
 
