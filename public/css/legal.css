@@ -256,3 +256,10 @@
   .legal-grid,.legal-data-list,.legal-form{grid-template-columns:1fr;}
   .legal-section{padding:17px;border-radius:17px;}
 }
+
+.legal-mt-14{margin-top:14px;}
+.legal-mt-16{margin-top:16px;}
+.legal-mt-18{margin-top:18px;}
+.legal-mb-16{margin-bottom:16px;}
+.legal-inline-links{display:inline-flex;gap:12px;flex-wrap:wrap;margin-inline-start:12px;}
+.legal-login-links{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:14px;font-size:11px;}
