@@ -73,6 +73,7 @@ const HARDENED_PUBLIC_PATHS = new Set([
   '/owner/login.html',
   '/superadmin/login.html',
   '/academy/legal-acceptance.html',
+  '/legal/',
   '/legal/index.html',
   '/legal/privacy.html',
   '/legal/terms.html',
