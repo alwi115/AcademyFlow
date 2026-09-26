@@ -215,6 +215,44 @@ async function accessibleStudentIds(req, courseId = null) {
   )];
 }
 
+async function studentCourseAccessFilter(req, extra = {}) {
+  const enrollments = await Enrollment.find(
+    await enrollmentAccessFilter(req, {
+      status: { $in: ['active','paused','completed'] }
+    })
+  ).select('studentId courseId');
+
+  const byCourse = new Map();
+
+  for (const row of enrollments) {
+    const courseId = String(row.courseId || '');
+    const studentId = String(row.studentId || '');
+    if (!courseId || !studentId) continue;
+
+    if (!byCourse.has(courseId)) byCourse.set(courseId, new Set());
+    byCourse.get(courseId).add(studentId);
+  }
+
+  const clauses = [...byCourse.entries()].map(([courseId, studentIds]) => ({
+    courseId,
+    studentId: { $in: [...studentIds] }
+  }));
+
+  if (!clauses.length) {
+    return {
+      academyId: req.academyId,
+      _id: { $in: [] },
+      ...extra
+    };
+  }
+
+  return {
+    academyId: req.academyId,
+    ...extra,
+    $or: clauses
+  };
+}
+
 async function assertStudentEnrollment(req, studentId, courseId) {
   await assertCourse(req, courseId);
 
@@ -262,6 +300,7 @@ module.exports = {
   attendanceAccessFilter,
   groupAccessFilter,
   accessibleStudentIds,
+  studentCourseAccessFilter,
   assertStudentEnrollment,
   assertGroupAccess
 };
