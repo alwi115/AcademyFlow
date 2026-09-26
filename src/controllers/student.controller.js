@@ -36,24 +36,15 @@ async function enrolledCourseIds(academyId, studentId) {
 }
 
 async function recalcProgress(academyId, studentId, courseId) {
-  const publishedLessons = await Lesson.find({
-    academyId,
-    courseId,
-    status: 'published'
-  }).select('_id');
-
-  const lessonIds = publishedLessons.map(row => row._id);
-  const totalLessons = lessonIds.length;
-
-  const completedLessons = totalLessons
-    ? await LessonProgress.countDocuments({
-        academyId,
-        studentId,
-        courseId,
-        lessonId: { $in: lessonIds },
-        completed: true
-      })
-    : 0;
+  const [totalLessons, completedLessons] = await Promise.all([
+    Lesson.countDocuments({ academyId, courseId, status: 'published' }),
+    LessonProgress.countDocuments({
+      academyId,
+      studentId,
+      courseId,
+      completed: true
+    })
+  ]);
 
   const progress = totalLessons
     ? Math.min(100, Math.round((completedLessons / totalLessons) * 100))
@@ -94,7 +85,7 @@ async function dashboard(req, res) {
     .filter(x => x.courseId)
     .map(x => x.courseId._id);
 
-  const [upcomingLive, pendingAssignments, issuedCertificates, unreadNotifications] = await Promise.all([
+  const [upcomingLive, publishedAssignments, issuedCertificates, unreadNotifications] = await Promise.all([
     LiveSession.find({
       academyId,
       courseId: { $in: courseIds },
@@ -105,13 +96,13 @@ async function dashboard(req, res) {
       .populate('instructorId', 'name')
       .sort({ startAt: 1 })
       .limit(5),
-    Assessment.countDocuments({
+    Assessment.find({
       academyId,
       courseId: { $in: courseIds },
       type: 'assignment',
       status: 'published',
       $or: [{ dueAt: null }, { dueAt: { $gte: now } }]
-    }),
+    }).select('_id'),
     Certificate.countDocuments({
       academyId,
       studentId,
@@ -124,6 +115,19 @@ async function dashboard(req, res) {
       channel: 'in_app'
     })
   ]);
+
+  const submittedAssignmentIds = publishedAssignments.length
+    ? await AssignmentSubmission.distinct('assessmentId', {
+        academyId,
+        studentId,
+        assessmentId: { $in: publishedAssignments.map(row => row._id) }
+      })
+    : [];
+
+  const submittedSet = new Set(submittedAssignmentIds.map(String));
+  const pendingAssignments = publishedAssignments.filter(
+    row => !submittedSet.has(String(row._id))
+  ).length;
 
   const averageProgress = enrollments.length
     ? Math.round(enrollments.reduce((sum, row) => sum + Number(row.progress || 0), 0) / enrollments.length)
