@@ -725,6 +725,7 @@ async function updateSettings(req, res) {
     'supportPhone',
     'legalEntityName',
     'commercialRegistrationNumber',
+    'ecommerceLicenseNumber',
     'taxNumber',
     'businessAddress',
     'privacyOfficerEmail',
