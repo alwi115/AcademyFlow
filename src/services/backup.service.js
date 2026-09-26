@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const { promisify } = require('util');
 const mongoose = require('mongoose');
 const { EJSON } = require('bson');
+const externalBackup = require('./external-backup.service');
 
 const gzip = promisify(zlib.gzip);
 const gunzip = promisify(zlib.gunzip);
@@ -241,7 +242,11 @@ async function writeBackup(reason = 'manual') {
     { flag: 'wx', mode: 0o600 }
   );
 
-  return metadata;
+  return {
+    ...metadata,
+    _dataPath: filePath,
+    _metaPath: metaPath
+  };
 }
 
 async function pruneBackups() {
@@ -272,7 +277,42 @@ async function createBackup({ reason = 'manual' } = {}) {
   busyOperation = 'backup';
 
   try {
-    const metadata = await writeBackup(reason);
+    const written = await writeBackup(reason);
+    let external = {
+      configured: false,
+      uploaded: false,
+      provider: 's3-compatible'
+    };
+
+    try {
+      external = await externalBackup.mirrorBackup({
+        dataPath: written._dataPath,
+        metadataPath: written._metaPath
+      });
+    } catch (err) {
+      external = {
+        configured: externalBackup.configured(),
+        uploaded: false,
+        provider: 's3-compatible',
+        error: String(err.message || err).slice(0, 800)
+      };
+      console.error('[backup] external mirror failed', external.error);
+    }
+
+    const metadata = {
+      ...written,
+      external
+    };
+    delete metadata._dataPath;
+    delete metadata._metaPath;
+
+    const metaPath = path.join(backupDir(), metadata.id + '.meta.json');
+    await fs.writeFile(
+      metaPath,
+      JSON.stringify(metadata, null, 2),
+      { mode: 0o600 }
+    );
+
     await pruneBackups();
     return metadata;
   } finally {
@@ -541,6 +581,7 @@ async function storageStatus() {
     explicitlyConfigured: explicitStorageConfigured(),
     encryptionConfigured: encryptionConfigured(),
     productionReady: productionReady(),
+    externalBackup: externalBackup.configStatus(),
     writable,
     freeBytes,
     totalBytes,
