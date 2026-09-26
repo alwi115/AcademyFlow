@@ -166,7 +166,7 @@ const SA = (() => {
               </div>
 
               <div class="sa-top-actions">
-                <button class="theme-toggle" type="button" onclick="toggleTheme()" title="فاتح / داكن">◐</button>
+                <button class="theme-toggle" data-theme-toggle data-theme-icon type="button" title="فاتح / داكن">◐</button>
                 <div class="sa-user">
                   <span class="sa-avatar">${esc((user.name || 'AF').slice(0,2).toUpperCase())}</span>
                   <span><b>${esc(user.name || 'مالك النظام')}</b><span>${esc(user.username || 'superadmin')}</span></span>

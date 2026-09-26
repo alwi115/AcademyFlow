@@ -228,7 +228,7 @@ const AF = (() => {
                 </div>
               </div>
               <div class="academy-toolbar">
-                <button class="theme-toggle" type="button" onclick="toggleTheme()" title="تبديل الوضع">◐</button>
+                <button class="theme-toggle" data-theme-toggle data-theme-icon type="button" title="تبديل الوضع">◐</button>
                 <div class="academy-user">
                   <span class="academy-user-avatar">${esc((user.name || 'AF').slice(0,2).toUpperCase())}</span>
                   <span><b>${esc(user.name || 'المستخدم')}</b><span>${esc(roleLabels[user.role] || user.role)}</span></span>

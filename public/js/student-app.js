@@ -165,7 +165,7 @@ const StudentPortal = (() => {
               </div>
 
               <div class="student-top-actions">
-                <button class="theme-toggle" type="button" onclick="toggleTheme()" title="فاتح / داكن">◐</button>
+                <button class="theme-toggle" data-theme-toggle data-theme-icon type="button" title="فاتح / داكن">◐</button>
                 <div class="student-user">
                   <span class="student-avatar">${esc((user.name || 'ST').slice(0,2).toUpperCase())}</span>
                   <span><b>${esc(user.name || 'الطالب')}</b><span>${esc(user.email || '')}</span></span>
