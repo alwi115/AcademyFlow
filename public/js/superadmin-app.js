@@ -861,6 +861,7 @@ const SA = (() => {
               </div>
               <div class="sa-config-list">
                 <div class="sa-config-row"><b>BACKUP_DIR دائم</b>${yesNo(h.configuration.backupDirectoryConfigured)}</div>
+                <div class="sa-config-row"><b>تشفير AES-256-GCM</b>${yesNo(h.configuration.backupEncryptionConfigured)}</div>
                 <div class="sa-config-row"><b>التخزين قابل للكتابة</b>${yesNo(h.storage.writable)}</div>
                 <div class="sa-config-row"><b>النسخ التلقائي</b>${yesNo(h.backups.automaticEnabled)}</div>
                 <div class="sa-config-row"><b>الاحتفاظ</b><span>${esc(h.backups.retentionCount)} نسخة</span></div>
@@ -869,7 +870,12 @@ const SA = (() => {
               </div>
               ${!h.storage.explicitlyConfigured ? `
                 <div class="sa-note sa-danger-note" style="margin-top:14px">
-                  BACKUP_DIR غير مضبوط. النسخ الحالية قد تكون على تخزين مؤقت. اربطه بمسار Railway Volume دائم.
+                  BACKUP_DIR غير مضبوط. اربطه بمسار Railway Volume دائم قبل الاعتماد على النسخ.
+                </div>
+              ` : ''}
+              ${!h.storage.encryptionConfigured ? `
+                <div class="sa-note sa-danger-note" style="margin-top:14px">
+                  BACKUP_ENCRYPTION_KEY غير مضبوط. Backup الإنتاج لن يعمل حتى تضيف مفتاحًا مستقلًا بطول 32 حرفًا أو أكثر.
                 </div>
               ` : ''}
             </article>
