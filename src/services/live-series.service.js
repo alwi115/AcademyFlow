@@ -1,6 +1,7 @@
 const LiveSeries = require('../models/LiveSeries');
 const LiveSession = require('../models/LiveSession');
 const zoom = require('./zoom.service');
+const Academy = require('../models/Academy');
 
 function badRequest(message) {
   const err = new Error(message);
@@ -186,9 +187,9 @@ async function createRecurringSeries({
       notifyEmail: series.notifyEmail
     });
 
-    if (zoom.configured()) {
+    if (zoom.configured() && zoom.isConnected(academy)) {
       try {
-        const meeting = await zoom.createMeeting({
+        const meeting = await zoom.createMeeting(academy, {
           topic: title,
           startTime: startAt,
           duration: durationMinutes,
@@ -215,6 +216,9 @@ async function createRecurringSeries({
 }
 
 async function cancelFutureSeries({ series, from = new Date() }) {
+  const academy = await Academy.findById(series.academyId)
+    .select('zoomIntegration.connected');
+
   const rows = await LiveSession.find({
     academyId: series.academyId,
     seriesId: series._id,
@@ -226,7 +230,7 @@ async function cancelFutureSeries({ series, from = new Date() }) {
 
   for (const row of rows) {
     try {
-      await zoom.deleteMeeting(row.zoomMeetingId);
+      await zoom.deleteMeeting(academy, row.zoomMeetingId);
     } catch (err) {
       console.error('[live-series cancel zoom]', err.message);
     }
