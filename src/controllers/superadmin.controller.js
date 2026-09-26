@@ -718,7 +718,18 @@ async function updateSettings(req, res) {
   const settings = await platformSettings();
   const before = settings.toObject();
 
-  const textFields = ['platformName','defaultCurrency','supportEmail','supportPhone','announcement'];
+  const textFields = [
+    'platformName',
+    'defaultCurrency',
+    'supportEmail',
+    'supportPhone',
+    'legalEntityName',
+    'commercialRegistrationNumber',
+    'taxNumber',
+    'businessAddress',
+    'privacyOfficerEmail',
+    'announcement'
+  ];
   for (const key of textFields) {
     if (req.body[key] !== undefined) settings[key] = String(req.body[key] ?? '').trim();
   }
