@@ -235,8 +235,10 @@ window.AcademyQuizAdmin = (() => {
               <div class="quiz-admin-stats">
                 <span><b>${esc(row.questionCount)}</b> سؤال</span>
                 <span><b>${esc(row.totalMarks)}</b> درجة</span>
-                <span><b>${esc(row.attemptCount)}</b> محاولة</span>
-                <span><b>${esc(row.pendingReviewCount)}</b> تحتاج تصحيح</span>
+                ${user()?.role === 'content_manager' ? '' : `
+                  <span><b>${esc(row.attemptCount)}</b> محاولة</span>
+                  <span><b>${esc(row.pendingReviewCount)}</b> تحتاج تصحيح</span>
+                `}
               </div>
               <div class="quiz-admin-meta">
                 <span>المدة: ${esc(row.durationMinutes || 0)} د</span>
@@ -611,7 +613,8 @@ window.AcademyQuizAdmin = (() => {
       try{
         const data=await api(apiBase() + '/quizzes/'+encodeURIComponent(id));
         const quiz=data.quiz;
-        const editable=quiz.status==='draft' && data.attempts.length===0;
+        const canReviewAttempts=user()?.role !== 'content_manager';
+        const editable=quiz.status==='draft' && !data.hasAttempts;
 
         target.innerHTML=`
           <section class="academy-card quiz-builder-hero">
@@ -671,31 +674,33 @@ window.AcademyQuizAdmin = (() => {
             </div>
           </section>
 
-          <section class="academy-card academy-section">
-            <div class="academy-card-head">
-              <div><h2>محاولات الطلاب</h2><p>النتائج والتصحيح اليدوي للإجابات القصيرة.</p></div>
-              <span class="academy-status info">${esc(data.attempts.length)} محاولة</span>
-            </div>
+          ${canReviewAttempts ? `
+            <section class="academy-card academy-section">
+              <div class="academy-card-head">
+                <div><h2>محاولات الطلاب</h2><p>النتائج والتصحيح اليدوي للإجابات القصيرة.</p></div>
+                <span class="academy-status info">${esc(data.attempts.length)} محاولة</span>
+              </div>
 
-            <div class="academy-table-wrap">
-              <table class="academy-table">
-                <thead><tr><th>الطالب</th><th>المحاولة</th><th>الحالة</th><th>الدرجة</th><th>النسبة</th><th>التسليم</th><th>إجراء</th></tr></thead>
-                <tbody>
-                  ${data.attempts.length?data.attempts.map(a=>`
-                    <tr>
-                      <td><b>${esc(a.student?.name || 'طالب')}</b><br><small>${esc(a.student?.email || '')}</small></td>
-                      <td>#${esc(a.attemptNumber)}</td>
-                      <td>${status(a.status)}</td>
-                      <td>${esc(a.score)} / ${esc(a.totalMarks)}</td>
-                      <td>${esc(a.percentage)}%</td>
-                      <td>${fmtDate(a.submittedAt,true)}</td>
-                      <td><button class="btn ${a.requiresManualReview?'primary':'soft'} quiz-open-attempt" data-id="${esc(a.id)}" type="button">${a.requiresManualReview?'تصحيح':'عرض'}</button></td>
-                    </tr>
-                  `).join(''):'<tr><td colspan="7" class="academy-empty">لا توجد محاولات حتى الآن.</td></tr>'}
-                </tbody>
-              </table>
-            </div>
-          </section>
+              <div class="academy-table-wrap">
+                <table class="academy-table">
+                  <thead><tr><th>الطالب</th><th>المحاولة</th><th>الحالة</th><th>الدرجة</th><th>النسبة</th><th>التسليم</th><th>إجراء</th></tr></thead>
+                  <tbody>
+                    ${data.attempts.length?data.attempts.map(a=>`
+                      <tr>
+                        <td><b>${esc(a.student?.name || 'طالب')}</b><br><small>${esc(a.student?.email || '')}</small></td>
+                        <td>#${esc(a.attemptNumber)}</td>
+                        <td>${status(a.status)}</td>
+                        <td>${esc(a.score)} / ${esc(a.totalMarks)}</td>
+                        <td>${esc(a.percentage)}%</td>
+                        <td>${fmtDate(a.submittedAt,true)}</td>
+                        <td><button class="btn ${a.requiresManualReview?'primary':'soft'} quiz-open-attempt" data-id="${esc(a.id)}" type="button">${a.requiresManualReview?'تصحيح':'عرض'}</button></td>
+                      </tr>
+                    `).join(''):'<tr><td colspan="7" class="academy-empty">لا توجد محاولات حتى الآن.</td></tr>'}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          ` : ''}
         `;
 
         document.getElementById('quizEditSettings').onclick=()=>openQuizForm(quiz,load);
