@@ -3,343 +3,309 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#f2efe7">
+  <meta name="theme-color" content="#0f1715">
   <meta name="color-scheme" content="light dark">
-  <title>AcademyFlow | نظام تشغيل الأكاديمية</title>
-  <meta name="description" content="AcademyFlow يجمع الطلاب والمدربين والدورات والحضور والمحاضرات المباشرة والتقارير وإدارة الأكاديمية في مسار واحد واضح.">
+  <title>AcademyFlow | إدارة الأكاديمية من مكان واحد</title>
+  <meta name="description" content="AcademyFlow يجمع الطلاب والمدربين والدورات والحضور والمحاضرات المباشرة والتقارير والصلاحيات في نظام واحد واضح.">
   <link rel="stylesheet" href="/css/app.css">
-  <link rel="stylesheet" href="/css/landing.css?v=3">
+  <link rel="stylesheet" href="/css/landing.css?v=4">
   <script src="/js/ui.js"></script>
 </head>
 <body class="visitor-home">
+  <div class="site-shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="AcademyFlow">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>
+          <b>AcademyFlow</b>
+          <small>ACADEMY OPERATING SYSTEM</small>
+        </span>
+      </a>
 
-  <nav class="orbit-nav" aria-label="تنقل سريع بين أقسام الصفحة">
-    <a href="#start" aria-label="البداية"><span>01</span><b>البداية</b></a>
-    <a href="#system" aria-label="النظام"><span>02</span><b>النظام</b></a>
-    <a href="#portals" aria-label="البوابات"><span>03</span><b>البوابات</b></a>
-    <a href="#flow" aria-label="التدفق"><span>04</span><b>التدفق</b></a>
-    <a href="#live" aria-label="المباشر"><span>05</span><b>المباشر</b></a>
-  </nav>
-
-  <div class="landing-wrap">
-    <header class="landing-masthead">
-      <a class="landing-brand" href="/" aria-label="AcademyFlow">AcademyFlow</a>
-
-      <div class="landing-index" aria-hidden="true">
-        <span>ACADEMY OPERATING SYSTEM</span>
-        <span>OMAN / 2026</span>
-      </div>
-
-      <nav class="landing-nav" aria-label="التنقل الرئيسي">
-        <a href="#system">النظام</a>
-        <a href="#portals">البوابات</a>
-        <a href="#flow">التدفق</a>
-        <button class="landing-theme theme-toggle" data-theme-toggle data-theme-icon type="button" aria-label="تبديل المظهر">◐</button>
-        <a class="landing-enter" href="/academy/login.html">دخول الأكاديمية</a>
+      <nav class="desktop-nav" aria-label="التنقل الرئيسي">
+        <a href="#platform">النظام</a>
+        <a href="#modules">المميزات</a>
+        <a href="#roles">البوابات</a>
+        <a href="#live">Zoom</a>
       </nav>
+
+      <div class="topbar-actions">
+        <button class="theme-button theme-toggle" data-theme-toggle data-theme-icon type="button" aria-label="تبديل المظهر">◐</button>
+        <a class="login-button" href="/academy/login.html">دخول الأكاديمية <span>↙</span></a>
+      </div>
     </header>
 
     <main>
-      <section class="landing-hero" id="start">
-        <div class="hero-copy-art" data-reveal>
-          <div class="hero-overline">
-            <span>01 — ACADEMYFLOW</span>
-            <i></i>
-            <span>مكان واحد يدير حركة الأكاديمية كاملة</span>
-          </div>
-
-          <h1>
-            الأكاديمية ما تحتاج
-            <em>شاشات أكثر.</em>
-            تحتاج تدفّق أوضح.
-          </h1>
-
-          <p class="hero-lead">
-            AcademyFlow يربط الطالب بالدورة، والمدرب بالمحاضرة، والحضور بالتقرير،
-            والفروع بالمستخدمين والصلاحيات. كل شيء يتحرك داخل نفس المنظومة بدل ما يتوزع بين ملفات وروابط وأنظمة متفرقة.
+      <section class="hero" id="platform">
+        <div class="hero-copy" data-reveal>
+          <span class="eyebrow"><i></i> إدارة أكاديميتك بدون تشتيت</span>
+          <h1>كل شغل الأكاديمية،<br><span>في نظام واحد واضح.</span></h1>
+          <p>
+            الطلاب، الدورات، المدربين، الحضور، المحاضرات المباشرة والتقارير؛
+            AcademyFlow يربطها في تجربة واحدة مرتبة بدل الملفات والروابط والأنظمة المتفرقة.
           </p>
 
-          <div class="hero-actions-human">
-            <a class="hero-main-link" href="/academy/login.html">
-              <span class="arrow">↙</span>
-              <span>ادخل لمساحة الأكاديمية</span>
-            </a>
-            <a class="hero-small-link" href="#system">استكشف النظام من الداخل</a>
+          <div class="hero-actions">
+            <a class="primary-cta" href="/academy/login.html">دخول الأكاديمية <span>↙</span></a>
+            <a class="secondary-cta" href="#modules">استكشف النظام</a>
           </div>
 
-          <div class="hero-facts" aria-label="معلومات مختصرة عن النظام">
-            <div><strong>01</strong><span>مساحة مستقلة لكل أكاديمية</span></div>
-            <div><strong>02</strong><span>توجيه حسب دور المستخدم</span></div>
-            <div><strong>03</strong><span>Zoom داخل دورة العمل</span></div>
+          <div class="hero-proof">
+            <span><b>01</b> مساحة مستقلة لكل أكاديمية</span>
+            <span><b>02</b> صلاحيات حسب الدور</span>
+            <span><b>03</b> Zoom مدمج في سير العمل</span>
           </div>
-
-          <span class="hero-handnote" aria-hidden="true">كل نقطة توصل للي بعدها</span>
         </div>
 
-        <div class="flow-art" aria-label="رسم بصري يوضح تدفق العمل داخل الأكاديمية" data-reveal>
-          <svg class="flow-canvas" viewBox="0 0 620 620" role="img" aria-label="مسار يربط الطالب والدورة والمدرب والحضور والتقارير">
-            <circle class="flow-orbit" cx="315" cy="305" r="226"></circle>
-            <circle class="flow-orbit" cx="315" cy="305" r="168"></circle>
-            <circle class="flow-orbit" cx="315" cy="305" r="104"></circle>
-            <path class="flow-line" d="M560 90 C450 50 405 170 333 220 C250 279 158 228 82 326 C28 395 106 520 237 542 C355 562 443 498 522 420"></path>
-            <path class="flow-line-main" d="M524 118 C474 178 520 245 432 279 C347 312 375 408 282 439 C204 465 143 426 95 354"></path>
-            <circle class="flow-dot" cx="524" cy="118" r="7"></circle>
-            <circle class="flow-dot" cx="95" cy="354" r="5"></circle>
-          </svg>
+        <div class="hero-composition" data-reveal aria-label="ملخص بصري لنظام AcademyFlow">
+          <div class="composition-main">
+            <div class="composition-head">
+              <span>اليوم في الأكاديمية</span>
+              <small>LIVE OVERVIEW</small>
+            </div>
 
-          <div class="flow-seal" aria-hidden="true">
-            <b>AF</b>
-            <span>ONE FLOW</span>
+            <div class="overview-grid">
+              <div class="overview-item">
+                <span class="mini-icon round">ط</span>
+                <div><b>الطلاب</b><small>ملفات وتسجيل ومتابعة</small></div>
+              </div>
+              <div class="overview-item">
+                <span class="mini-icon square">د</span>
+                <div><b>الدورات</b><small>جداول ومدربين ومحاضرات</small></div>
+              </div>
+              <div class="overview-item">
+                <span class="mini-icon soft">ح</span>
+                <div><b>الحضور</b><small>متابعة مرتبطة بالدورة</small></div>
+              </div>
+            </div>
+
+            <div class="activity-line">
+              <span>تسجيل طالب</span>
+              <i></i>
+              <span>إضافة للدورة</span>
+              <i></i>
+              <span>محاضرة</span>
+              <i></i>
+              <span>تقرير</span>
+            </div>
           </div>
 
-          <div class="flow-node n1"><span><b>الطالب</b><small>START</small></span></div>
-          <div class="flow-node n2"><span><b>الدورة</b><small>ENROLL</small></span></div>
-          <div class="flow-node n3"><span><b>المدرب</b><small>TEACH</small></span></div>
-          <div class="flow-node n4"><span><b>الحضور</b><small>TRACK</small></span></div>
-          <div class="flow-node n5"><span><b>التقرير</b><small>KNOW</small></span></div>
-          <span class="flow-stamp" aria-hidden="true">مو أجزاء منفصلة</span>
+          <div class="composition-zoom">
+            <span class="zoom-dot"></span>
+            <small>ZOOM CONNECTED</small>
+            <b>المحاضرة تبدأ من داخل النظام</b>
+          </div>
+
+          <div class="composition-stat">
+            <strong>4</strong>
+            <span>بوابات حسب الدور</span>
+          </div>
+
+          <div class="composition-note">
+            <small>ONE FLOW</small>
+            <span>كل خطوة تعرف اللي قبلها واللي بعدها.</span>
+          </div>
         </div>
       </section>
 
-      <section class="landing-manifesto" data-reveal>
-        <div class="manifesto-label">فكرة النظام</div>
-        <p class="manifesto-copy">
-          لما تتغيّر معلومة في مكان، <span>باقي المنظومة تعرف عنها.</span>
-          هذي هي الفكرة اللي مبني عليها AcademyFlow.
+      <section class="section intro-strip" data-reveal>
+        <div>
+          <span class="section-kicker">ليش AcademyFlow؟</span>
+          <h2>مو مجرد لوحة تحكم.<br>هو طريقة تشغيل مرتبة للأكاديمية.</h2>
+        </div>
+        <p>
+          الفكرة بسيطة: ما نخلي كل جزء يعيش لحاله. الطالب مرتبط بالدورة،
+          الدورة بالمدرب، المحاضرة بالموعد، والحضور بالتقرير.
         </p>
       </section>
 
-      <section class="system-map-section system-explorer" id="system">
-        <div class="system-map-copy" data-reveal>
-          <span class="section-index">02 — INTERACTIVE SYSTEM MAP</span>
-          <h2>لفّ العجلة.<br>وشوف النظام من الداخل.</h2>
-          <p>
-            كل جزء في AcademyFlow مرتبط بالباقي. اختر أي نقطة من العجلة، وبتشوف وش تسوي فعليًا داخل الأكاديمية وكيف ترتبط بباقي المنظومة.
-          </p>
-
-          <div class="wheel-hint" aria-hidden="true">
-            <span>اضغط على أي دائرة</span>
-            <i></i>
-            <b>EXPLORE</b>
+      <section class="section feature-mosaic" id="modules">
+        <article class="feature-card feature-large" data-reveal>
+          <div class="feature-icon icon-rect">01</div>
+          <div>
+            <span class="feature-label">STUDENT JOURNEY</span>
+            <h3>رحلة الطالب كاملة في ملف واحد.</h3>
+            <p>من التسجيل إلى الدورات والحضور والمتابعة، كل شيء يبقى تحت نفس الطالب بدل ما يتوزع على أكثر من مكان.</p>
           </div>
+          <div class="feature-tags"><span>الملف</span><span>التسجيل</span><span>الحضور</span></div>
+        </article>
 
-          <div class="system-detail" id="systemDetail" aria-live="polite">
-            <div class="system-detail-top">
-              <span class="system-detail-index" id="systemDetailIndex">01</span>
-              <span class="system-detail-tag" id="systemDetailTag">STUDENT CORE</span>
-            </div>
-            <h3 id="systemDetailTitle">الطلاب</h3>
-            <p id="systemDetailText">
-              ملف واحد يمشي مع الطالب من أول تسجيله، ويربط دوراته وحضوره ومحاضراته بدل ما تتوزع معلوماته في أكثر من مكان.
-            </p>
-            <div class="system-detail-links">
-              <span id="systemDetailLinkA">التسجيل</span>
-              <span id="systemDetailLinkB">الدورات</span>
-              <span id="systemDetailLinkC">الحضور</span>
-            </div>
-            <div class="system-detail-foot">
-              <span>مرتبط مع</span>
-              <strong id="systemDetailConnected">الدورات · الحضور · التقارير</strong>
+        <article class="feature-card feature-square" data-reveal>
+          <div class="feature-icon icon-circle">02</div>
+          <span class="feature-label">COURSES</span>
+          <h3>الدورة مساحة تشغيل، مو صف في جدول.</h3>
+          <p>مدرب، طلاب، مواعيد ومحاضرات في سياق واحد.</p>
+        </article>
+
+        <article class="feature-card feature-circle" data-reveal>
+          <span class="circle-number">4</span>
+          <b>بوابات مختلفة</b>
+          <small>مالك · إدارة · مدرب · طالب</small>
+        </article>
+
+        <article class="feature-card feature-wide" data-reveal>
+          <div class="feature-row">
+            <div class="feature-icon icon-soft">03</div>
+            <div>
+              <span class="feature-label">ACCESS CONTROL</span>
+              <h3>كل مستخدم يشوف اللي يخصه فقط.</h3>
             </div>
           </div>
+          <p>كود الأكاديمية يحدد المساحة، الحساب يحدد الهوية، والدور يحدد الصلاحيات والواجهة المناسبة.</p>
+          <div class="role-pills"><span>Owner</span><span>Admin</span><span>Instructor</span><span>Student</span></div>
+        </article>
+
+        <article class="feature-card feature-report" data-reveal>
+          <span class="feature-label">REPORTING</span>
+          <h3>التقارير تقرأ حركة النظام بدل ما تجمعها يدويًا.</h3>
+          <div class="mini-chart" aria-hidden="true">
+            <i></i><i></i><i></i><i></i><i></i>
+          </div>
+        </article>
+
+        <article class="feature-card feature-security" data-reveal>
+          <div class="security-symbol" aria-hidden="true">✓</div>
+          <div>
+            <span class="feature-label">MULTI-TENANT</span>
+            <h3>بيانات كل أكاديمية في مساحتها.</h3>
+            <p>عزل واضح للبيانات مع صلاحيات مرتبطة بالمستخدم والدور.</p>
+          </div>
+        </article>
+      </section>
+
+      <section class="section explorer" id="explorer">
+        <div class="explorer-heading" data-reveal>
+          <span class="section-kicker">استكشف النظام</span>
+          <h2>اضغط على الجزء اللي يهمك.</h2>
+          <p>بدل عجلة ضخمة، خلّينا التفاعل يخدم المعلومة: تختار الجزء، وتتغير التفاصيل مباشرة.</p>
         </div>
 
-        <div class="wheel-stage" data-reveal>
-          <div class="wheel-axis axis-x" aria-hidden="true"></div>
-          <div class="wheel-axis axis-y" aria-hidden="true"></div>
-
-          <div class="system-wheel" id="systemWheel" role="group" aria-label="استكشف أقسام AcademyFlow">
-            <div class="wheel-rotor" id="wheelRotor" aria-hidden="true">
-              <i class="rotor-line"></i>
-              <i class="rotor-dot"></i>
-            </div>
-
-            <button class="wheel-item w1 is-active" type="button" data-feature="students" aria-pressed="true">
-              <span class="wheel-no">01</span><b>الطلاب</b><small>STUDENTS</small>
-            </button>
-            <button class="wheel-item w2" type="button" data-feature="courses" aria-pressed="false">
-              <span class="wheel-no">02</span><b>الدورات</b><small>COURSES</small>
-            </button>
-            <button class="wheel-item w3" type="button" data-feature="instructors" aria-pressed="false">
-              <span class="wheel-no">03</span><b>المدربين</b><small>INSTRUCTORS</small>
-            </button>
-            <button class="wheel-item w4" type="button" data-feature="zoom" aria-pressed="false">
-              <span class="wheel-no">04</span><b>Zoom</b><small>LIVE</small>
-            </button>
-            <button class="wheel-item w5" type="button" data-feature="attendance" aria-pressed="false">
-              <span class="wheel-no">05</span><b>الحضور</b><small>ATTENDANCE</small>
-            </button>
-            <button class="wheel-item w6" type="button" data-feature="reports" aria-pressed="false">
-              <span class="wheel-no">06</span><b>التقارير</b><small>REPORTS</small>
-            </button>
-            <button class="wheel-item w7" type="button" data-feature="branches" aria-pressed="false">
-              <span class="wheel-no">07</span><b>الفروع</b><small>BRANCHES</small>
-            </button>
-            <button class="wheel-item w8" type="button" data-feature="roles" aria-pressed="false">
-              <span class="wheel-no">08</span><b>الصلاحيات</b><small>ROLES</small>
-            </button>
-
-            <button class="wheel-core" id="wheelCore" type="button" aria-label="الانتقال للعنصر التالي">
-              <span class="wheel-core-kicker">ACADEMYFLOW</span>
-              <strong id="wheelCoreTitle">الطلاب</strong>
-              <small>اضغط للمحطة التالية ↺</small>
-            </button>
+        <div class="explorer-layout" data-reveal>
+          <div class="module-tabs" role="tablist" aria-label="أجزاء AcademyFlow">
+            <button class="module-tab is-active" type="button" role="tab" aria-selected="true" data-module="students"><span>01</span> الطلاب</button>
+            <button class="module-tab" type="button" role="tab" aria-selected="false" data-module="courses"><span>02</span> الدورات</button>
+            <button class="module-tab" type="button" role="tab" aria-selected="false" data-module="attendance"><span>03</span> الحضور</button>
+            <button class="module-tab" type="button" role="tab" aria-selected="false" data-module="zoom"><span>04</span> Zoom</button>
+            <button class="module-tab" type="button" role="tab" aria-selected="false" data-module="reports"><span>05</span> التقارير</button>
+            <button class="module-tab" type="button" role="tab" aria-selected="false" data-module="roles"><span>06</span> الصلاحيات</button>
           </div>
 
-          <div class="wheel-caption">
-            <span><b>08</b> وحدات مترابطة</span>
-            <span><b>01</b> تدفّق واحد</span>
-            <span class="wheel-caption-note">مو قائمة مميزات — هذي خريطة شغل الأكاديمية.</span>
+          <div class="module-detail" id="moduleDetail" aria-live="polite">
+            <div class="module-detail-copy">
+              <span id="moduleKicker">STUDENT CORE</span>
+              <h3 id="moduleTitle">الطلاب</h3>
+              <p id="moduleText">ملف الطالب يجمع بياناته وتسجيلاته ودوراته وحضوره في مكان واحد، ويخلي الرجوع لتاريخه أسهل للإدارة.</p>
+              <div class="detail-points">
+                <span id="modulePoint1">ملف موحد</span>
+                <span id="modulePoint2">تسجيل بالدورات</span>
+                <span id="modulePoint3">متابعة الحضور</span>
+              </div>
+            </div>
+            <div class="module-visual" data-state="students">
+              <div class="module-visual-orb"><b id="moduleVisualTitle">STUDENT</b><small>CONNECTED DATA</small></div>
+              <div class="module-link l1">الدورات</div>
+              <div class="module-link l2">الحضور</div>
+              <div class="module-link l3">التقارير</div>
+            </div>
           </div>
         </div>
       </section>
 
-      <section class="portal-section" id="portals">
-        <header class="portal-heading" data-reveal>
-          <span class="section-index">03 — PORTALS</span>
-          <h2>بوابة واحدة.<br>لكن مو نفس التجربة للجميع.</h2>
-          <p>
-            النظام يتعرف على المستخدم بعد تسجيل الدخول، وبعدها يوديه للمساحة المناسبة له بدل ما يرمي كل الناس في لوحة وحدة.
-          </p>
-        </header>
-
-        <div class="portal-rings" data-reveal>
-          <div class="portal-center">
-            <span>AF</span>
-            <small>ROLE ROUTER</small>
-          </div>
-
-          <div class="portal-ring ring-owner">
-            <div class="portal-role"><b>المالك</b><small>إدارة الأكاديمية والصلاحيات والإعدادات</small></div>
-          </div>
-          <div class="portal-ring ring-admin">
-            <div class="portal-role"><b>الإدارة</b><small>التشغيل اليومي والطلاب والدورات</small></div>
-          </div>
-          <div class="portal-ring ring-instructor">
-            <div class="portal-role"><b>المدرب</b><small>الدورات والمحاضرات والطلاب المرتبطين به</small></div>
-          </div>
-          <div class="portal-ring ring-student">
-            <div class="portal-role"><b>الطالب</b><small>دوراته ومحاضراته ومتابعته</small></div>
-          </div>
+      <section class="section roles-section" id="roles">
+        <div class="roles-heading" data-reveal>
+          <span class="section-kicker">بوابات حسب الدور</span>
+          <h2>نفس النظام، لكن كل شخص يدخل للمكان اللي يخصه.</h2>
         </div>
 
-        <div class="portal-notes" data-reveal>
-          <p><span>01</span> كود الأكاديمية يحدد مساحة البيانات.</p>
-          <p><span>02</span> الحساب يحدد هوية المستخدم.</p>
-          <p><span>03</span> الدور يحدد البوابة والصلاحيات.</p>
-        </div>
-      </section>
-
-      <section class="landing-story" id="flow">
-        <aside class="story-aside" data-reveal>
-          <span class="story-no">04</span>
-          <h2>شغلك اليومي، بس بدون الفوضى.</h2>
-          <p>
-            هذا هو تسلسل العمل الفعلي داخل النظام، مو مجرد أربع بطاقات تقول لك وش فيه.
-          </p>
-        </aside>
-
-        <div class="story-list">
-          <article class="story-row" data-reveal>
-            <span class="row-index">01</span>
-            <h3>يدخل الطالب، وتبدأ حكايته من مكان واحد.</h3>
-            <p>ملفه، تسجيله، دوراته، حضوره وكل ما يتعلق به يبقى مربوطًا بنفس الهوية.</p>
-            <i class="row-mark" aria-hidden="true"></i>
+        <div class="roles-grid">
+          <article class="role-card role-owner" data-reveal>
+            <span>OWNER</span>
+            <h3>المالك</h3>
+            <p>إدارة الأكاديمية والإعدادات والصلاحيات والصورة العامة.</p>
+            <i>01</i>
           </article>
-
-          <article class="story-row" data-reveal>
-            <span class="row-index">02</span>
-            <h3>الدورة تتحول من جدول إلى مساحة تشغيل.</h3>
-            <p>المدرب والطلاب والمواعيد والمحاضرات المباشرة كلها أجزاء من نفس الدورة.</p>
-            <i class="row-mark" aria-hidden="true"></i>
+          <article class="role-card role-admin" data-reveal>
+            <span>ADMIN</span>
+            <h3>الإدارة</h3>
+            <p>التشغيل اليومي للطلاب والدورات والمتابعة.</p>
+            <i>02</i>
           </article>
-
-          <article class="story-row" data-reveal>
-            <span class="row-index">03</span>
-            <h3>الفروع والمستخدمون ما يختلطون على بعض.</h3>
-            <p>الصلاحيات والأدوار توزع الوصول حسب المسؤولية، وكل أكاديمية تظل داخل مساحة بياناتها.</p>
-            <i class="row-mark" aria-hidden="true"></i>
+          <article class="role-card role-instructor" data-reveal>
+            <span>INSTRUCTOR</span>
+            <h3>المدرب</h3>
+            <p>دوراته ومحاضراته والطلاب المرتبطين به.</p>
+            <i>03</i>
           </article>
-
-          <article class="story-row" data-reveal>
-            <span class="row-index">04</span>
-            <h3>الحضور والمتابعة يصير لهم معنى.</h3>
-            <p>لأنهم مربوطين بالطالب والدورة والمدرب، مو مجرد أرقام منفصلة ما تعرف ترجعها لسياقها.</p>
-            <i class="row-mark" aria-hidden="true"></i>
-          </article>
-
-          <article class="story-row" data-reveal>
-            <span class="row-index">05</span>
-            <h3>الإدارة تشوف الصورة بدل ما تجمعها.</h3>
-            <p>التقارير والبيانات المتصلة تخلي القرار مبني على حركة النظام نفسها.</p>
-            <i class="row-mark" aria-hidden="true"></i>
+          <article class="role-card role-student" data-reveal>
+            <span>STUDENT</span>
+            <h3>الطالب</h3>
+            <p>دوراته ومحاضراته ومتابعته من مكان واضح.</p>
+            <i>04</i>
           </article>
         </div>
       </section>
 
-      <section class="landing-zoom" id="live">
-        <div class="zoom-word" aria-hidden="true">LIVE</div>
-
-        <div class="zoom-copy" data-reveal>
-          <span class="eyebrow">05 — LIVE LAYER / ZOOM</span>
-          <h2>المحاضرة الحية تدخل في المسار، مو تنرمي كرابط خارجي.</h2>
+      <section class="section live-section" id="live">
+        <div class="live-copy" data-reveal>
+          <span class="section-kicker">Zoom Integration</span>
+          <h2>المحاضرة المباشرة جزء من النظام، مو رابط مرمي في الشات.</h2>
           <p>
-            ربط Zoom يخلي المحاضرات المباشرة جزء من سياق الأكاديمية: من أنشأها، متى تبدأ، ومن المفروض يدخل لها.
-            النظام يحافظ على خفة البنية، وZoom يتكفل بطبقة الفيديو.
+            تربط الأكاديمية حساب Zoom الخاص فيها، وبعدها تصير المحاضرات مرتبطة بالدورات والمدربين والمواعيد.
           </p>
-          <ul class="zoom-points">
+          <ul>
             <li>ربط حساب Zoom الخاص بالأكاديمية.</li>
-            <li>إنشاء وإدارة المحاضرات من داخل النظام.</li>
-            <li>تجربة أوضح للمدرب والطالب بدل تبادل الروابط يدويًا.</li>
+            <li>إنشاء المحاضرات من داخل النظام.</li>
+            <li>وصول أوضح للمدرب والطالب.</li>
           </ul>
         </div>
 
-        <div class="zoom-orbit" aria-label="المحاضرات المباشرة عبر Zoom" data-reveal>
-          <span class="zoom-satellite zs1">الدورة</span>
-          <span class="zoom-satellite zs2">المدرب</span>
-          <span class="zoom-satellite zs3">الطلاب</span>
-          <span class="zoom-satellite zs4">الموعد</span>
+        <div class="live-visual" data-reveal>
+          <div class="live-square">
+            <span class="live-status"><i></i> LIVE</span>
+            <b>محاضرة مباشرة</b>
+            <small>دورة تطوير الويب</small>
+            <div class="live-meta"><span>المدرب</span><strong>جاهز للبدء</strong></div>
+          </div>
+          <div class="live-circle">ZOOM</div>
+          <div class="live-pill">مرتبط بالدورة + الموعد</div>
         </div>
       </section>
 
-      <section class="trust-line" data-reveal aria-label="مبادئ النظام">
-        <span>عزل بيانات الأكاديميات</span>
-        <i></i>
-        <span>صلاحيات حسب الدور</span>
-        <i></i>
-        <span>جلسات دخول محمية</span>
-        <i></i>
-        <span>تصميم للجوال والكمبيوتر</span>
+      <section class="section trust-bar" data-reveal>
+        <div><b>عزل البيانات</b><span>كل أكاديمية داخل مساحتها</span></div>
+        <div><b>صلاحيات واضحة</b><span>كل دور يشوف اللي يحتاجه</span></div>
+        <div><b>جلسات محمية</b><span>تسجيل دخول آمن</span></div>
       </section>
 
-      <section class="landing-final" data-reveal>
-        <span class="final-kicker">READY WHEN YOU ARE</span>
-        <h2 class="final-title">
-          افتح الأكاديمية.<br>
-          وخَلِّ <span>التدفق يبدأ.</span>
-        </h2>
-
-        <div class="final-actions">
-          <p>
-            تدخل بكود الأكاديمية وبيانات حسابك، وبعدها AcademyFlow يوجهك تلقائيًا للبوابة المناسبة لدورك.
-          </p>
-          <a class="final-enter" href="/academy/login.html">دخول<br>AcademyFlow ↙</a>
+      <section class="section final-cta" data-reveal>
+        <div>
+          <span class="section-kicker">جاهز للدخول؟</span>
+          <h2>خلّ إدارة الأكاديمية<br>تصير أبسط من اليوم.</h2>
+          <p>استخدم كود الأكاديمية وبيانات حسابك، والنظام يوجهك تلقائيًا إلى البوابة المناسبة.</p>
         </div>
+        <a href="/academy/login.html" class="final-button">
+          <span>دخول AcademyFlow</span>
+          <b>↙</b>
+        </a>
       </section>
     </main>
 
-    <footer class="landing-footer">
-      <span>AcademyFlow © 2026 — نظام تشغيل للأكاديميات، مو مجرد لوحة تحكم.</span>
-      <nav class="landing-legal" aria-label="الروابط القانونية">
+    <footer class="footer">
+      <div class="footer-brand">
+        <b>AcademyFlow</b>
+        <span>نظام تشغيل متكامل للأكاديميات.</span>
+      </div>
+      <nav aria-label="الروابط القانونية">
         <a href="/legal/privacy.html">الخصوصية</a>
         <a href="/legal/terms.html">الشروط</a>
         <a href="/legal/refund.html">الاسترداد</a>
         <a href="/legal/support.html">الدعم</a>
         <a href="/legal/index.html">المركز القانوني</a>
       </nav>
+      <small>© 2026 AcademyFlow</small>
     </footer>
   </div>
 
-  <script src="/js/landing.js?v=2"></script>
+  <script src="/js/landing.js?v=3"></script>
 </body>
 </html>
