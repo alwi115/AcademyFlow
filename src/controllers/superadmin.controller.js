@@ -334,7 +334,6 @@ async function health(req, res) {
 
   const memory = process.memoryUsage();
   const now = new Date();
-  const in24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
   const dbStarted = Date.now();
 
   let dbPingMs = null;
@@ -355,7 +354,7 @@ async function health(req, res) {
     storage,
     recentErrors,
     connectedZoomAcademies,
-    expiringZoomAcademies,
+    brokenZoomAcademies,
     academyIssues
   ] = await Promise.all([
     Academy.countDocuments(),
@@ -372,7 +371,10 @@ async function health(req, res) {
     Academy.countDocuments({ 'zoomIntegration.connected': true }),
     Academy.countDocuments({
       'zoomIntegration.connected': true,
-      'zoomIntegration.accessTokenExpiresAt': { $lte: in24Hours }
+      $or: [
+        { 'zoomIntegration.zoomUserId': { $in: ['', null] } },
+        { 'zoomIntegration.tokensEncrypted': { $in: ['', null] } }
+      ]
     }),
     Academy.find({
       $or: [
@@ -383,7 +385,10 @@ async function health(req, res) {
         },
         {
           'zoomIntegration.connected': true,
-          'zoomIntegration.accessTokenExpiresAt': { $lte: now }
+          $or: [
+            { 'zoomIntegration.zoomUserId': { $in: ['', null] } },
+            { 'zoomIntegration.tokensEncrypted': { $in: ['', null] } }
+          ]
         }
       ]
     })
@@ -478,7 +483,7 @@ async function health(req, res) {
       webhookConfigured: Boolean(process.env.ZOOM_WEBHOOK_SECRET_TOKEN),
       tokenEncryptionKeyConfigured: Boolean(process.env.ZOOM_TOKEN_ENCRYPTION_KEY),
       connectedAcademies: connectedZoomAcademies,
-      expiringWithin24Hours: expiringZoomAcademies
+      brokenIntegrations: brokenZoomAcademies
     },
     configuration: {
       jwtConfigured: Boolean(process.env.JWT_SECRET && process.env.JWT_SECRET.length >= 64),
