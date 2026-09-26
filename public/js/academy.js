@@ -689,10 +689,14 @@ const AF = (() => {
           method = 'POST';
         }
 
-        await api(endpoint, {
+        const saved = await api(endpoint, {
           method,
           body:JSON.stringify(payload)
         });
+
+        if (saved?.zoomWarning) {
+          alert(saved.zoomWarning);
+        }
 
         modal.hidden = true;
         optionsCache.value = null;

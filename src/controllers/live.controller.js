@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const LiveSession = require('../models/LiveSession');
 const Academy = require('../models/Academy');
 const Course = require('../models/Course');
@@ -59,6 +60,16 @@ async function createLiveSession(req, res) {
     });
   }
 
+  if (!mongoose.isValidObjectId(instructorId)) {
+    return res.status(400).json({ message: 'المدرب المحدد غير صحيح' });
+  }
+  if (courseId && !mongoose.isValidObjectId(courseId)) {
+    return res.status(400).json({ message: 'الدورة المحددة غير صحيحة' });
+  }
+  if (groupId && !mongoose.isValidObjectId(groupId)) {
+    return res.status(400).json({ message: 'المجموعة المحددة غير صحيحة' });
+  }
+
   const [academy, instructor, course] = await Promise.all([
     Academy.findById(academyId),
     ownedInstructor(academyId, instructorId),
@@ -93,42 +104,68 @@ async function createLiveSession(req, res) {
   const timezone = safeTimeZone(academy.timezone || 'Asia/Muscat');
   const normalizedStartAt = parseAcademyDateTime(startAt, timezone);
   const duration = Math.max(1, Number(durationMinutes || 60));
-  let meeting = {
-    meetingId: '',
-    joinUrl: '',
-    startUrl: '',
-    password: ''
-  };
 
-  if (zoom.configured()) {
-    meeting = await zoom.createMeeting({
-      topic: clean(title),
-      startTime: normalizedStartAt,
-      duration,
-      timezone
-    });
+  if (!Number.isFinite(duration)) {
+    return res.status(400).json({ message: 'مدة المحاضرة غير صحيحة' });
   }
 
-  const session = await LiveSession.create({
-    academyId,
-    courseId: courseId || null,
-    groupId: group?._id || null,
-    title: clean(title),
-    description: clean(description),
-    instructorId,
-    startAt: normalizedStartAt,
-    durationMinutes: duration,
-    zoomMeetingId: meeting.meetingId,
-    zoomJoinUrl: meeting.joinUrl,
-    zoomStartUrl: meeting.startUrl,
-    zoomPassword: meeting.password,
-    attendanceEnabled: attendanceEnabled !== false,
-    lateAfterMinutes: Math.max(0, Number(lateAfterMinutes ?? 10)),
-    joinWindowBeforeMinutes: Math.max(0, Number(joinWindowBeforeMinutes ?? 15)),
-    reminderMinutes: Math.max(0, Math.min(1440, Number(reminderMinutes ?? 5))),
-    notifyInApp: notifyInApp !== false,
-    notifyEmail: notifyEmail !== false
-  });
+  // Save the AcademyFlow session first. External Zoom failures must never
+  // prevent the owner/instructor from creating the class.
+  let session;
+  try {
+    session = await LiveSession.create({
+      academyId,
+      courseId: courseId || null,
+      groupId: group?._id || null,
+      title: clean(title),
+      description: clean(description),
+      instructorId,
+      startAt: normalizedStartAt,
+      durationMinutes: duration,
+      attendanceEnabled: attendanceEnabled !== false,
+      lateAfterMinutes: Math.max(0, Number(lateAfterMinutes ?? 10)),
+      joinWindowBeforeMinutes: Math.max(0, Number(joinWindowBeforeMinutes ?? 15)),
+      reminderMinutes: Math.max(0, Math.min(1440, Number(reminderMinutes ?? 5))),
+      notifyInApp: notifyInApp !== false,
+      notifyEmail: notifyEmail !== false
+    });
+  } catch (err) {
+    if (err?.name === 'ValidationError' || err?.name === 'CastError') {
+      return res.status(400).json({
+        message: 'تعذر حفظ المحاضرة بسبب قيمة غير صحيحة في أحد الحقول'
+      });
+    }
+    throw err;
+  }
+
+  let zoomWarning = '';
+
+  if (!zoom.configured()) {
+    zoomWarning = 'تم حفظ المحاضرة، لكن تكامل Zoom غير مفعّل في إعدادات السيرفر.';
+    session.zoomProvisionError = 'Zoom integration is not configured';
+    await session.save();
+  } else {
+    try {
+      const meeting = await zoom.createMeeting({
+        topic: clean(title),
+        startTime: normalizedStartAt,
+        duration,
+        timezone
+      });
+
+      session.zoomMeetingId = meeting.meetingId;
+      session.zoomJoinUrl = meeting.joinUrl;
+      session.zoomStartUrl = meeting.startUrl;
+      session.zoomPassword = meeting.password;
+      session.zoomProvisionError = '';
+      await session.save();
+    } catch (err) {
+      console.error('[zoom create meeting]', err.message);
+      zoomWarning = 'تم حفظ المحاضرة، لكن تعذر إنشاء رابط Zoom الآن. يمكنك إعادة إنشاء الرابط لاحقًا.';
+      session.zoomProvisionError = String(err.message || 'Zoom meeting creation failed').slice(0,1000);
+      await session.save();
+    }
+  }
 
   res.status(201).json({
     id: session._id,
@@ -139,7 +176,10 @@ async function createLiveSession(req, res) {
     timezone,
     durationMinutes: session.durationMinutes,
     status: session.status,
-    zoomJoinUrl: session.zoomJoinUrl || ''
+    zoomMeetingId: session.zoomMeetingId || '',
+    zoomJoinUrl: session.zoomJoinUrl || '',
+    zoomReady: Boolean(session.zoomJoinUrl),
+    zoomWarning
   });
 }
 
