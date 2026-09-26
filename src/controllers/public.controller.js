@@ -49,6 +49,7 @@ async function legalConfig(req, res) {
     ecommerceLicenseNumber: settings.ecommerceLicenseNumber || '',
     taxNumber: settings.taxNumber || '',
     businessAddress: settings.businessAddress || '',
+    privacyOfficerName: settings.privacyOfficerName || '',
     privacyOfficerEmail: settings.privacyOfficerEmail || '',
     legalVersion: CURRENT_LEGAL_VERSION,
     jurisdiction: 'Sultanate of Oman'
