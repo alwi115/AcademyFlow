@@ -9,6 +9,12 @@ window.AcademyQuizAdmin = (() => {
       : '/academy/' + file;
   }
 
+  function apiBase() {
+    return document.body.classList.contains('instructor-app')
+      ? '/api/instructor'
+      : '/api/academy';
+  }
+
   function esc(value) {
     return String(value ?? '')
       .replaceAll('&','&amp;')
@@ -104,7 +110,7 @@ window.AcademyQuizAdmin = (() => {
   }
 
   async function options() {
-    return api('/api/academy/options');
+    return api(apiBase() + '/options');
   }
 
   async function openQuizForm(row=null,onDone=async()=>{}) {
@@ -167,7 +173,7 @@ window.AcademyQuizAdmin = (() => {
 
       try {
         const saved = await api(
-          row ? '/api/academy/quizzes/'+row._id : '/api/academy/quizzes',
+          row ? apiBase() + '/quizzes/'+row._id : apiBase() + '/quizzes',
           {method:row?'PATCH':'POST',body:JSON.stringify(payload)}
         );
         closeModal();
@@ -247,7 +253,7 @@ window.AcademyQuizAdmin = (() => {
 
     const load=async()=>{
       try{
-        rows=await api('/api/academy/quizzes');
+        rows=await api(apiBase() + '/quizzes');
         draw();
       }catch(err){
         document.getElementById('quizList').innerHTML='<div class="academy-empty">'+esc(err.message)+'</div>';
@@ -408,8 +414,8 @@ window.AcademyQuizAdmin = (() => {
       try{
         await api(
           question
-            ? '/api/academy/quizzes/'+quiz._id+'/questions/'+question._id
-            : '/api/academy/quizzes/'+quiz._id+'/questions',
+            ? apiBase() + '/quizzes/'+quiz._id+'/questions/'+question._id
+            : apiBase() + '/quizzes/'+quiz._id+'/questions',
           {method:question?'PATCH':'POST',body:JSON.stringify(data)}
         );
         closeModal();
@@ -456,7 +462,7 @@ window.AcademyQuizAdmin = (() => {
       message.textContent='';
 
       try{
-        await api('/api/academy/quizzes/'+quiz._id,{
+        await api(apiBase() + '/quizzes/'+quiz._id,{
           method:'PATCH',
           body:JSON.stringify({dueAt})
         });
@@ -474,7 +480,7 @@ window.AcademyQuizAdmin = (() => {
 
   async function updateStatus(quiz,next,onDone) {
     try{
-      await api('/api/academy/quizzes/'+quiz._id,{
+      await api(apiBase() + '/quizzes/'+quiz._id,{
         method:'PATCH',
         body:JSON.stringify({status:next})
       });
@@ -486,14 +492,14 @@ window.AcademyQuizAdmin = (() => {
   async function deleteQuestion(quiz,question,onDone) {
     if(!confirm('حذف هذا السؤال نهائيًا؟')) return;
     try{
-      await api('/api/academy/quizzes/'+quiz._id+'/questions/'+question._id,{method:'DELETE'});
+      await api(apiBase() + '/quizzes/'+quiz._id+'/questions/'+question._id,{method:'DELETE'});
       toast('تم حذف السؤال');
       await onDone();
     }catch(err){toast(err.message,'error');}
   }
 
   async function openAttempt(quiz,attempt,onDone) {
-    const data=await api('/api/academy/quizzes/'+quiz._id+'/attempts/'+attempt.id);
+    const data=await api(apiBase() + '/quizzes/'+quiz._id+'/attempts/'+attempt.id);
     const {modal,title,subtitle,form}=modalElements();
     const a=data.attempt;
 
@@ -578,7 +584,7 @@ window.AcademyQuizAdmin = (() => {
       btn.disabled=true;btn.textContent='جاري الحفظ...';msg.textContent='';
 
       try{
-        await api('/api/academy/quizzes/'+quiz._id+'/attempts/'+attempt.id+'/questions/'+question.id+'/grade',{
+        await api(apiBase() + '/quizzes/'+quiz._id+'/attempts/'+attempt.id+'/questions/'+question.id+'/grade',{
           method:'PATCH',
           body:JSON.stringify(payload)
         });
@@ -603,7 +609,7 @@ window.AcademyQuizAdmin = (() => {
       target.innerHTML='<div class="academy-empty">جاري تحميل الاختبار...</div>';
 
       try{
-        const data=await api('/api/academy/quizzes/'+encodeURIComponent(id));
+        const data=await api(apiBase() + '/quizzes/'+encodeURIComponent(id));
         const quiz=data.quiz;
         const editable=quiz.status==='draft' && data.attempts.length===0;
 
