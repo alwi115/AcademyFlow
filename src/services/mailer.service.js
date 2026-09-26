@@ -1,112 +1,28 @@
-const RESEND_API_URL = 'https://api.resend.com/emails';
-const TEST_FROM = 'AcademyFlow <onboarding@resend.dev>';
+const SENDGRID_API_URL = 'https://api.sendgrid.com/v3/mail/send';
 
-const PUBLIC_MAIL_DOMAINS = new Set([
-  'gmail.com',
-  'googlemail.com',
-  'yahoo.com',
-  'outlook.com',
-  'hotmail.com',
-  'live.com',
-  'icloud.com',
-  'me.com',
-  'aol.com'
-]);
-
-function extractEmail(value) {
-  const text = String(value || '').trim();
-  const angle = text.match(/<([^<>\s]+@[^<>\s]+)>/);
-  if (angle) return angle[1].toLowerCase();
-
-  const plain = text.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
-  return plain ? text.toLowerCase() : '';
-}
-
-function senderDomain(value) {
-  const email = extractEmail(value);
-  return email.includes('@') ? email.split('@').pop() : '';
-}
-
-function isPlaceholderOrPublicSender(value) {
-  const domain = senderDomain(value);
-  if (!domain) return true;
-
-  return (
-    domain === 'yourdomain.com' ||
-    domain.endsWith('.yourdomain.com') ||
-    PUBLIC_MAIL_DOMAINS.has(domain)
-  );
-}
-
-function resolveSender() {
-  const rawFrom = String(
-    process.env.RESEND_FROM ||
-    process.env.EMAIL_FROM ||
-    ''
-  ).trim();
-
-  if (!rawFrom) {
-    return {
-      rawFrom: '',
-      from: TEST_FROM,
-      mode: 'testing',
-      ignoredConfiguredFrom: false,
-      reason: 'لم يتم تحديد مرسل موثّق، لذلك يستخدم النظام مرسل Resend التجريبي.'
-    };
-  }
-
-  const domain = senderDomain(rawFrom);
-
-  if (
-    rawFrom.toLowerCase().includes('onboarding@resend.dev') ||
-    domain === 'resend.dev'
-  ) {
-    return {
-      rawFrom,
-      from: TEST_FROM,
-      mode: 'testing',
-      ignoredConfiguredFrom: false,
-      reason: 'النظام يعمل بوضع اختبار Resend.'
-    };
-  }
-
-  if (isPlaceholderOrPublicSender(rawFrom)) {
-    return {
-      rawFrom,
-      from: TEST_FROM,
-      mode: 'testing',
-      ignoredConfiguredFrom: true,
-      reason: 'تم تجاهل EMAIL_FROM لأنه غير صالح كمرسل موثّق في Resend، واستخدام onboarding@resend.dev تلقائيًا.'
-    };
-  }
-
-  return {
-    rawFrom,
-    from: rawFrom,
-    mode: 'production',
-    ignoredConfiguredFrom: false,
-    reason: 'مرسل مخصص جاهز. يجب أن يكون الدومين موثّقًا داخل Resend.'
-  };
+function validEmail(value) {
+  const email = String(value || '').trim().toLowerCase();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : '';
 }
 
 function configStatus() {
-  const apiKey = String(process.env.RESEND_API_KEY || '').trim();
-  const testTo = String(process.env.RESEND_TEST_TO || '').trim();
-  const sender = resolveSender();
+  const apiKey = String(process.env.SENDGRID_API_KEY || '').trim();
+  const fromEmail = validEmail(process.env.SENDGRID_FROM_EMAIL);
+  const fromName = String(process.env.SENDGRID_FROM_NAME || 'AcademyFlow').trim() || 'AcademyFlow';
+  const replyTo = validEmail(process.env.SENDGRID_REPLY_TO) || fromEmail;
+  const missing = [];
+
+  if (!apiKey) missing.push('SENDGRID_API_KEY');
+  if (!fromEmail) missing.push('SENDGRID_FROM_EMAIL');
 
   return {
-    provider: 'resend',
-    configured: Boolean(apiKey),
+    provider: 'sendgrid',
+    configured: missing.length === 0,
+    missing,
     apiKeyPresent: Boolean(apiKey),
-    missing: apiKey ? [] : ['RESEND_API_KEY'],
-    mode: sender.mode,
-    from: sender.from,
-    rawFrom: sender.rawFrom,
-    ignoredConfiguredFrom: sender.ignoredConfiguredFrom,
-    reason: sender.reason,
-    testTo,
-    testReady: Boolean(apiKey && testTo),
-    productionReady: Boolean(apiKey && sender.mode === 'production')
+    fromEmail,
+    fromName,
+    replyTo
   };
 }
 
@@ -128,119 +44,135 @@ function appBaseUrl() {
 
 function canSendTo(recipient) {
   const status = configStatus();
-  const email = String(recipient || '').trim().toLowerCase();
+  const email = validEmail(recipient);
 
   if (!status.apiKeyPresent) {
     return {
       allowed: false,
-      code: 'RESEND_NOT_CONFIGURED',
-      reason: 'RESEND_API_KEY غير موجود.'
+      code: 'SENDGRID_NOT_CONFIGURED',
+      reason: 'SENDGRID_API_KEY غير موجود.'
+    };
+  }
+
+  if (!status.fromEmail) {
+    return {
+      allowed: false,
+      code: 'SENDGRID_FROM_MISSING',
+      reason: 'SENDGRID_FROM_EMAIL غير موجود أو غير صحيح.'
     };
   }
 
   if (!email) {
     return {
       allowed: false,
-      code: 'RECIPIENT_MISSING',
-      reason: 'البريد المستلم غير موجود.'
+      code: 'RECIPIENT_INVALID',
+      reason: 'بريد المستلم غير صحيح.'
     };
   }
 
-  if (status.mode === 'production') {
-    return { allowed: true, code: 'OK', reason: '' };
-  }
-
-  const testTo = status.testTo.toLowerCase();
-
-  if (!testTo) {
-    return {
-      allowed: false,
-      code: 'RESEND_TEST_RECIPIENT_MISSING',
-      reason: 'وضع الاختبار مفعل لكن RESEND_TEST_TO غير موجود.'
-    };
-  }
-
-  if (email !== testTo) {
-    return {
-      allowed: false,
-      code: 'RESEND_TEST_MODE_ONLY',
-      reason: 'Resend بوضع الاختبار يسمح بالإرسال فقط إلى RESEND_TEST_TO حتى يتم توثيق دومين.'
-    };
-  }
-
-  return { allowed: true, code: 'OK_TEST', reason: '' };
+  return { allowed: true, code: 'OK', reason: '', email };
 }
 
-async function resendRequest(payload) {
+function errorMessageFromSendGrid(data, status) {
+  if (Array.isArray(data?.errors) && data.errors.length) {
+    return data.errors
+      .map(item => item?.message)
+      .filter(Boolean)
+      .join(' · ')
+      .slice(0,1000);
+  }
+
+  return String(data?.message || `SendGrid request failed (${status})`).slice(0,1000);
+}
+
+async function sendGridRequest({ to, subject, text, html }) {
   const status = configStatus();
 
-  if (!status.apiKeyPresent) {
-    const err = new Error('RESEND_API_KEY غير موجود');
-    err.code = 'RESEND_NOT_CONFIGURED';
-    err.missing = ['RESEND_API_KEY'];
+  if (!status.configured) {
+    const err = new Error('إعدادات SendGrid غير مكتملة');
+    err.code = 'SENDGRID_NOT_CONFIGURED';
+    err.missing = status.missing;
+    err.retriable = false;
     throw err;
   }
 
-  const recipients = Array.isArray(payload.to) ? payload.to : [payload.to];
-
-  for (const recipient of recipients) {
-    const capability = canSendTo(recipient);
-    if (!capability.allowed) {
-      const err = new Error(capability.reason);
-      err.code = capability.code;
-      throw err;
-    }
+  const capability = canSendTo(to);
+  if (!capability.allowed) {
+    const err = new Error(capability.reason);
+    err.code = capability.code;
+    err.retriable = false;
+    throw err;
   }
 
-  const response = await fetch(RESEND_API_URL, {
+  const payload = {
+    personalizations: [
+      {
+        to: [{ email: capability.email }]
+      }
+    ],
+    from: {
+      email: status.fromEmail,
+      name: status.fromName
+    },
+    subject,
+    content: [
+      { type: 'text/plain', value: String(text || '') },
+      { type: 'text/html', value: String(html || '') }
+    ]
+  };
+
+  if (status.replyTo) {
+    payload.reply_to = {
+      email: status.replyTo,
+      name: status.fromName
+    };
+  }
+
+  const response = await fetch(SENDGRID_API_URL, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      Authorization: `Bearer ${process.env.SENDGRID_API_KEY}`,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      from: status.from,
-      ...payload
-    })
+    body: JSON.stringify(payload)
   });
 
-  const data = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    const err = new Error(
-      data.message ||
-      data.error ||
-      `Resend request failed (${response.status})`
-    );
-    err.code = data.name || data.code || `HTTP_${response.status}`;
-    err.status = response.status;
-    err.details = data;
-    throw err;
+  if (response.ok) {
+    return {
+      ok: true,
+      messageId: response.headers.get('x-message-id') || ''
+    };
   }
 
-  return {
-    id: data.id || '',
-    messageId: data.id || '',
-    raw: data
-  };
+  const data = await response.json().catch(() => ({}));
+  const err = new Error(errorMessageFromSendGrid(data,response.status));
+  err.status = response.status;
+  err.code =
+    response.status === 401 ? 'SENDGRID_UNAUTHORIZED' :
+    response.status === 403 ? 'SENDGRID_FORBIDDEN' :
+    response.status === 429 ? 'SENDGRID_RATE_LIMITED' :
+    `SENDGRID_HTTP_${response.status}`;
+  err.retriable = response.status === 429 || response.status >= 500;
+  err.details = data;
+  throw err;
 }
 
 async function sendTestEmail({ to, academyName }) {
   const base = appBaseUrl();
 
-  return resendRequest({
-    to: [to],
+  return sendGridRequest({
+    to,
     subject: 'AcademyFlow · اختبار البريد الإلكتروني',
     text: [
       'البريد يعمل بنجاح.',
-      'هذه رسالة اختبار من AcademyFlow عبر Resend.',
+      'هذه رسالة اختبار من AcademyFlow عبر SendGrid.',
       base ? `رابط النظام: ${base}` : ''
     ].filter(Boolean).join('\n'),
     html: `
       <div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.8;color:#111827">
         <h2>البريد يعمل بنجاح ✅</h2>
-        <p>هذه رسالة اختبار من <strong>${escapeHtml(academyName || 'AcademyFlow')}</strong> عبر Resend.</p>
-        <p>إذا وصلت لك هذه الرسالة، فإعداد Resend يعمل.</p>
+        <p>هذه رسالة اختبار من <strong>${escapeHtml(academyName || 'AcademyFlow')}</strong> عبر SendGrid.</p>
+        <p>إذا وصلت لك هذه الرسالة، فإعداد SendGrid جاهز لإرسال تذكيرات الطلاب.</p>
         ${base ? `<p><a href="${escapeHtml(base)}">فتح AcademyFlow</a></p>` : ''}
       </div>
     `
@@ -257,11 +189,9 @@ async function sendLiveReminder({ to, studentName, academyName, session, minutes
     timeZone: session.timezone || 'Asia/Muscat'
   });
 
-  const subject = `تذكير: ${session.title} تبدأ بعد ${minutes} دقائق`;
-
-  return resendRequest({
-    to: [to],
-    subject,
+  return sendGridRequest({
+    to,
+    subject: `تذكير: ${session.title} تبدأ بعد ${minutes} دقائق`,
     text: [
       `مرحبًا ${studentName || 'طالبنا'},`,
       '',

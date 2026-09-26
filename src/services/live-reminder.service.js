@@ -98,7 +98,7 @@ async function sendEmail({ academy, session, student, courseTitle, minutes }) {
 
   if (!mailer.configured()) {
     delivery.status = 'failed';
-    delivery.error = 'RESEND_API_KEY غير موجود';
+    delivery.error = 'إعدادات SendGrid غير مكتملة';
     delivery.lastAttemptAt = new Date();
     delivery.attempts = Math.max(1, Number(delivery.attempts || 0));
     await delivery.save();
@@ -135,18 +135,12 @@ async function sendEmail({ academy, session, student, courseTitle, minutes }) {
     await delivery.save();
     return 'sent';
   } catch (err) {
-    const terminalCodes = new Set([
-      'RESEND_TEST_MODE_ONLY',
-      'RESEND_TEST_RECIPIENT_MISSING',
-      'RECIPIENT_MISSING'
-    ]);
-
-    delivery.status = terminalCodes.has(err.code) ? 'skipped' : 'failed';
+    delivery.status = 'failed';
     delivery.error = String(err.message || 'Email failed').slice(0,1000);
     await delivery.save();
 
-    if (delivery.status === 'skipped') return 'skipped';
-    return delivery.attempts >= 3 ? 'failed_final' : 'retry';
+    if (err.retriable && delivery.attempts < 3) return 'retry';
+    return 'failed_final';
   }
 }
 

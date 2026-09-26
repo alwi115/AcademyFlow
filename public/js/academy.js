@@ -1465,26 +1465,26 @@ const AF = (() => {
         <div class="academy-card-head">
           <div>
             <h2>البريد الإلكتروني والتنبيهات</h2>
-            <p>الإرسال يستخدم Resend عبر HTTPS، لذلك يناسب Railway بدون الحاجة إلى SMTP.</p>
+            <p>الإرسال يستخدم SendGrid عبر HTTPS، لذلك يناسب Railway بدون الحاجة إلى SMTP.</p>
           </div>
           <div id="academyEmailState"><span class="academy-status info">جاري فحص الإعداد...</span></div>
         </div>
 
         <div class="academy-details-grid" id="academyEmailDetails">
           <div class="academy-detail-item"><small>الحالة</small><div>جاري قراءة إعدادات البريد...</div></div>
-          <div class="academy-detail-item"><small>مزود البريد</small><div>Resend</div></div>
+          <div class="academy-detail-item"><small>مزود البريد</small><div>SendGrid</div></div>
           <div class="academy-detail-item"><small>البريد المرسل منه</small><div>—</div></div>
+          <div class="academy-detail-item"><small>اسم المرسل</small><div>AcademyFlow</div></div>
           <div class="academy-detail-item"><small>API Key</small><div>—</div></div>
-          <div class="academy-detail-item"><small>بريد الاختبار</small><div>—</div></div>
         </div>
 
         <div class="academy-note" style="margin-top:12px">
-          <b>الإعداد الآمن:</b>
-          للاختبار يكفي <code>RESEND_API_KEY</code> +
-          <code>RESEND_TEST_TO</code> +
+          <b>المطلوب في Railway Variables:</b>
+          <code>SENDGRID_API_KEY</code> +
+          <code>SENDGRID_FROM_EMAIL</code> +
+          <code>SENDGRID_FROM_NAME</code> +
           <code>PUBLIC_URL</code>.
-          النظام يستخدم <code>onboarding@resend.dev</code> تلقائيًا في وضع الاختبار.
-          <code>EMAIL_FROM</code> اختياري، ولا يُستخدم إلا إذا كان لدومين موثّق في Resend.
+          لازم يكون <code>SENDGRID_FROM_EMAIL</code> هو نفس البريد الذي وثقته في Single Sender Verification.
         </div>
 
         <div class="academy-row-actions" style="margin-top:12px">
@@ -1513,34 +1513,21 @@ const AF = (() => {
       try {
         const emailStatus = await api('/api/academy/email/status');
 
-        if (!emailStatus.configured) {
-          state.innerHTML = '<span class="academy-status bad">ناقص إعداد</span>';
-        } else if (emailStatus.productionReady) {
-          state.innerHTML = '<span class="academy-status good">إرسال حقيقي جاهز</span>';
-        } else if (emailStatus.testReady) {
-          state.innerHTML = '<span class="academy-status warn">وضع اختبار جاهز</span>';
-        } else {
-          state.innerHTML = '<span class="academy-status warn">وضع اختبار غير مكتمل</span>';
-        }
+        state.innerHTML = emailStatus.configured
+          ? '<span class="academy-status good">جاهز للإرسال</span>'
+          : '<span class="academy-status bad">ناقص إعداد</span>';
 
-        const reason = !emailStatus.configured
-          ? 'المتغيرات الناقصة: '+((emailStatus.missing || []).join(', ') || 'غير معروفة')
-          : emailStatus.productionReady
-            ? 'Resend جاهز للإرسال إلى الطلاب باستخدام دومين موثّق.'
-            : emailStatus.testReady
-              ? 'الاختبار جاهز. الإرسال الحقيقي لكل الطلاب يحتاج دومين موثّق في Resend.'
-              : 'أضف RESEND_TEST_TO حتى يعمل البريد التجريبي.';
+        const reason = emailStatus.configured
+          ? 'SendGrid جاهز. البريد التجريبي وتذكيرات الطلاب سيستخدمان Single Sender الموثّق.'
+          : 'المتغيرات الناقصة: '+((emailStatus.missing || []).join(', ') || 'غير معروفة');
 
         details.innerHTML = `
           <div class="academy-detail-item"><small>الحالة</small><div>${esc(reason)}</div></div>
-          <div class="academy-detail-item"><small>مزود البريد</small><div>Resend · HTTPS API</div></div>
-          <div class="academy-detail-item"><small>المرسل الفعلي</small><div>${esc(emailStatus.from || '—')}</div></div>
+          <div class="academy-detail-item"><small>مزود البريد</small><div>SendGrid · HTTPS API</div></div>
+          <div class="academy-detail-item"><small>البريد المرسل منه</small><div>${esc(emailStatus.fromEmail || '—')}</div></div>
+          <div class="academy-detail-item"><small>اسم المرسل</small><div>${esc(emailStatus.fromName || 'AcademyFlow')}</div></div>
           <div class="academy-detail-item"><small>API Key</small><div>${emailStatus.apiKeyPresent ? 'موجود ومخفي' : 'غير موجود'}</div></div>
-          <div class="academy-detail-item"><small>بريد الاختبار</small><div>${esc(emailStatus.testTo || 'غير محدد')}</div></div>
-          <div class="academy-detail-item"><small>الوضع</small><div>${emailStatus.productionReady ? 'إرسال حقيقي' : 'اختبار Resend'}</div></div>
-          ${emailStatus.ignoredConfiguredFrom
-            ? '<div class="academy-detail-item" style="grid-column:1/-1"><small>تصحيح تلقائي</small><div>تم تجاهل EMAIL_FROM غير الصالح واستخدام onboarding@resend.dev تلقائيًا.</div></div>'
-            : ''}
+          <div class="academy-detail-item"><small>Reply-To</small><div>${esc(emailStatus.replyTo || '—')}</div></div>
         `;
       } catch (err) {
         state.innerHTML = '<span class="academy-status bad">تعذر قراءة حالة البريد</span>';
