@@ -50,6 +50,27 @@ jobs:
           echo "Staging health endpoint did not become ready."
           exit 1
 
+      - name: Validate legal and commercial public pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="${STAGING_BASE_URL%/}"
+
+          for path in             /legal/             /legal/privacy.html             /legal/terms.html             /legal/refund.html             /legal/data-deletion.html             /legal/cookies.html             /legal/acceptable-use.html             /legal/support.html             /legal/dpa.html             /legal/privacy-request.html
+          do
+            echo "Checking $path"
+            curl -fsS --max-time 15 "$base$path" -o /dev/null
+          done
+
+          curl -fsS --max-time 15 "$base/api/public/legal-config" -o legal-config.json
+          python3 - <<'PY'
+          import json
+          data = json.load(open("legal-config.json", encoding="utf-8"))
+          assert data.get("legalVersion"), "legalVersion missing"
+          assert data.get("jurisdiction") == "Sultanate of Oman", "unexpected jurisdiction"
+          print("Legal public endpoints passed.")
+          PY
+
       - name: Capture staging security headers
         shell: bash
         run: |
