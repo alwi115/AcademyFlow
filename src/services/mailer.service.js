@@ -1,19 +1,112 @@
 const RESEND_API_URL = 'https://api.resend.com/emails';
+const TEST_FROM = 'AcademyFlow <onboarding@resend.dev>';
+
+const PUBLIC_MAIL_DOMAINS = new Set([
+  'gmail.com',
+  'googlemail.com',
+  'yahoo.com',
+  'outlook.com',
+  'hotmail.com',
+  'live.com',
+  'icloud.com',
+  'me.com',
+  'aol.com'
+]);
+
+function extractEmail(value) {
+  const text = String(value || '').trim();
+  const angle = text.match(/<([^<>\s]+@[^<>\s]+)>/);
+  if (angle) return angle[1].toLowerCase();
+
+  const plain = text.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
+  return plain ? text.toLowerCase() : '';
+}
+
+function senderDomain(value) {
+  const email = extractEmail(value);
+  return email.includes('@') ? email.split('@').pop() : '';
+}
+
+function isPlaceholderOrPublicSender(value) {
+  const domain = senderDomain(value);
+  if (!domain) return true;
+
+  return (
+    domain === 'yourdomain.com' ||
+    domain.endsWith('.yourdomain.com') ||
+    PUBLIC_MAIL_DOMAINS.has(domain)
+  );
+}
+
+function resolveSender() {
+  const rawFrom = String(
+    process.env.RESEND_FROM ||
+    process.env.EMAIL_FROM ||
+    ''
+  ).trim();
+
+  if (!rawFrom) {
+    return {
+      rawFrom: '',
+      from: TEST_FROM,
+      mode: 'testing',
+      ignoredConfiguredFrom: false,
+      reason: 'لم يتم تحديد مرسل موثّق، لذلك يستخدم النظام مرسل Resend التجريبي.'
+    };
+  }
+
+  const domain = senderDomain(rawFrom);
+
+  if (
+    rawFrom.toLowerCase().includes('onboarding@resend.dev') ||
+    domain === 'resend.dev'
+  ) {
+    return {
+      rawFrom,
+      from: TEST_FROM,
+      mode: 'testing',
+      ignoredConfiguredFrom: false,
+      reason: 'النظام يعمل بوضع اختبار Resend.'
+    };
+  }
+
+  if (isPlaceholderOrPublicSender(rawFrom)) {
+    return {
+      rawFrom,
+      from: TEST_FROM,
+      mode: 'testing',
+      ignoredConfiguredFrom: true,
+      reason: 'تم تجاهل EMAIL_FROM لأنه غير صالح كمرسل موثّق في Resend، واستخدام onboarding@resend.dev تلقائيًا.'
+    };
+  }
+
+  return {
+    rawFrom,
+    from: rawFrom,
+    mode: 'production',
+    ignoredConfiguredFrom: false,
+    reason: 'مرسل مخصص جاهز. يجب أن يكون الدومين موثّقًا داخل Resend.'
+  };
+}
 
 function configStatus() {
   const apiKey = String(process.env.RESEND_API_KEY || '').trim();
-  const from = String(process.env.EMAIL_FROM || '').trim();
-  const missing = [];
-
-  if (!apiKey) missing.push('RESEND_API_KEY');
-  if (!from) missing.push('EMAIL_FROM');
+  const testTo = String(process.env.RESEND_TEST_TO || '').trim();
+  const sender = resolveSender();
 
   return {
     provider: 'resend',
-    configured: missing.length === 0,
-    missing,
-    from,
-    apiKeyPresent: Boolean(apiKey)
+    configured: Boolean(apiKey),
+    apiKeyPresent: Boolean(apiKey),
+    missing: apiKey ? [] : ['RESEND_API_KEY'],
+    mode: sender.mode,
+    from: sender.from,
+    rawFrom: sender.rawFrom,
+    ignoredConfiguredFrom: sender.ignoredConfiguredFrom,
+    reason: sender.reason,
+    testTo,
+    testReady: Boolean(apiKey && testTo),
+    productionReady: Boolean(apiKey && sender.mode === 'production')
   };
 }
 
@@ -33,14 +126,70 @@ function appBaseUrl() {
   return (firstOrigin || '').replace(/\/$/, '');
 }
 
+function canSendTo(recipient) {
+  const status = configStatus();
+  const email = String(recipient || '').trim().toLowerCase();
+
+  if (!status.apiKeyPresent) {
+    return {
+      allowed: false,
+      code: 'RESEND_NOT_CONFIGURED',
+      reason: 'RESEND_API_KEY غير موجود.'
+    };
+  }
+
+  if (!email) {
+    return {
+      allowed: false,
+      code: 'RECIPIENT_MISSING',
+      reason: 'البريد المستلم غير موجود.'
+    };
+  }
+
+  if (status.mode === 'production') {
+    return { allowed: true, code: 'OK', reason: '' };
+  }
+
+  const testTo = status.testTo.toLowerCase();
+
+  if (!testTo) {
+    return {
+      allowed: false,
+      code: 'RESEND_TEST_RECIPIENT_MISSING',
+      reason: 'وضع الاختبار مفعل لكن RESEND_TEST_TO غير موجود.'
+    };
+  }
+
+  if (email !== testTo) {
+    return {
+      allowed: false,
+      code: 'RESEND_TEST_MODE_ONLY',
+      reason: 'Resend بوضع الاختبار يسمح بالإرسال فقط إلى RESEND_TEST_TO حتى يتم توثيق دومين.'
+    };
+  }
+
+  return { allowed: true, code: 'OK_TEST', reason: '' };
+}
+
 async function resendRequest(payload) {
   const status = configStatus();
 
-  if (!status.configured) {
-    const err = new Error('Resend is not configured');
+  if (!status.apiKeyPresent) {
+    const err = new Error('RESEND_API_KEY غير موجود');
     err.code = 'RESEND_NOT_CONFIGURED';
-    err.missing = status.missing;
+    err.missing = ['RESEND_API_KEY'];
     throw err;
+  }
+
+  const recipients = Array.isArray(payload.to) ? payload.to : [payload.to];
+
+  for (const recipient of recipients) {
+    const capability = canSendTo(recipient);
+    if (!capability.allowed) {
+      const err = new Error(capability.reason);
+      err.code = capability.code;
+      throw err;
+    }
   }
 
   const response = await fetch(RESEND_API_URL, {
@@ -91,7 +240,7 @@ async function sendTestEmail({ to, academyName }) {
       <div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.8;color:#111827">
         <h2>البريد يعمل بنجاح ✅</h2>
         <p>هذه رسالة اختبار من <strong>${escapeHtml(academyName || 'AcademyFlow')}</strong> عبر Resend.</p>
-        <p>إذا وصلت لك هذه الرسالة، فإعداد البريد صحيح ويمكن للنظام إرسال تذكيرات المحاضرات.</p>
+        <p>إذا وصلت لك هذه الرسالة، فإعداد Resend يعمل.</p>
         ${base ? `<p><a href="${escapeHtml(base)}">فتح AcademyFlow</a></p>` : ''}
       </div>
     `
@@ -148,6 +297,7 @@ function escapeHtml(value) {
 module.exports = {
   configured,
   configStatus,
+  canSendTo,
   sendTestEmail,
   sendLiveReminder
 };

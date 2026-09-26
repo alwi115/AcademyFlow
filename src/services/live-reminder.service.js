@@ -98,11 +98,20 @@ async function sendEmail({ academy, session, student, courseTitle, minutes }) {
 
   if (!mailer.configured()) {
     delivery.status = 'failed';
-    delivery.error = 'Resend is not configured';
+    delivery.error = 'RESEND_API_KEY غير موجود';
     delivery.lastAttemptAt = new Date();
     delivery.attempts = Math.max(1, Number(delivery.attempts || 0));
     await delivery.save();
     return 'failed_final';
+  }
+
+  const capability = mailer.canSendTo(student.email);
+  if (!capability.allowed) {
+    delivery.status = 'skipped';
+    delivery.error = capability.reason;
+    delivery.lastAttemptAt = new Date();
+    await delivery.save();
+    return 'skipped';
   }
 
   delivery.attempts = Number(delivery.attempts || 0) + 1;
@@ -126,10 +135,17 @@ async function sendEmail({ academy, session, student, courseTitle, minutes }) {
     await delivery.save();
     return 'sent';
   } catch (err) {
-    delivery.status = 'failed';
+    const terminalCodes = new Set([
+      'RESEND_TEST_MODE_ONLY',
+      'RESEND_TEST_RECIPIENT_MISSING',
+      'RECIPIENT_MISSING'
+    ]);
+
+    delivery.status = terminalCodes.has(err.code) ? 'skipped' : 'failed';
     delivery.error = String(err.message || 'Email failed').slice(0,1000);
     await delivery.save();
 
+    if (delivery.status === 'skipped') return 'skipped';
     return delivery.attempts >= 3 ? 'failed_final' : 'retry';
   }
 }

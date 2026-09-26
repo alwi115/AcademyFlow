@@ -1479,13 +1479,12 @@ const AF = (() => {
         </div>
 
         <div class="academy-note" style="margin-top:12px">
-          <b>المطلوب في Railway Variables:</b>
-          <code>RESEND_API_KEY</code> +
-          <code>EMAIL_FROM</code> +
+          <b>الإعداد الآمن:</b>
+          للاختبار يكفي <code>RESEND_API_KEY</code> +
+          <code>RESEND_TEST_TO</code> +
           <code>PUBLIC_URL</code>.
-          وللاختبار باستخدام <code>onboarding@resend.dev</code> أضف:
-          <code>RESEND_TEST_TO</code>.
-          لا تضع مفتاح Resend داخل الموقع أو ترسله لأي شخص.
+          النظام يستخدم <code>onboarding@resend.dev</code> تلقائيًا في وضع الاختبار.
+          <code>EMAIL_FROM</code> اختياري، ولا يُستخدم إلا إذا كان لدومين موثّق في Resend.
         </div>
 
         <div class="academy-row-actions" style="margin-top:12px">
@@ -1514,20 +1513,34 @@ const AF = (() => {
       try {
         const emailStatus = await api('/api/academy/email/status');
 
-        state.innerHTML = emailStatus.configured
-          ? '<span class="academy-status good">الإعدادات موجودة</span>'
-          : '<span class="academy-status warn">غير مضبوط</span>';
+        if (!emailStatus.configured) {
+          state.innerHTML = '<span class="academy-status bad">ناقص إعداد</span>';
+        } else if (emailStatus.productionReady) {
+          state.innerHTML = '<span class="academy-status good">إرسال حقيقي جاهز</span>';
+        } else if (emailStatus.testReady) {
+          state.innerHTML = '<span class="academy-status warn">وضع اختبار جاهز</span>';
+        } else {
+          state.innerHTML = '<span class="academy-status warn">وضع اختبار غير مكتمل</span>';
+        }
 
-        const reason = emailStatus.configured
-          ? 'إعدادات Resend موجودة. استخدم زر البريد التجريبي للتأكد أن المفتاح والبريد المرسل منه يعملان.'
-          : 'المتغيرات الناقصة: '+((emailStatus.missing || []).join(', ') || 'غير معروفة');
+        const reason = !emailStatus.configured
+          ? 'المتغيرات الناقصة: '+((emailStatus.missing || []).join(', ') || 'غير معروفة')
+          : emailStatus.productionReady
+            ? 'Resend جاهز للإرسال إلى الطلاب باستخدام دومين موثّق.'
+            : emailStatus.testReady
+              ? 'الاختبار جاهز. الإرسال الحقيقي لكل الطلاب يحتاج دومين موثّق في Resend.'
+              : 'أضف RESEND_TEST_TO حتى يعمل البريد التجريبي.';
 
         details.innerHTML = `
           <div class="academy-detail-item"><small>الحالة</small><div>${esc(reason)}</div></div>
           <div class="academy-detail-item"><small>مزود البريد</small><div>Resend · HTTPS API</div></div>
-          <div class="academy-detail-item"><small>البريد المرسل منه</small><div>${esc(emailStatus.from || '—')}</div></div>
+          <div class="academy-detail-item"><small>المرسل الفعلي</small><div>${esc(emailStatus.from || '—')}</div></div>
           <div class="academy-detail-item"><small>API Key</small><div>${emailStatus.apiKeyPresent ? 'موجود ومخفي' : 'غير موجود'}</div></div>
-          <div class="academy-detail-item"><small>بريد الاختبار</small><div>${esc(emailStatus.testTo || 'سيستخدم بريد حساب AcademyFlow')}</div></div>
+          <div class="academy-detail-item"><small>بريد الاختبار</small><div>${esc(emailStatus.testTo || 'غير محدد')}</div></div>
+          <div class="academy-detail-item"><small>الوضع</small><div>${emailStatus.productionReady ? 'إرسال حقيقي' : 'اختبار Resend'}</div></div>
+          ${emailStatus.ignoredConfiguredFrom
+            ? '<div class="academy-detail-item" style="grid-column:1/-1"><small>تصحيح تلقائي</small><div>تم تجاهل EMAIL_FROM غير الصالح واستخدام onboarding@resend.dev تلقائيًا.</div></div>'
+            : ''}
         `;
       } catch (err) {
         state.innerHTML = '<span class="academy-status bad">تعذر قراءة حالة البريد</span>';

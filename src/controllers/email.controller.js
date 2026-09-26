@@ -4,7 +4,6 @@ const mailer = require('../services/mailer.service');
 
 async function status(req, res) {
   const info = mailer.configStatus();
-  const testTo = String(process.env.RESEND_TEST_TO || '').trim();
 
   res.json({
     provider: info.provider,
@@ -12,8 +11,13 @@ async function status(req, res) {
     missing: info.missing,
     from: info.from || '',
     apiKeyPresent: Boolean(info.apiKeyPresent),
-    testTo,
-    testToConfigured: Boolean(testTo)
+    testTo: info.testTo || '',
+    testToConfigured: Boolean(info.testTo),
+    mode: info.mode,
+    testReady: Boolean(info.testReady),
+    productionReady: Boolean(info.productionReady),
+    ignoredConfiguredFrom: Boolean(info.ignoredConfiguredFrom),
+    reason: info.reason || ''
   });
 }
 
@@ -27,8 +31,8 @@ async function test(req, res) {
     }).select('name email')
   ]);
 
-  const configuredTestTo = String(process.env.RESEND_TEST_TO || '').trim();
-  const recipient = configuredTestTo || String(user?.email || '').trim();
+  const info = mailer.configStatus();
+  const recipient = String(info.testTo || user?.email || '').trim();
 
   if (!recipient) {
     return res.status(400).json({
@@ -36,12 +40,20 @@ async function test(req, res) {
     });
   }
 
-  const info = mailer.configStatus();
-
   if (!info.configured) {
     return res.status(409).json({
       message: 'إعدادات Resend غير مكتملة',
       missing: info.missing
+    });
+  }
+
+  const capability = mailer.canSendTo(recipient);
+
+  if (!capability.allowed) {
+    return res.status(409).json({
+      message: 'وضع اختبار Resend غير جاهز',
+      error: capability.reason,
+      code: capability.code
     });
   }
 
@@ -54,8 +66,9 @@ async function test(req, res) {
     res.json({
       ok: true,
       provider: 'resend',
+      mode: info.mode,
+      from: info.from,
       to: recipient,
-      usedDedicatedTestAddress: Boolean(configuredTestTo),
       messageId: result?.messageId || ''
     });
   } catch (err) {
