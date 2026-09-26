@@ -862,8 +862,8 @@ const SA = (() => {
               <p>${activeAlerts.some(x => x.severity === 'critical') ? 'يوجد تنبيه حرج' : 'الحالة تحت المراقبة'}</p>
             </article>
             <article class="sa-health-item">
-              <small>الجاهزية القانونية</small>
-              <strong>${h.legalReadiness?.complete ? 'مكتملة' : 'تحتاج بيانات'}</strong>
+              <small>الجاهزية القانونية والتجارية</small>
+              <strong>${esc(h.legalReadiness?.percent ?? 0)}%</strong>
               <p>${h.legalReadiness?.complete ? 'الهوية القانونية الأساسية مضبوطة' : 'ناقص: '+esc((h.legalReadiness?.missing || []).join(', '))}</p>
             </article>
           </div>
