@@ -9,7 +9,9 @@ const {
 } = require('../services/quiz.service');
 const {
   manageableCourseIds: instructorCourseIds,
-  assertCourse: assertInstructorCourse
+  assertCourse: assertInstructorCourse,
+  assertDirectCourse: assertInstructorDirectCourse,
+  studentCourseAccessFilter
 } = require('../services/instructor-scope.service');
 
 function clean(value) {
@@ -38,6 +40,14 @@ async function assertCourseAccess(req, courseId) {
   }
 
   return course;
+}
+
+async function assertCourseManagementAccess(req, courseId) {
+  if (req.user.role === 'instructor') {
+    return assertInstructorDirectCourse(req, courseId);
+  }
+
+  return assertCourseAccess(req, courseId);
 }
 
 async function getQuizForAdmin(req, id) {
@@ -105,10 +115,14 @@ async function listQuizzes(req, res) {
     let pendingReviewCount = null;
 
     if (canReviewAttempts) {
+      const attemptBase = req.user.role === 'instructor'
+        ? await studentCourseAccessFilter(req, { assessmentId: quiz._id })
+        : { academyId: req.academyId, assessmentId: quiz._id };
+
       [attemptCount, gradedCount, pendingReviewCount] = await Promise.all([
-        QuizAttempt.countDocuments({ academyId: req.academyId, assessmentId: quiz._id }),
-        QuizAttempt.countDocuments({ academyId: req.academyId, assessmentId: quiz._id, status: 'graded' }),
-        QuizAttempt.countDocuments({ academyId: req.academyId, assessmentId: quiz._id, status: 'pending_review' })
+        QuizAttempt.countDocuments(attemptBase),
+        QuizAttempt.countDocuments({ ...attemptBase, status: 'graded' }),
+        QuizAttempt.countDocuments({ ...attemptBase, status: 'pending_review' })
       ]);
     }
 
@@ -144,7 +158,7 @@ async function createQuiz(req, res) {
     return res.status(400).json({ message: 'الدورة وعنوان الاختبار مطلوبان' });
   }
 
-  await assertCourseAccess(req, courseId);
+  await assertCourseManagementAccess(req, courseId);
 
   const quiz = await Assessment.create({
     academyId: req.academyId,
@@ -170,6 +184,9 @@ async function createQuiz(req, res) {
 async function quizDetails(req, res) {
   const quiz = await getQuizForAdmin(req, req.params.id);
   const canReviewAttempts = req.user.role !== 'content_manager';
+  const attemptFilter = req.user.role === 'instructor'
+    ? await studentCourseAccessFilter(req, { assessmentId: quiz._id })
+    : { academyId: req.academyId, assessmentId: quiz._id };
 
   const [questions, attempts, hasAttempts] = await Promise.all([
     QuizQuestion.find({
@@ -179,17 +196,15 @@ async function quizDetails(req, res) {
       .select('+correctBoolean +explanation +options.isCorrect')
       .sort({ order: 1, createdAt: 1 }),
     canReviewAttempts
-      ? QuizAttempt.find({
-          academyId: req.academyId,
-          assessmentId: quiz._id
-        })
+      ? QuizAttempt.find(attemptFilter)
           .populate('studentId', 'name email')
           .sort({ createdAt: -1 })
       : [],
-    QuizAttempt.exists({
-      academyId: req.academyId,
-      assessmentId: quiz._id
-    })
+    QuizAttempt.exists(
+      req.user.role === 'content_manager'
+        ? { academyId: req.academyId, assessmentId: quiz._id }
+        : attemptFilter
+    )
   ]);
 
   res.json({
@@ -214,6 +229,7 @@ async function quizDetails(req, res) {
 
 async function updateQuiz(req, res) {
   const quiz = await getQuizForAdmin(req, req.params.id);
+  await assertCourseManagementAccess(req, quiz.courseId?._id || quiz.courseId);
   const hasAttempts = await QuizAttempt.exists({
     academyId: req.academyId,
     assessmentId: quiz._id
@@ -277,6 +293,7 @@ async function updateQuiz(req, res) {
 
 async function createQuestion(req, res) {
   const quiz = await getQuizForAdmin(req, req.params.id);
+  await assertCourseManagementAccess(req, quiz.courseId?._id || quiz.courseId);
   await ensureQuestionsEditable(quiz);
 
   const payload = normalizeQuestionPayload(req.body);
@@ -299,6 +316,7 @@ async function createQuestion(req, res) {
 
 async function updateQuestion(req, res) {
   const quiz = await getQuizForAdmin(req, req.params.id);
+  await assertCourseManagementAccess(req, quiz.courseId?._id || quiz.courseId);
   await ensureQuestionsEditable(quiz);
 
   const question = await QuizQuestion.findOne({
@@ -325,6 +343,7 @@ async function updateQuestion(req, res) {
 
 async function deleteQuestion(req, res) {
   const quiz = await getQuizForAdmin(req, req.params.id);
+  await assertCourseManagementAccess(req, quiz.courseId?._id || quiz.courseId);
   await ensureQuestionsEditable(quiz);
 
   const row = await QuizQuestion.findOneAndDelete({
@@ -344,10 +363,11 @@ async function deleteQuestion(req, res) {
 async function listAttempts(req, res) {
   const quiz = await getQuizForAdmin(req, req.params.id);
 
-  const rows = await QuizAttempt.find({
-    academyId: req.academyId,
-    assessmentId: quiz._id
-  })
+  const rows = await QuizAttempt.find(
+    req.user.role === 'instructor'
+      ? await studentCourseAccessFilter(req, { assessmentId: quiz._id })
+      : { academyId: req.academyId, assessmentId: quiz._id }
+  )
     .populate('studentId', 'name email')
     .sort({ createdAt: -1 });
 
@@ -369,11 +389,18 @@ async function listAttempts(req, res) {
 async function attemptDetails(req, res) {
   const quiz = await getQuizForAdmin(req, req.params.id);
 
-  const attempt = await QuizAttempt.findOne({
-    _id: req.params.attemptId,
-    academyId: req.academyId,
-    assessmentId: quiz._id
-  }).populate('studentId', 'name email');
+  const attempt = await QuizAttempt.findOne(
+    req.user.role === 'instructor'
+      ? await studentCourseAccessFilter(req, {
+          _id: req.params.attemptId,
+          assessmentId: quiz._id
+        })
+      : {
+          _id: req.params.attemptId,
+          academyId: req.academyId,
+          assessmentId: quiz._id
+        }
+  ).populate('studentId', 'name email');
 
   if (!attempt) {
     return res.status(404).json({ message: 'المحاولة غير موجودة' });
@@ -421,11 +448,18 @@ async function gradeShortAnswer(req, res) {
   const quiz = await getQuizForAdmin(req, req.params.id);
 
   const [attempt, question] = await Promise.all([
-    QuizAttempt.findOne({
-      _id: req.params.attemptId,
-      academyId: req.academyId,
-      assessmentId: quiz._id
-    }),
+    QuizAttempt.findOne(
+      req.user.role === 'instructor'
+        ? await studentCourseAccessFilter(req, {
+            _id: req.params.attemptId,
+            assessmentId: quiz._id
+          })
+        : {
+            _id: req.params.attemptId,
+            academyId: req.academyId,
+            assessmentId: quiz._id
+          }
+    ),
     QuizQuestion.findOne({
       _id: req.params.questionId,
       academyId: req.academyId,
