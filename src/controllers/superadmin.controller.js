@@ -193,17 +193,23 @@ async function updateStatus(req, res) {
     return res.status(400).json({ message: 'Invalid status' });
   }
 
-  const academy = await Academy.findByIdAndUpdate(
-    req.params.id,
-    { status: req.body.status },
-    { new: true }
-  );
-
+  const academy = await Academy.findById(req.params.id);
   if (!academy) return res.status(404).json({ message: 'Academy not found' });
 
-  await audit(req, 'academy.status', 'academy', academy._id, academy.name, {
-    status: academy.status
-  });
+  const before = { status: academy.status };
+  academy.status = req.body.status;
+  await academy.save();
+
+  await audit(
+    req,
+    'academy.status',
+    'academy',
+    academy._id,
+    academy.name,
+    { changedFields: ['status'] },
+    before,
+    { status: academy.status }
+  );
 
   res.json(academy);
 }
@@ -212,6 +218,12 @@ async function updateSubscription(req, res) {
   const { planId, subscriptionEndsAt, status } = req.body;
   const academy = await Academy.findById(req.params.id);
   if (!academy) return res.status(404).json({ message: 'Academy not found' });
+
+  const before = {
+    planId: academy.planId || null,
+    subscriptionEndsAt: academy.subscriptionEndsAt || null,
+    status: academy.status
+  };
 
   if (planId !== undefined) {
     if (planId && !(await Plan.exists({ _id: planId }))) {
@@ -235,11 +247,20 @@ async function updateSubscription(req, res) {
   }
 
   await academy.save();
-  await audit(req, 'academy.subscription', 'academy', academy._id, academy.name, {
-    planId: academy.planId || null,
-    subscriptionEndsAt: academy.subscriptionEndsAt || null,
-    status: academy.status
-  });
+  await audit(
+    req,
+    'academy.subscription',
+    'academy',
+    academy._id,
+    academy.name,
+    { changedFields: Object.keys(req.body || {}) },
+    before,
+    {
+      planId: academy.planId || null,
+      subscriptionEndsAt: academy.subscriptionEndsAt || null,
+      status: academy.status
+    }
+  );
 
   res.json(await academy.populate('planId', 'name code monthlyPrice yearlyPrice active'));
 }
@@ -283,6 +304,15 @@ async function updatePlan(req, res) {
   const row = await Plan.findById(req.params.id);
   if (!row) return res.status(404).json({ message: 'Plan not found' });
 
+  const before = {
+    name: row.name,
+    monthlyPrice: row.monthlyPrice,
+    yearlyPrice: row.yearlyPrice,
+    limits: row.limits?.toObject ? row.limits.toObject() : row.limits,
+    features: row.features,
+    active: row.active
+  };
+
   const { name, monthlyPrice, yearlyPrice, students, instructors, courses, branches, features } = req.body;
 
   if (name !== undefined) row.name = String(name).trim();
@@ -301,7 +331,23 @@ async function updatePlan(req, res) {
   }
 
   await row.save();
-  await audit(req, 'plan.update', 'plan', row._id, row.name, { fields: Object.keys(req.body || {}) });
+  await audit(
+    req,
+    'plan.update',
+    'plan',
+    row._id,
+    row.name,
+    { fields: Object.keys(req.body || {}) },
+    before,
+    {
+      name: row.name,
+      monthlyPrice: row.monthlyPrice,
+      yearlyPrice: row.yearlyPrice,
+      limits: row.limits?.toObject ? row.limits.toObject() : row.limits,
+      features: row.features,
+      active: row.active
+    }
+  );
   res.json(row);
 }
 
@@ -620,6 +666,7 @@ async function getSettings(req, res) {
 
 async function updateSettings(req, res) {
   const settings = await platformSettings();
+  const before = settings.toObject();
 
   const textFields = ['platformName','defaultCurrency','supportEmail','supportPhone','announcement'];
   for (const key of textFields) {
@@ -631,9 +678,16 @@ async function updateSettings(req, res) {
   if (req.body.maintenanceMode !== undefined) settings.maintenanceMode = Boolean(req.body.maintenanceMode);
 
   await settings.save();
-  await audit(req, 'system.settings', 'system', settings._id, settings.platformName, {
-    fields: Object.keys(req.body || {})
-  });
+  await audit(
+    req,
+    'system.settings',
+    'system',
+    settings._id,
+    settings.platformName,
+    { fields: Object.keys(req.body || {}) },
+    before,
+    settings.toObject()
+  );
 
   res.json(settings);
 }
