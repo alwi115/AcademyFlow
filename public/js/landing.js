@@ -1,94 +1,10 @@
-(function(){
-  const modules={
-    students:{
-      kicker:'STUDENT CORE',title:'الطلاب',
-      text:'ملف الطالب يجمع بياناته وتسجيلاته ودوراته وحضوره في مكان واحد، ويخلي الرجوع لتاريخه أسهل للإدارة.',
-      points:['ملف موحد','تسجيل بالدورات','متابعة الحضور'],visual:'STUDENT'
-    },
-    courses:{
-      kicker:'COURSE ENGINE',title:'الدورات',
-      text:'كل دورة تجمع المدرب والطلاب والمواعيد والمحاضرات تحت نفس السياق، بدل ما تكون مجرد اسم في جدول.',
-      points:['جدول الدورة','الطلاب المسجلون','المحاضرات'],visual:'COURSE'
-    },
-    attendance:{
-      kicker:'ATTENDANCE TRACK',title:'الحضور',
-      text:'تسجيل الحضور يبقى مرتبطًا بالطالب والدورة واليوم، عشان المتابعة والتقارير تكون مبنية على بيانات واضحة.',
-      points:['تسجيل يومي','ربط بالطالب','تقارير حضور'],visual:'TRACK'
-    },
-    zoom:{
-      kicker:'LIVE LAYER',title:'Zoom',
-      text:'ربط حساب Zoom الخاص بالأكاديمية يخلي المحاضرة المباشرة مرتبطة بالدورة والمدرب والموعد بدل رابط منفصل.',
-      points:['حساب الأكاديمية','إدارة المحاضرات','وصول أسهل'],visual:'LIVE'
-    },
-    reports:{
-      kicker:'REPORTING',title:'التقارير',
-      text:'التقارير تقرأ البيانات المرتبطة داخل النظام وتعرض صورة أوضح للإدارة بدون جمع المعلومات يدويًا من عدة أماكن.',
-      points:['بيانات مترابطة','متابعة أوضح','قرار أسرع'],visual:'REPORT'
-    },
-    roles:{
-      kicker:'ACCESS CONTROL',title:'الصلاحيات',
-      text:'كل مستخدم يدخل للواجهة المناسبة له ويشوف الصلاحيات المرتبطة بدوره، مع بقاء بيانات الأكاديمية داخل مساحتها.',
-      points:['مالك','إدارة','مدرب / طالب'],visual:'ACCESS'
-    }
-  };
-
-  function initReveal(){
-    const items=document.querySelectorAll('[data-reveal]');
-    if(!('IntersectionObserver' in window)){
-      items.forEach(el=>el.classList.add('is-visible'));
-      return;
-    }
-    const io=new IntersectionObserver(entries=>{
-      entries.forEach(entry=>{
-        if(entry.isIntersecting){
-          entry.target.classList.add('is-visible');
-          io.unobserve(entry.target);
-        }
-      });
-    },{threshold:.1});
-    items.forEach(el=>io.observe(el));
-  }
-
-  function initExplorer(){
-    const tabs=[...document.querySelectorAll('.module-tab')];
-    const detail=document.getElementById('moduleDetail');
-    if(!tabs.length||!detail) return;
-
-    const kicker=document.getElementById('moduleKicker');
-    const title=document.getElementById('moduleTitle');
-    const text=document.getElementById('moduleText');
-    const p1=document.getElementById('modulePoint1');
-    const p2=document.getElementById('modulePoint2');
-    const p3=document.getElementById('modulePoint3');
-    const visualTitle=document.getElementById('moduleVisualTitle');
-    const visual=detail.querySelector('.module-visual');
-
-    function activate(tab){
-      const data=modules[tab.dataset.module];
-      if(!data) return;
-      tabs.forEach(btn=>{
-        const active=btn===tab;
-        btn.classList.toggle('is-active',active);
-        btn.setAttribute('aria-selected',active?'true':'false');
-      });
-      detail.classList.remove('is-changing');
-      void detail.offsetWidth;
-      detail.classList.add('is-changing');
-      kicker.textContent=data.kicker;
-      title.textContent=data.title;
-      text.textContent=data.text;
-      p1.textContent=data.points[0];
-      p2.textContent=data.points[1];
-      p3.textContent=data.points[2];
-      visualTitle.textContent=data.visual;
-      visual.dataset.state=tab.dataset.module;
-    }
-
-    tabs.forEach(tab=>tab.addEventListener('click',()=>activate(tab)));
-  }
-
-  document.addEventListener('DOMContentLoaded',()=>{
-    initReveal();
-    initExplorer();
-  });
-})();
+(()=>{const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+const eco={students:['الطلاب','ملف واحد يربط التسجيل والدورات والحضور.'],courses:['الدورات','المواعيد والمدربين والطلاب والمحاضرات في سياق واحد.'],live:['المباشر','جلسات Zoom تبدأ من مكانها الطبيعي داخل الدورة.'],reports:['التقارير','البيانات المتصلة تتحول لصورة مفهومة للإدارة.'],teachers:['المدربين','كل مدرب يشوف دوراته وطلابه ومحاضراته فقط.']};
+const mapData={admin:['الإدارة','نقطة التحكم اللي تشوف حركة الأكاديمية وتوصل لكل الوحدات.'],students:['الطلاب','بيانات الطالب تتحرك مع التسجيل والحضور والدورات.'],teachers:['المدربين','المدرب مرتبط بالدورات والجلسات والطلاب المسؤول عنهم.'],classes:['الدورات','الدورة تجمع الأشخاص والمواعيد والمحتوى في سياق واحد.'],live:['المباشر','Zoom يدخل داخل دورة العمل بدل ما يبقى رابط منفصل.'],payments:['المدفوعات','الحركة المالية تبقى مرتبطة بالسجل المناسب.'],reports:['التقارير','آخر محطة تجمع الإشارات وتحولها لمعلومة قابلة للقراءة.']};
+function reveal(){const els=$$('[data-reveal]');if(!('IntersectionObserver'in window)){els.forEach(x=>x.classList.add('visible'));return}const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');io.unobserve(e.target)}}),{threshold:.1});els.forEach(x=>io.observe(x))}
+function ecosystem(){const root=$('[data-ecosystem]'),pop=$('#ecoPop');if(!root)return;$$('.eco-node',root).forEach(n=>{const act=()=>{const k=n.dataset.eco,d=eco[k];$$('.eco-node',root).forEach(x=>x.classList.toggle('active',x===n));$$('.hero-routes path',root).forEach(x=>x.classList.toggle('active',x.dataset.route===k));root.classList.add('has-active');pop.querySelector('b').textContent=d[0];pop.querySelector('p').textContent=d[1];$('#coreCaption').textContent=d[0]+' متصل بباقي المنظومة'};n.addEventListener('mouseenter',act);n.addEventListener('focus',act);n.addEventListener('click',act)});root.addEventListener('mouseleave',()=>{$$('.eco-node',root).forEach(x=>x.classList.remove('active'));$$('.hero-routes path',root).forEach(x=>x.classList.remove('active'));root.classList.remove('has-active');$('#coreCaption').innerHTML='الأكاديمية كلها<br>في سياق واحد'})}
+function platformMap(){const root=$('[data-map]'),info=$('#mapInfo');if(!root)return;$$('[data-map-node]',root).forEach((n,i)=>{const act=()=>{const k=n.dataset.mapNode,d=mapData[k];$$('[data-map-node]',root).forEach(x=>x.classList.toggle('active',x===n));$$('.map-path',root).forEach(x=>x.classList.toggle('active',x.classList.contains('p-'+k)));root.classList.add('dim');info.querySelector('small').textContent='SELECTED / '+String(i+1).padStart(2,'0');info.querySelector('b').textContent=d[0];info.querySelector('p').textContent=d[1]};n.addEventListener('mouseenter',act);n.addEventListener('focus',act);n.addEventListener('click',act)});root.addEventListener('mouseleave',()=>root.classList.remove('dim'))}
+function counters(){const els=$$('[data-counter]');const io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;const el=e.target,to=+el.dataset.counter,start=performance.now(),dur=900;function tick(t){const p=Math.min(1,(t-start)/dur);el.textContent=Math.round(to*(1-Math.pow(1-p,3))).toLocaleString('en-US');if(p<1)requestAnimationFrame(tick)}requestAnimationFrame(tick);io.unobserve(el)}),{threshold:.5});els.forEach(x=>io.observe(x))}
+function places(){$$('.place').forEach(p=>{const act=()=>{const [name,a,b]=p.dataset.place.split('|'),pop=$('#placePop');pop.querySelector('b').textContent=name;pop.querySelector('small').textContent=a;pop.querySelector('span').textContent=b};p.addEventListener('mouseenter',act);p.addEventListener('click',act);p.addEventListener('focus',act)})}
+function finalLight(){const s=$('[data-final]'),l=$('.final-light');if(!s||!l||matchMedia('(pointer:coarse)').matches)return;s.addEventListener('pointermove',e=>{const r=s.getBoundingClientRect();l.style.left=((e.clientX-r.left)/r.width*100)+'%';l.style.top=((e.clientY-r.top)/r.height*100)+'%'})}
+document.addEventListener('DOMContentLoaded',()=>{reveal();ecosystem();platformMap();counters();places();finalLight();$$('[data-scroll]').forEach(b=>b.addEventListener('click',()=>$(b.dataset.scroll)?.scrollIntoView({behavior:'smooth'})));addEventListener('scroll',()=>$('#afNav')?.classList.toggle('is-scrolled',scrollY>24),{passive:true})})})();
