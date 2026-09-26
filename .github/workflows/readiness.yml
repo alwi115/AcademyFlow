@@ -1,0 +1,55 @@
+name: AcademyFlow Readiness
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  readiness:
+    name: Monitoring, E2E and performance
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27020:27017
+    env:
+      MONGODB_URI: mongodb://127.0.0.1:27020/academyflow_readiness_test
+      BACKUP_DIR: /tmp/academyflow-readiness-backups
+      NODE_ENV: test
+      PERFORMANCE_P95_MS: 2500
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: npm install --ignore-scripts
+
+      - name: Check readiness JavaScript syntax
+        shell: bash
+        run: |
+          node --check src/services/system-monitor.service.js
+          node --check src/services/audit.service.js
+          node --check src/middleware/audit.js
+          node --check scripts/monitoring-test.js
+          node --check scripts/e2e-test.js
+          node --check scripts/performance-smoke-test.js
+
+      - name: Monitoring alert regression
+        run: npm run test:monitoring
+
+      - name: End-to-end academy journey
+        run: npm run test:e2e
+
+      - name: Safe performance smoke
+        run: npm run test:performance
