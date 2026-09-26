@@ -1225,6 +1225,7 @@ const SA = (() => {
       portability: 'نقل البيانات',
       objection: 'اعتراض',
       withdraw_consent: 'سحب الموافقة',
+      stop_notifications: 'إيقاف الإشعارات الإلكترونية',
       complaint: 'شكوى خصوصية'
     };
 
