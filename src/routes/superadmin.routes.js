@@ -19,6 +19,7 @@ router.patch('/plans/:id/toggle', c.togglePlan);
 
 router.get('/subscriptions', c.subscriptions);
 router.get('/health', c.health);
+router.post('/health/run', c.runHealthMonitor);
 
 router.get('/backups', c.listBackups);
 router.post('/backups', c.createBackup);
