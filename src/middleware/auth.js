@@ -56,7 +56,7 @@ async function auth(req, res, next) {
     const user = await User.findOne({
       _id: payload.sub,
       active: true
-    }).select('_id role academyId branchId active');
+    }).select('_id role academyId branchId active legalAcceptance');
 
     if (!user) {
       clearSessionCookie(res);
@@ -120,7 +120,8 @@ async function auth(req, res, next) {
       sub: String(user._id),
       role: user.role,
       academyId: currentAcademyId,
-      branchId: currentBranchId
+      branchId: currentBranchId,
+      legalAcceptance: user.legalAcceptance || null
     };
 
     return next();
