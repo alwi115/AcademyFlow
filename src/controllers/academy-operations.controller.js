@@ -225,6 +225,16 @@ async function updateGroup(req, res) {
 
   if (req.body.instructorId !== undefined) {
     if (req.body.instructorId) {
+      if (
+        req.user.role === 'branch_manager' &&
+        String(req.body.instructorId) !== String(row.instructorId || '') &&
+        !branchManagerScope.instructorIds.includes(String(req.body.instructorId))
+      ) {
+        return res.status(403).json({
+          message: 'مدير الفرع لا يستطيع تعيين مدرب خارج نطاق فرعه'
+        });
+      }
+
       await assertInstructor(req.body.instructorId, req.academyId);
       row.instructorId = req.body.instructorId;
     } else {
