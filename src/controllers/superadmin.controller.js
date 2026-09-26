@@ -749,6 +749,7 @@ async function updateSettings(req, res) {
     'ecommerceLicenseNumber',
     'taxNumber',
     'businessAddress',
+    'privacyOfficerName',
     'privacyOfficerEmail',
     'announcement'
   ];
