@@ -7,6 +7,9 @@ const Notification = require('../models/Notification');
 const {
   manageableCourseIds,
   assertCourse,
+  assertDirectCourse,
+  attendanceAccessFilter,
+  studentCourseAccessFilter,
   assertStudentEnrollment
 } = require('../services/instructor-scope.service');
 
@@ -71,7 +74,7 @@ async function createLesson(req, res) {
     return res.status(400).json({ message: 'الدورة وعنوان الدرس مطلوبان' });
   }
 
-  await assertCourse(req, courseId);
+  await assertDirectCourse(req, courseId);
 
   let youtubeId = '';
   if (videoUrl) {
@@ -104,10 +107,10 @@ async function updateLesson(req, res) {
   });
 
   if (!row) return res.status(404).json({ message: 'الدرس غير موجود' });
-  await assertCourse(req, row.courseId);
+  await assertDirectCourse(req, row.courseId);
 
   if (req.body.courseId !== undefined) {
-    await assertCourse(req, req.body.courseId);
+    await assertDirectCourse(req, req.body.courseId);
     row.courseId = req.body.courseId;
   }
 
@@ -140,18 +143,16 @@ async function updateLesson(req, res) {
 }
 
 async function attendance(req, res) {
-  const courseIds = await manageableCourseIds(req);
-  const query = {
-    academyId: req.academyId,
-    courseId: { $in: courseIds }
-  };
+  const extra = {};
 
   if (req.query.courseId) {
     await assertCourse(req, req.query.courseId);
-    query.courseId = req.query.courseId;
+    extra.courseId = req.query.courseId;
   }
 
-  const rows = await Attendance.find(query)
+  const rows = await Attendance.find(
+    await attendanceAccessFilter(req, extra)
+  )
     .populate('studentId', 'name email')
     .populate('courseId', 'title code')
     .populate({ path: 'groupId', match: { academyId: req.academyId }, select: 'name' })
@@ -228,20 +229,23 @@ async function assignments(req, res) {
 
   const result = await Promise.all(rows.map(async assignment => {
     const [submissionCount, pendingCount, gradedCount] = await Promise.all([
-      AssignmentSubmission.countDocuments({
-        academyId: req.academyId,
-        assessmentId: assignment._id
-      }),
-      AssignmentSubmission.countDocuments({
-        academyId: req.academyId,
-        assessmentId: assignment._id,
-        status: 'submitted'
-      }),
-      AssignmentSubmission.countDocuments({
-        academyId: req.academyId,
-        assessmentId: assignment._id,
-        status: 'graded'
-      })
+      AssignmentSubmission.countDocuments(
+        await studentCourseAccessFilter(req, {
+          assessmentId: assignment._id
+        })
+      ),
+      AssignmentSubmission.countDocuments(
+        await studentCourseAccessFilter(req, {
+          assessmentId: assignment._id,
+          status: 'submitted'
+        })
+      ),
+      AssignmentSubmission.countDocuments(
+        await studentCourseAccessFilter(req, {
+          assessmentId: assignment._id,
+          status: 'graded'
+        })
+      )
     ]);
 
     return {
@@ -265,7 +269,7 @@ async function createAssignment(req, res) {
     return res.status(400).json({ message: 'الدورة وعنوان الواجب مطلوبان' });
   }
 
-  await assertCourse(req, courseId);
+  await assertDirectCourse(req, courseId);
 
   const row = await Assessment.create({
     academyId: req.academyId,
@@ -292,7 +296,7 @@ async function updateAssignment(req, res) {
   });
 
   if (!row) return res.status(404).json({ message: 'الواجب غير موجود' });
-  await assertCourse(req, row.courseId);
+  await assertDirectCourse(req, row.courseId);
 
   const hasSubmissions = await AssignmentSubmission.exists({
     academyId: req.academyId,
@@ -303,7 +307,7 @@ async function updateAssignment(req, res) {
     if (hasSubmissions) {
       return res.status(409).json({ message: 'لا يمكن تغيير الدورة بعد وجود تسليمات' });
     }
-    await assertCourse(req, req.body.courseId);
+    await assertDirectCourse(req, req.body.courseId);
     row.courseId = req.body.courseId;
   }
 
@@ -344,10 +348,11 @@ async function assignmentSubmissions(req, res) {
   if (!assignment) return res.status(404).json({ message: 'الواجب غير موجود' });
   await assertCourse(req, assignment.courseId);
 
-  const rows = await AssignmentSubmission.find({
-    academyId: req.academyId,
-    assessmentId: assignment._id
-  })
+  const rows = await AssignmentSubmission.find(
+    await studentCourseAccessFilter(req, {
+      assessmentId: assignment._id
+    })
+  )
     .populate('studentId', 'name email')
     .sort({ submittedAt: -1 });
 
@@ -373,6 +378,7 @@ async function gradeAssignment(req, res) {
 
   if (!assignment) return res.status(404).json({ message: 'الواجب غير موجود' });
   await assertCourse(req, assignment.courseId);
+  await assertStudentEnrollment(req, submission.studentId, assignment.courseId);
 
   const score = Number(req.body.score);
 
@@ -415,7 +421,7 @@ async function createNotification(req, res) {
     return res.status(400).json({ message: 'الدورة والعنوان والرسالة مطلوبة' });
   }
 
-  await assertCourse(req, courseId);
+  await assertDirectCourse(req, courseId);
 
   const row = await Notification.create({
     academyId: req.academyId,
