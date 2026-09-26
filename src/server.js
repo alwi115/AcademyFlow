@@ -65,6 +65,8 @@ const HARDENED_PUBLIC_PATHS = new Set([
   '/',
   '/index.html',
   '/academy/login.html',
+  '/owner/login.html',
+  '/superadmin/login.html',
   '/robots.txt',
   '/sitemap.xml'
 ]);
