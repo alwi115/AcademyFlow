@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { auth, allowRoles } = require('../middleware/auth');
 const tenant = require('../middleware/tenant');
+const requireOwnerLegalAcceptance = require('../middleware/legal-acceptance');
 const c = require('../controllers/academy.controller');
 const q = require('../controllers/academy-quiz.controller');
 const ops = require('../controllers/academy-operations.controller');
@@ -15,7 +16,7 @@ const FINANCE_ROLES = ['owner','admin','accountant'];
 const COMMUNICATION_ROLES = ['owner','admin','support'];
 const QUIZ_REVIEW_ROLES = ['owner','admin'];
 
-router.use(auth, tenant, allowRoles(...ACADEMY_ROLES));
+router.use(auth, tenant, allowRoles(...ACADEMY_ROLES), requireOwnerLegalAcceptance);
 
 router.get('/dashboard', c.dashboard);
 router.get('/options', c.options);
