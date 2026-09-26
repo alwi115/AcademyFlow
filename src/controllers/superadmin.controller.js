@@ -428,7 +428,8 @@ async function health(req, res) {
     !dbPingOk ||
     !storage.writable ||
     !process.env.JWT_SECRET ||
-    process.env.JWT_SECRET.length < 64;
+    process.env.JWT_SECRET.length < 64 ||
+    activeAlerts.some(alert => alert.severity === 'critical');
 
   const degraded =
     !critical && (
@@ -437,7 +438,8 @@ async function health(req, res) {
       !email.configured ||
       !zoomOAuthConfigured ||
       recentErrors.length > 0 ||
-      academyIssues.length > 0
+      academyIssues.length > 0 ||
+      activeAlerts.length > 0
     );
 
   res.json({
@@ -504,6 +506,12 @@ async function health(req, res) {
       backupEncryptionConfigured: storage.encryptionConfigured
     },
     counts: { academies, users, plans, auditLogs: logs },
+    monitoring: {
+      enabled: systemMonitor.enabled(),
+      intervalMinutes: Number(process.env.MONITOR_INTERVAL_MINUTES || 15),
+      alertRecipientConfigured: Boolean(process.env.ALERT_EMAIL || process.env.SUPERADMIN_EMAIL),
+      activeAlerts
+    },
     recentErrors,
     academyIssues
   });
