@@ -389,6 +389,41 @@ async function main() {
       courseId: String(course._id)
     });
 
+    // Privilege assignment itself is protected.
+    await expect('admin', 'POST', '/api/academy/users', 403, {
+      name: 'Forbidden peer admin',
+      email: 'peer-admin@example.test',
+      password: 'StrongPassword123!',
+      role: 'admin'
+    });
+
+    await expect('admin', 'POST', '/api/academy/users', 400, {
+      name: 'Unscoped branch manager',
+      email: 'unscoped-manager@example.test',
+      password: 'StrongPassword123!',
+      role: 'branch_manager'
+    });
+
+    const scopedManager = await expect('admin', 'POST', '/api/academy/users', 201, {
+      name: 'Scoped branch manager',
+      email: 'scoped-manager@example.test',
+      password: 'StrongPassword123!',
+      role: 'branch_manager',
+      branchId: String(branchA._id)
+    });
+    assert.strictEqual(String(scopedManager.body.branchId), String(branchA._id));
+
+    await expect('owner', 'POST', '/api/academy/users', 201, {
+      name: 'Owner-created admin',
+      email: 'owner-admin@example.test',
+      password: 'StrongPassword123!',
+      role: 'admin'
+    });
+
+    await expect('admin', 'PATCH', '/api/academy/users/' + users.owner._id, 403, {
+      name: 'Tampered owner'
+    });
+
     // Owners/admins retain administrative access.
     await expect('owner', 'POST', '/api/academy/branches', 201, {
       name: 'Owner Branch',
