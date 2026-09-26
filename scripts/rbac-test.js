@@ -631,7 +631,9 @@ async function main() {
       '/api/academy/quizzes/' + quiz._id + '/attempts',
       200
     );
-    assert.strictEqual(ownerAttempts.body.length, 1);
+    const ownerAttemptIds = new Set(ownerAttempts.body.map(row => String(row.id || row._id)));
+    assert(ownerAttemptIds.has(String(quizAttempt._id)));
+    assert(ownerAttemptIds.has(String(groupOnlyQuizAttempt._id)));
 
     const instructorAttempts = await expect(
       'instructor',
@@ -639,7 +641,11 @@ async function main() {
       '/api/instructor/quizzes/' + quiz._id + '/attempts',
       200
     );
-    assert.strictEqual(instructorAttempts.body.length, 1);
+    const instructorAttemptIds = new Set(
+      instructorAttempts.body.map(row => String(row.id || row._id))
+    );
+    assert(instructorAttemptIds.has(String(quizAttempt._id)));
+    assert(instructorAttemptIds.has(String(groupOnlyQuizAttempt._id)));
 
     // Certificate issuance is limited to students actually enrolled in the course.
     await expect('content_manager', 'POST', '/api/academy/certificates', 400, {
