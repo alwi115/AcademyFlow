@@ -735,8 +735,20 @@ async function createEnrollment(req, res) {
   if (student.role !== 'student') return res.status(400).json({ message: 'Selected user is not a student' });
   await assertOwned(Course, courseId, academyId, 'Course');
 
-  if (isBranchManager(req) && !groupId) {
-    return res.status(400).json({ message: 'Branch managers must enroll students into a group in their branch' });
+  if (isBranchManager(req)) {
+    const scope = await branchScope(req);
+
+    if (!scope.studentIds.includes(String(studentId))) {
+      return res.status(403).json({
+        message: 'You can only enroll students already within your assigned branch scope'
+      });
+    }
+
+    if (!groupId) {
+      return res.status(400).json({
+        message: 'Branch managers must enroll students into a group in their branch'
+      });
+    }
   }
 
   if (groupId) {
