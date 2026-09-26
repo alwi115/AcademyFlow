@@ -56,7 +56,7 @@ async function auth(req, res, next) {
     const user = await User.findOne({
       _id: payload.sub,
       active: true
-    }).select('_id role academyId active');
+    }).select('_id role academyId branchId active');
 
     if (!user) {
       clearSessionCookie(res);
@@ -65,12 +65,15 @@ async function auth(req, res, next) {
 
     const currentAcademyId = user.academyId ? String(user.academyId) : null;
     const tokenAcademyId = payload.academyId ? String(payload.academyId) : null;
+    const currentBranchId = user.branchId ? String(user.branchId) : null;
+    const tokenBranchId = payload.branchId ? String(payload.branchId) : null;
 
     // A role or tenant change is a security boundary change. Do not silently
     // upgrade, downgrade or move an existing session: force a fresh login.
     if (
       payload.role !== user.role ||
-      tokenAcademyId !== currentAcademyId
+      tokenAcademyId !== currentAcademyId ||
+      tokenBranchId !== currentBranchId
     ) {
       clearSessionCookie(res);
       return res.status(401).json({ message: 'Session scope changed. Sign in again.' });
@@ -96,6 +99,11 @@ async function auth(req, res, next) {
       return res.status(403).json({ message: 'Academy context missing' });
     }
 
+    if (user.role === 'branch_manager' && !currentBranchId) {
+      clearSessionCookie(res);
+      return res.status(403).json({ message: 'Branch manager is not assigned to a branch' });
+    }
+
     const academy = await Academy.findById(currentAcademyId).select('_id status');
 
     if (!academy) {
@@ -111,7 +119,8 @@ async function auth(req, res, next) {
     req.user = {
       sub: String(user._id),
       role: user.role,
-      academyId: currentAcademyId
+      academyId: currentAcademyId,
+      branchId: currentBranchId
     };
 
     return next();
