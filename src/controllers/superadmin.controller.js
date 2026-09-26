@@ -456,8 +456,11 @@ async function health(req, res) {
   const legalRequiredFields = {
     legalEntityName: Boolean(String(legalSettings.legalEntityName || '').trim()),
     commercialRegistrationNumber: Boolean(String(legalSettings.commercialRegistrationNumber || '').trim()),
+    ecommerceLicenseNumber: Boolean(String(legalSettings.ecommerceLicenseNumber || '').trim()),
     businessAddress: Boolean(String(legalSettings.businessAddress || '').trim()),
     supportEmail: Boolean(String(legalSettings.supportEmail || '').trim()),
+    supportPhone: Boolean(String(legalSettings.supportPhone || '').trim()),
+    privacyOfficerName: Boolean(String(legalSettings.privacyOfficerName || '').trim()),
     privacyOfficerEmail: Boolean(String(legalSettings.privacyOfficerEmail || '').trim())
   };
   const legalMissing = Object.entries(legalRequiredFields)
