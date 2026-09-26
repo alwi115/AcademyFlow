@@ -14,7 +14,9 @@ const {
   formatAcademyDisplay
 } = require('../services/timezone.service');
 const {
+  instructorScope,
   assertCourse,
+  assertGroupAccess,
   assertStudentEnrollment
 } = require('../services/instructor-scope.service');
 
@@ -22,13 +24,61 @@ function clean(value) {
   return typeof value === 'string' ? value.trim() : value;
 }
 
+function liveAccessClauses(scope) {
+  const clauses = [];
+
+  if (scope.directCourseIds.length) {
+    clauses.push({ courseId: { $in: scope.directCourseIds } });
+  }
+
+  if (scope.assignedGroupIds.length) {
+    clauses.push({ groupId: { $in: scope.assignedGroupIds } });
+  }
+
+  return clauses.length ? clauses : [{ _id: { $in: [] } }];
+}
+
+async function resolveLiveTarget(req, courseId, groupId) {
+  const course = await assertCourse(req, courseId);
+  const scope = await instructorScope(req);
+  const directCourse = scope.directCourseIds.includes(String(course._id));
+
+  let group = null;
+
+  if (groupId) {
+    group = await assertGroupAccess(req, groupId, course._id);
+  } else if (!directCourse) {
+    const err = new Error('مدرب المجموعة يجب أن يحدد مجموعته للمحاضرة');
+    err.status = 403;
+    throw err;
+  }
+
+  return { course, group, directCourse };
+}
+
+async function assertSessionScope(req, session) {
+  const scope = await instructorScope(req);
+  const courseId = String(session.courseId?._id || session.courseId || '');
+  const groupId = String(session.groupId?._id || session.groupId || '');
+
+  if (scope.directCourseIds.includes(courseId)) return true;
+  if (groupId && scope.assignedGroupIds.includes(groupId)) return true;
+
+  const err = new Error('المحاضرة خارج نطاقك الحالي');
+  err.status = 403;
+  throw err;
+}
+
 async function liveSessions(req, res) {
   const academy = await Academy.findById(req.academyId).select('timezone zoomIntegration.connected');
   const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
 
+  const scope = await instructorScope(req);
+
   const rows = await LiveSession.find({
     academyId: req.academyId,
-    instructorId: req.user.sub
+    instructorId: req.user.sub,
+    $or: liveAccessClauses(scope)
   })
     .populate('courseId', 'title code')
     .populate('groupId', 'name')
@@ -81,7 +131,7 @@ async function createLiveSession(req, res) {
     return res.status(400).json({ message: 'المجموعة المحددة غير صحيحة' });
   }
 
-  const course = await assertCourse(req, courseId);
+  const { course, group } = await resolveLiveTarget(req, courseId, groupId);
   const academy = await Academy.findById(req.academyId).select('timezone zoomIntegration.connected');
   const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
   const normalizedStartAt = parseAcademyDateTime(startAt, timezone);
@@ -89,20 +139,6 @@ async function createLiveSession(req, res) {
 
   if (!Number.isFinite(duration)) {
     return res.status(400).json({ message: 'مدة المحاضرة غير صحيحة' });
-  }
-
-  let group = null;
-  if (groupId) {
-    group = await Group.findOne({
-      _id: groupId,
-      academyId: req.academyId,
-      courseId: course._id,
-      status: { $ne: 'cancelled' }
-    });
-
-    if (!group) {
-      return res.status(400).json({ message: 'المجموعة المحددة لا تتبع هذه الدورة' });
-    }
   }
 
   let row;
@@ -183,6 +219,7 @@ async function liveStart(req, res) {
   });
 
   if (!row) return res.status(404).json({ message: 'المحاضرة غير موجودة' });
+  await assertSessionScope(req, row);
 
   if (!row.zoomStartUrl) {
     return res.status(409).json({
@@ -204,6 +241,8 @@ async function liveAttendance(req, res) {
   if (!session || !session.courseId) {
     return res.status(404).json({ message: 'المحاضرة غير موجودة' });
   }
+
+  await assertSessionScope(req, session);
 
   const enrollmentFilter = {
     academyId: req.academyId,
@@ -280,6 +319,8 @@ async function updateLiveAttendance(req, res) {
     return res.status(404).json({ message: 'المحاضرة غير موجودة' });
   }
 
+  await assertSessionScope(req, session);
+
   const enrollment = await assertStudentEnrollment(
     req,
     req.params.studentId,
@@ -339,6 +380,8 @@ async function updateLiveSession(req, res) {
     return res.status(404).json({ message: 'المحاضرة غير موجودة أو لا تملك صلاحيتها' });
   }
 
+  await assertSessionScope(req, row);
+
   const academy = await Academy.findById(req.academyId).select('timezone zoomIntegration.connected');
   const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
 
@@ -364,22 +407,12 @@ async function updateLiveSession(req, res) {
   }
 
   if (req.body.groupId !== undefined) {
-    if (req.body.groupId) {
-      const group = await Group.findOne({
-        _id: req.body.groupId,
-        academyId: req.academyId,
-        courseId: nextCourseId,
-        status: { $ne: 'cancelled' }
-      });
-
-      if (!group) {
-        return res.status(400).json({ message: 'المجموعة المحددة لا تتبع هذه الدورة' });
-      }
-      nextGroupId = group._id;
-    } else {
-      nextGroupId = null;
-    }
+    nextGroupId = req.body.groupId || null;
   }
+
+  const targetScope = await resolveLiveTarget(req, nextCourseId, nextGroupId);
+  nextCourseId = targetScope.course._id;
+  nextGroupId = targetScope.group?._id || null;
 
   const previousStatus = row.status;
   const nextStatus = req.body.status !== undefined
@@ -547,24 +580,10 @@ async function createLiveSeries(req, res) {
     });
   }
 
-  const [course, academy] = await Promise.all([
-    assertCourse(req, courseId),
+  const [{ course, group }, academy] = await Promise.all([
+    resolveLiveTarget(req, courseId, groupId),
     Academy.findById(req.academyId)
   ]);
-
-  let group = null;
-  if (groupId) {
-    group = await Group.findOne({
-      _id: groupId,
-      academyId: req.academyId,
-      courseId: course._id,
-      status: { $ne: 'cancelled' }
-    });
-
-    if (!group) {
-      return res.status(400).json({ message: 'المجموعة المحددة لا تتبع هذه الدورة' });
-    }
-  }
 
   const result = await createRecurringSeries({
     academy,
@@ -588,9 +607,12 @@ async function createLiveSeries(req, res) {
 }
 
 async function listLiveSeries(req, res) {
+  const scope = await instructorScope(req);
+
   const rows = await LiveSeries.find({
     academyId: req.academyId,
-    instructorId: req.user.sub
+    instructorId: req.user.sub,
+    $or: liveAccessClauses(scope)
   })
     .populate('courseId', 'title code')
     .populate('groupId', 'name')
@@ -600,10 +622,13 @@ async function listLiveSeries(req, res) {
 }
 
 async function cancelLiveSeriesFuture(req, res) {
+  const scope = await instructorScope(req);
+
   const series = await LiveSeries.findOne({
     _id: req.params.seriesId,
     academyId: req.academyId,
-    instructorId: req.user.sub
+    instructorId: req.user.sub,
+    $or: liveAccessClauses(scope)
   });
 
   if (!series) {
