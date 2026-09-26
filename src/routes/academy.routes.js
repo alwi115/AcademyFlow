@@ -21,6 +21,7 @@ router.get('/options', c.options);
 
 router.get('/users', allowRoles(...PEOPLE_ROLES), c.listUsers);
 router.post('/users', allowRoles(...ADMIN_ROLES), c.createUser);
+router.patch('/users/:id', allowRoles(...ADMIN_ROLES), c.updateUser);
 
 router.get('/branches', allowRoles(...OPERATIONS_ROLES), c.listBranches);
 router.post('/branches', allowRoles(...ADMIN_ROLES), c.createBranch);
