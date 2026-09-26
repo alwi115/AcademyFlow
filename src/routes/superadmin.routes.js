@@ -26,6 +26,9 @@ router.post('/backups', c.createBackup);
 router.post('/backups/:id/validate', c.validateBackup);
 router.post('/backups/:id/restore', c.restoreBackup);
 
+router.get('/privacy-requests', c.listPrivacyRequests);
+router.patch('/privacy-requests/:id', c.updatePrivacyRequest);
+
 router.get('/audit', c.listAudit);
 
 router.get('/settings', c.getSettings);
