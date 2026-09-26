@@ -33,8 +33,7 @@ jobs:
         run: |
           set +e
           npm audit --json > security-reports/npm-audit.json
-          npm audit > security-reports/npm-audit.txt
-          echo "npm audit exit code: $?" >> security-reports/npm-audit.txt
+          npm audit > security-reports/npm-audit.txt 2>&1
           exit 0
 
       - name: Set up Python
@@ -49,17 +48,83 @@ jobs:
         shell: bash
         run: |
           set +e
-          semgrep scan             --config p/owasp-top-ten             --config p/nodejs             --json             --output security-reports/semgrep.json             .
-          semgrep scan             --config p/owasp-top-ten             --config p/nodejs             --text             --output security-reports/semgrep.txt             .
+          semgrep scan \
+            --config p/owasp-top-ten \
+            --config p/nodejs \
+            --json \
+            --output security-reports/semgrep.json \
+            .
+          semgrep scan \
+            --config p/owasp-top-ten \
+            --config p/nodejs \
+            --text \
+            --output security-reports/semgrep.txt \
+            .
           exit 0
 
       - name: Upload SAST reports
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: academyflow-sast-reports
           path: security-reports/
           if-no-files-found: error
           retention-days: 30
+
+      - name: Enforce SAST results
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          report_dir = pathlib.Path("security-reports")
+          failures = []
+
+          audit_path = report_dir / "npm-audit.json"
+          if not audit_path.exists():
+              failures.append("npm audit report is missing")
+          else:
+              try:
+                  audit = json.loads(audit_path.read_text(encoding="utf-8"))
+                  vulns = audit.get("metadata", {}).get("vulnerabilities", {})
+                  found = {
+                      level: int(vulns.get(level, 0) or 0)
+                      for level in ("low", "moderate", "high", "critical")
+                  }
+                  if sum(found.values()):
+                      failures.append(
+                          "npm audit vulnerabilities: " +
+                          ", ".join(f"{k}={v}" for k, v in found.items() if v)
+                      )
+              except Exception as exc:
+                  failures.append(f"npm audit report could not be parsed: {exc}")
+
+          semgrep_path = report_dir / "semgrep.json"
+          if not semgrep_path.exists():
+              failures.append("Semgrep report is missing")
+          else:
+              try:
+                  semgrep = json.loads(semgrep_path.read_text(encoding="utf-8"))
+                  results = semgrep.get("results") or []
+                  errors = semgrep.get("errors") or []
+                  if results:
+                      failures.append(f"Semgrep findings: {len(results)}")
+                  if errors:
+                      failures.append(f"Semgrep scan errors: {len(errors)}")
+              except Exception as exc:
+                  failures.append(f"Semgrep report could not be parsed: {exc}")
+
+          if failures:
+              print("Security gate failed:")
+              for item in failures:
+                  print(f" - {item}")
+              sys.exit(1)
+
+          print("SAST gate passed: no dependency vulnerabilities, Semgrep findings, or scan errors.")
+          PY
 
   dast:
     name: DAST - OWASP ZAP baseline
@@ -86,14 +151,87 @@ jobs:
         shell: bash
         run: |
           set +e
-          docker run --rm             -v "$PWD/security-reports:/zap/wrk/:rw"             -t ghcr.io/zaproxy/zaproxy:stable             zap-baseline.py             -t https://academyflow.up.railway.app             -r zap-report.html             -J zap-report.json             -w zap-report.md             -I
-          echo "ZAP exit code: $?" > security-reports/zap-exit-code.txt
+          docker run --rm \
+            -v "$PWD/security-reports:/zap/wrk/:rw" \
+            -t ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py \
+            -t https://academyflow.up.railway.app \
+            -r zap-report.html \
+            -J zap-report.json \
+            -w zap-report.md \
+            -I
+          ZAP_EXIT_CODE=$?
+          echo "$ZAP_EXIT_CODE" > security-reports/zap-exit-code.txt
           exit 0
 
       - name: Upload DAST reports
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: academyflow-dast-reports
           path: security-reports/
           if-no-files-found: error
           retention-days: 30
+
+      - name: Enforce DAST results
+        if: always()
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          report_dir = pathlib.Path("security-reports")
+          failures = []
+
+          exit_path = report_dir / "zap-exit-code.txt"
+          if not exit_path.exists():
+              failures.append("ZAP exit-code file is missing")
+          else:
+              try:
+                  code = int(exit_path.read_text(encoding="utf-8").strip())
+                  if code not in (0, 2):
+                      failures.append(f"ZAP scanner failed with exit code {code}")
+              except Exception as exc:
+                  failures.append(f"ZAP exit code could not be parsed: {exc}")
+
+          report_path = report_dir / "zap-report.json"
+          if not report_path.exists():
+              failures.append("ZAP JSON report is missing")
+          else:
+              try:
+                  report = json.loads(report_path.read_text(encoding="utf-8"))
+                  alerts = []
+                  for site in report.get("site", []) or []:
+                      alerts.extend(site.get("alerts", []) or [])
+
+                  blocking = []
+                  for alert in alerts:
+                      try:
+                          risk = int(alert.get("riskcode", 0) or 0)
+                      except (TypeError, ValueError):
+                          risk = 0
+                      if risk >= 2:
+                          blocking.append(alert)
+
+                  if blocking:
+                      names = sorted({
+                          str(alert.get("name") or alert.get("alert") or "Unknown alert")
+                          for alert in blocking
+                      })
+                      failures.append(
+                          f"ZAP medium/high alerts: {len(blocking)} (" +
+                          "; ".join(names[:10]) + ")"
+                      )
+              except Exception as exc:
+                  failures.append(f"ZAP report could not be parsed: {exc}")
+
+          if failures:
+              print("DAST gate failed:")
+              for item in failures:
+                  print(f" - {item}")
+              sys.exit(1)
+
+          print("DAST gate passed: no medium/high ZAP alerts and the scanner completed successfully.")
+          PY
