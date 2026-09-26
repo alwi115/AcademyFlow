@@ -175,6 +175,7 @@ const StudentPortal = (() => {
               </div>
             </header>
 
+            <section id="studentUrgentBanner" class="student-urgent-slot" hidden></section>
             <section id="studentPageContent"></section>
             <div class="student-footer">AcademyFlow · Student Portal</div>
           </div>
@@ -327,6 +328,112 @@ const StudentPortal = (() => {
         }
       };
     });
+  }
+
+  let urgentReminderTimer = null;
+  let urgentCountdownTimer = null;
+  let urgentReminderData = null;
+
+  function urgentCountdownText(seconds) {
+    const value = Number(seconds || 0);
+
+    if (value <= 0) return 'المحاضرة بدأت الآن';
+
+    const minutes = Math.floor(value / 60);
+    const secondsPart = Math.max(0,value % 60);
+
+    if (minutes >= 60) {
+      const hours = Math.floor(minutes / 60);
+      const left = minutes % 60;
+      return 'تبدأ بعد '+hours+' س '+left+' د';
+    }
+
+    return 'تبدأ بعد '+String(minutes).padStart(2,'0')+':'+String(secondsPart).padStart(2,'0');
+  }
+
+  function updateUrgentCountdown() {
+    const node = document.getElementById('studentUrgentCountdown');
+    if (!node || !urgentReminderData?.session) return;
+
+    const start = new Date(urgentReminderData.session.startAt).getTime();
+    const seconds = Math.round((start - Date.now()) / 1000);
+
+    node.textContent = urgentCountdownText(seconds);
+    node.classList.toggle('live',seconds <= 0);
+
+    const label = document.getElementById('studentUrgentLabel');
+    if (label) label.textContent = seconds <= 0 ? 'مباشر الآن' : 'محاضرة قريبة';
+  }
+
+  function renderUrgentReminder(data) {
+    const slot = document.getElementById('studentUrgentBanner');
+    if (!slot) return;
+
+    if (!data?.active || !data.session) {
+      slot.hidden = true;
+      slot.innerHTML = '';
+      urgentReminderData = null;
+      if (urgentCountdownTimer) clearInterval(urgentCountdownTimer);
+      urgentCountdownTimer = null;
+      return;
+    }
+
+    urgentReminderData = data;
+    slot.hidden = false;
+    slot.innerHTML = `
+      <article class="student-urgent-banner">
+        <div class="student-urgent-pulse" aria-hidden="true"><i></i></div>
+
+        <div class="student-urgent-copy">
+          <div class="student-urgent-kicker">
+            <span id="studentUrgentLabel">${data.session.liveNow ? 'مباشر الآن' : 'محاضرة قريبة'}</span>
+            <strong id="studentUrgentCountdown">${esc(urgentCountdownText(data.session.secondsUntilStart))}</strong>
+          </div>
+
+          <h2>${esc(data.session.title)}</h2>
+          <p>
+            ${esc(data.session.course || '')}
+            ${data.session.group ? ' · '+esc(data.session.group) : ''}
+            · ${esc(data.session.startAtDisplay || fmtDate(data.session.startAt,true))}
+          </p>
+
+          <div class="student-urgent-note">
+            ادخل من AcademyFlow حتى يتم تسجيل حضورك تلقائيًا.
+          </div>
+        </div>
+
+        <div class="student-urgent-actions">
+          <button
+            class="btn primary student-join-live student-urgent-join"
+            data-session-id="${esc(data.session.id)}"
+            type="button">
+            دخول المحاضرة الآن
+          </button>
+          <a class="btn soft" href="/student/notifications.html">كل الإشعارات</a>
+        </div>
+      </article>
+    `;
+
+    bindLiveJoinButtons();
+
+    if (urgentCountdownTimer) clearInterval(urgentCountdownTimer);
+    urgentCountdownTimer = setInterval(updateUrgentCountdown,1000);
+    updateUrgentCountdown();
+  }
+
+  async function refreshUrgentReminder() {
+    try {
+      const data = await api('/api/student/notifications/urgent');
+      renderUrgentReminder(data);
+    } catch (err) {
+      if (err?.status !== 401) console.warn('Urgent reminder:',err.message);
+    }
+  }
+
+  function startUrgentReminderPolling() {
+    refreshUrgentReminder();
+    if (urgentReminderTimer) clearInterval(urgentReminderTimer);
+    urgentReminderTimer = setInterval(refreshUrgentReminder,20000);
   }
 
   async function renderDashboard() {
@@ -1090,14 +1197,17 @@ const StudentPortal = (() => {
         <section class="student-card">
           <div class="student-card-head"><div><h2>آخر الإشعارات</h2><p>إشعارات الأكاديمية الموجهة للطلاب.</p></div></div>
           ${rows.length ? rows.map(x => `
-            <article class="student-notification">
+            <article class="student-notification ${x.type==='live_reminder'?'student-notification-live':''}">
+              ${x.type==='live_reminder'?'<span class="student-notification-badge">تنبيه محاضرة</span>':''}
               <h3>${esc(x.title)}</h3>
               <p>${esc(x.message)}</p>
+              ${x.liveSessionId?'<div class="student-actions"><button class="btn primary student-join-live" data-session-id="'+esc(x.liveSessionId._id||x.liveSessionId)+'" type="button">دخول المحاضرة</button></div>':''}
               <small>${fmtDate(x.sentAt || x.createdAt,true)}</small>
             </article>
           `).join('') : '<div class="student-empty">لا توجد إشعارات حاليًا.</div>'}
         </section>
       `;
+      bindLiveJoinButtons();
     } catch (err) {
       target.innerHTML = '<div class="student-card student-empty">'+esc(err.message)+'</div>';
     }
@@ -1203,6 +1313,7 @@ const StudentPortal = (() => {
 
   async function init() {
     renderShell();
+    startUrgentReminderPolling();
 
     if (page === 'quizzes' && window.StudentQuiz) return window.StudentQuiz.renderList();
     if (page === 'quiz' && window.StudentQuiz) return window.StudentQuiz.renderQuizPage();

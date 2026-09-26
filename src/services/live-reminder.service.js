@@ -97,11 +97,12 @@ async function sendEmail({ academy, session, student, courseTitle, minutes }) {
   }
 
   if (!mailer.configured()) {
-    delivery.status = 'skipped';
+    delivery.status = 'failed';
     delivery.error = 'SMTP is not configured';
     delivery.lastAttemptAt = new Date();
+    delivery.attempts = Math.max(1, Number(delivery.attempts || 0));
     await delivery.save();
-    return 'skipped';
+    return 'failed_final';
   }
 
   delivery.attempts = Number(delivery.attempts || 0) + 1;

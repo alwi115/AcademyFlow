@@ -178,6 +178,7 @@ const AF = (() => {
     if (!response.ok) {
       const error = new Error(data?.message || 'تعذر تنفيذ العملية');
       error.status = response.status;
+      error.data = data;
       throw error;
     }
 
@@ -1243,6 +1244,11 @@ const AF = (() => {
                     ${esc(x.instructorId?.name || 'بدون مدرب')} ·
                     تذكير قبل ${esc(x.reminderMinutes ?? 5)} د
                   </span>
+                  <span class="academy-live-reminder-stats">
+                    ${x.reminderCompletedAt
+                      ? 'التذكير: داخل الموقع '+esc(x.reminderStats?.inApp || 0)+' · Email '+esc(x.reminderStats?.email || 0)+(Number(x.reminderStats?.emailFailed || 0)?' · فشل '+esc(x.reminderStats.emailFailed):'')
+                      : 'التذكير لم يُرسل بعد'}
+                  </span>
                 </div>
 
                 <div class="academy-row-actions">
@@ -1417,7 +1423,23 @@ const AF = (() => {
     target.innerHTML = '<div class="academy-empty">جاري تحميل الإعدادات...</div>';
 
     try {
-      const s = await api('/api/academy/settings');
+      const [s,emailStatus] = await Promise.all([
+        api('/api/academy/settings'),
+        api('/api/academy/email/status')
+      ]);
+
+      const emailState = emailStatus.connectionOk
+        ? '<span class="academy-status good">البريد جاهز</span>'
+        : emailStatus.configured
+          ? '<span class="academy-status bad">فشل الاتصال</span>'
+          : '<span class="academy-status warn">غير مضبوط</span>';
+
+      const emailReason = emailStatus.connectionOk
+        ? 'تم الاتصال بخادم SMTP بنجاح.'
+        : emailStatus.configured
+          ? (emailStatus.error || 'تعذر الاتصال بخادم البريد.')
+          : 'المتغيرات الناقصة: '+(emailStatus.missing || []).join(', ');
+
       target.innerHTML = `
         <form id="settingsForm" class="academy-settings-grid">
           <section class="academy-settings-section">
@@ -1444,9 +1466,53 @@ const AF = (() => {
           </div>
         </form>
         <section class="academy-card academy-section">
+          <div class="academy-card-head">
+            <div>
+              <h2>البريد الإلكتروني والتنبيهات</h2>
+              <p>اختبر SMTP قبل الاعتماد على تذكيرات المحاضرات.</p>
+            </div>
+            <div>${emailState}</div>
+          </div>
+
+          <div class="academy-details-grid">
+            <div class="academy-detail-item"><small>الحالة</small><div>${esc(emailReason)}</div></div>
+            <div class="academy-detail-item"><small>الخادم</small><div>${esc(emailStatus.host || '—')}:${esc(emailStatus.port || '—')}</div></div>
+            <div class="academy-detail-item"><small>البريد المرسل منه</small><div>${esc(emailStatus.fromEmail || '—')}</div></div>
+            <div class="academy-detail-item"><small>SSL/TLS المباشر</small><div>${emailStatus.secure ? 'مفعل' : 'غير مفعل (STARTTLS/587 عادة)'}</div></div>
+          </div>
+
+          <div class="academy-row-actions" style="margin-top:12px">
+            <button class="btn primary" id="academyTestEmail" type="button">إرسال بريد تجريبي إلى حسابي</button>
+            <span id="academyTestEmailMsg" class="academy-note"></span>
+          </div>
+        </section>
+
+        <section class="academy-card academy-section">
           <div class="academy-note">كود الأكاديمية: <b>${esc(s.code)}</b> · الحالة: <b>${esc(s.status)}</b>. هذه القيم يديرها مالك منصة AcademyFlow وليست قابلة للتغيير من إعدادات الأكاديمية.</div>
         </section>
       `;
+
+      document.getElementById('academyTestEmail').onclick = async e => {
+        const button = e.currentTarget;
+        const msg = document.getElementById('academyTestEmailMsg');
+        const original = button.textContent;
+
+        button.disabled = true;
+        button.textContent = 'جاري الاختبار...';
+        msg.textContent = '';
+
+        try {
+          const result = await api('/api/academy/email/test',{method:'POST'});
+          msg.style.color = 'var(--success)';
+          msg.textContent = 'تم إرسال رسالة اختبار إلى '+result.to+'. افحص الوارد والرسائل غير المرغوب فيها.';
+        } catch (err) {
+          msg.style.color = 'var(--danger)';
+          msg.textContent = err.message + (err.data?.error ? ' · '+err.data.error : '');
+        } finally {
+          button.disabled = false;
+          button.textContent = original;
+        }
+      };
 
       document.getElementById('settingsForm').onsubmit = async e => {
         e.preventDefault();

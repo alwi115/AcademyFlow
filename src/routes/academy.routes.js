@@ -4,6 +4,7 @@ const tenant = require('../middleware/tenant');
 const c = require('../controllers/academy.controller');
 const q = require('../controllers/academy-quiz.controller');
 const ops = require('../controllers/academy-operations.controller');
+const email = require('../controllers/email.controller');
 
 const ACADEMY_ROLES = ['owner','admin','branch_manager','instructor','accountant','reception','content_manager','support'];
 const QUIZ_MANAGERS = ['owner','admin','instructor','content_manager'];
@@ -67,5 +68,8 @@ router.get('/reports', allowRoles('owner','admin','accountant'), c.reports);
 
 router.get('/settings', allowRoles('owner','admin'), c.getSettings);
 router.patch('/settings', allowRoles('owner','admin'), c.updateSettings);
+
+router.get('/email/status', allowRoles('owner','admin'), email.status);
+router.post('/email/test', allowRoles('owner','admin'), email.test);
 
 module.exports = router;

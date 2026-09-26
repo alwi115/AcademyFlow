@@ -2,14 +2,33 @@ const nodemailer = require('nodemailer');
 
 let transporter = null;
 
+const REQUIRED_SMTP_VARS = [
+  'SMTP_HOST',
+  'SMTP_PORT',
+  'SMTP_USER',
+  'SMTP_PASS'
+];
+
+function configStatus() {
+  const missing = REQUIRED_SMTP_VARS.filter(key => !String(process.env[key] || '').trim());
+
+  if (!String(process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || '').trim()) {
+    missing.push('SMTP_FROM_EMAIL');
+  }
+
+  return {
+    configured: missing.length === 0,
+    missing,
+    host: String(process.env.SMTP_HOST || '').trim(),
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: String(process.env.SMTP_SECURE || '').toLowerCase() === 'true',
+    fromName: String(process.env.SMTP_FROM_NAME || 'AcademyFlow').trim(),
+    fromEmail: String(process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || '').trim()
+  };
+}
+
 function configured() {
-  return Boolean(
-    process.env.SMTP_HOST &&
-    process.env.SMTP_PORT &&
-    process.env.SMTP_USER &&
-    process.env.SMTP_PASS &&
-    (process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER)
-  );
+  return configStatus().configured;
 }
 
 function getTransporter() {
@@ -23,6 +42,9 @@ function getTransporter() {
     pool: true,
     maxConnections: 5,
     maxMessages: 100,
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 15000,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS
@@ -42,6 +64,82 @@ function appBaseUrl() {
     .filter(Boolean)[0];
 
   return (firstOrigin || '').replace(/\/$/, '');
+}
+
+async function verifyConnection() {
+  const status = configStatus();
+
+  if (!status.configured) {
+    return {
+      ok: false,
+      configured: false,
+      missing: status.missing,
+      error: 'SMTP is not configured'
+    };
+  }
+
+  try {
+    const tx = getTransporter();
+    await tx.verify();
+
+    return {
+      ok: true,
+      configured: true,
+      missing: [],
+      host: status.host,
+      port: status.port,
+      secure: status.secure,
+      fromEmail: status.fromEmail
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      configured: true,
+      missing: [],
+      host: status.host,
+      port: status.port,
+      secure: status.secure,
+      fromEmail: status.fromEmail,
+      error: String(err.message || 'SMTP connection failed').slice(0,500),
+      code: String(err.code || '').slice(0,80)
+    };
+  }
+}
+
+async function sendTestEmail({ to, academyName }) {
+  const tx = getTransporter();
+
+  if (!tx) {
+    const err = new Error('SMTP is not configured');
+    err.code = 'SMTP_NOT_CONFIGURED';
+    throw err;
+  }
+
+  const base = appBaseUrl();
+  const subject = 'AcademyFlow · اختبار البريد الإلكتروني';
+  const text = [
+    'تم الاتصال بخدمة البريد بنجاح.',
+    'هذه رسالة اختبار من AcademyFlow.',
+    base ? `رابط النظام: ${base}` : ''
+  ].filter(Boolean).join('\n');
+
+  return tx.sendMail({
+    from: {
+      name: process.env.SMTP_FROM_NAME || academyName || 'AcademyFlow',
+      address: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER
+    },
+    to,
+    subject,
+    text,
+    html: `
+      <div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.8;color:#111827">
+        <h2>البريد يعمل بنجاح ✅</h2>
+        <p>هذه رسالة اختبار من <strong>AcademyFlow</strong>.</p>
+        <p>إذا وصلت لك هذه الرسالة، فإعدادات SMTP صحيحة ويمكن للنظام إرسال تذكيرات المحاضرات.</p>
+        ${base ? `<p><a href="${escapeHtml(base)}">فتح AcademyFlow</a></p>` : ''}
+      </div>
+    `
+  });
 }
 
 async function sendLiveReminder({ to, studentName, academyName, session, minutes }) {
@@ -107,5 +205,8 @@ function escapeHtml(value) {
 
 module.exports = {
   configured,
+  configStatus,
+  verifyConnection,
+  sendTestEmail,
   sendLiveReminder
 };

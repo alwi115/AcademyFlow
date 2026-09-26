@@ -27,6 +27,7 @@ router.get('/quiz-attempts/:attemptId/result', q.quizResult);
 
 router.get('/payments', c.payments);
 router.get('/certificates', c.certificates);
+router.get('/notifications/urgent', c.urgentNotification);
 router.get('/notifications', c.notifications);
 
 router.get('/profile', c.profile);

@@ -73,3 +73,37 @@ body.student-app{min-width:320px;overflow-x:hidden;font-size:14px}
 .student-watch-note{margin-top:8px;color:var(--text-mute);font-size:8.5px;line-height:1.65}
 .student-lesson.done .student-lesson-number{background:color-mix(in srgb,var(--success) 13%,transparent);color:var(--success)}
 @media(max-width:640px){.student-watch-head{gap:8px}.student-watch-head small{font-size:9px}.student-watch-note{font-size:9px}}
+
+
+/* Highly visible live-class reminder */
+.student-urgent-slot[hidden]{display:none!important}
+.student-urgent-slot{position:sticky;top:8px;z-index:45;margin-bottom:12px}
+.student-urgent-banner{position:relative;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;padding:15px 16px;border:1px solid color-mix(in srgb,var(--danger) 42%,var(--line));border-radius:16px;background:linear-gradient(135deg,color-mix(in srgb,var(--danger) 12%,var(--surface)),color-mix(in srgb,var(--warning) 11%,var(--surface)));box-shadow:0 14px 34px rgba(15,23,42,.16);overflow:hidden}
+.student-urgent-banner:before{content:"";position:absolute;inset-inline-start:0;top:0;bottom:0;width:5px;background:var(--danger)}
+.student-urgent-pulse{width:44px;height:44px;display:grid;place-items:center;border-radius:50%;background:color-mix(in srgb,var(--danger) 12%,transparent)}
+.student-urgent-pulse i{width:14px;height:14px;border-radius:50%;background:var(--danger);box-shadow:0 0 0 0 color-mix(in srgb,var(--danger) 40%,transparent);animation:studentUrgentPulse 1.2s infinite}
+@keyframes studentUrgentPulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--danger) 45%,transparent)}70%{box-shadow:0 0 0 13px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.student-urgent-copy{min-width:0}
+.student-urgent-kicker{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:3px}
+.student-urgent-kicker span{font-size:9px;font-weight:900;letter-spacing:.04em;color:var(--danger)}
+.student-urgent-kicker strong{font-size:10px;padding:4px 8px;border-radius:999px;background:var(--surface);border:1px solid var(--line)}
+.student-urgent-kicker strong.live{color:var(--danger);font-weight:900}
+.student-urgent-copy h2{margin:0;font-size:15px;line-height:1.4}
+.student-urgent-copy p{margin:4px 0 0;color:var(--text-mute);font-size:9.5px}
+.student-urgent-note{margin-top:7px;font-size:9px;font-weight:800}
+.student-urgent-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.student-urgent-join{min-height:42px;font-weight:900}
+.student-notification-live{position:relative;border:1px solid color-mix(in srgb,var(--danger) 35%,var(--line));background:color-mix(in srgb,var(--danger) 7%,var(--surface))}
+.student-notification-badge{display:inline-flex;align-items:center;min-height:24px;padding:0 8px;border-radius:999px;background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger);font-size:8.5px;font-weight:900;margin-bottom:7px}
+@media(max-width:760px){
+  .student-urgent-slot{top:5px}
+  .student-urgent-banner{grid-template-columns:auto 1fr;gap:10px;padding:13px}
+  .student-urgent-actions{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;width:100%}
+  .student-urgent-actions .btn{width:100%;min-height:42px}
+}
+@media(max-width:430px){
+  .student-urgent-banner{grid-template-columns:1fr}
+  .student-urgent-pulse{display:none}
+  .student-urgent-actions{grid-template-columns:1fr}
+  .student-urgent-copy h2{font-size:14px}
+}

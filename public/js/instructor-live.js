@@ -55,6 +55,9 @@ window.InstructorLive = (() => {
                     <span>${s.attendanceEnabled?'التحضير مفعل':'التحضير متوقف'}</span>
                     <span>${s.zoomReady?'Zoom جاهز':'Zoom غير مربوط'}</span>
                     <span>تذكير قبل ${P().esc(s.reminderMinutes ?? 5)} د</span>
+                    ${s.reminderCompletedAt
+                      ? '<span>الموقع '+P().esc(s.reminderStats?.inApp || 0)+' · Email '+P().esc(s.reminderStats?.email || 0)+(Number(s.reminderStats?.emailFailed || 0)?' · فشل '+P().esc(s.reminderStats.emailFailed):'')+'</span>'
+                      : '<span>التذكير لم يُرسل بعد</span>'}
                     ${s.series?'<span>جدول متكرر</span>':''}
                   </div>
 

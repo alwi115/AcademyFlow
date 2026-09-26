@@ -749,6 +749,72 @@ async function certificates(req, res) {
   res.json(rows);
 }
 
+async function urgentNotification(req, res) {
+  const now = new Date();
+  const academy = await Academy.findById(req.academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
+
+  const rows = await Notification.find({
+    academyId: req.academyId,
+    recipientId: req.user.sub,
+    type: 'live_reminder',
+    status: 'sent',
+    channel: 'in_app',
+    liveSessionId: { $ne: null },
+    sentAt: { $gte: new Date(now.getTime() - 3 * 60 * 60 * 1000) }
+  })
+    .populate({
+      path: 'liveSessionId',
+      select: 'title startAt durationMinutes status courseId groupId',
+      populate: [
+        { path:'courseId', select:'title code' },
+        { path:'groupId', select:'name' }
+      ]
+    })
+    .sort({ sentAt: -1 })
+    .limit(10);
+
+  const active = rows.find(notification => {
+    const session = notification.liveSessionId;
+    if (!session || ['ended','cancelled'].includes(session.status)) return false;
+
+    const start = new Date(session.startAt).getTime();
+    const end = start + Math.max(1, Number(session.durationMinutes || 60)) * 60 * 1000;
+    const current = now.getTime();
+
+    return current >= start - 60 * 60 * 1000 && current <= end;
+  });
+
+  if (!active?.liveSessionId) {
+    return res.json({ active:false });
+  }
+
+  const session = active.liveSessionId;
+  const startMs = new Date(session.startAt).getTime();
+  const secondsUntilStart = Math.round((startMs - now.getTime()) / 1000);
+
+  res.json({
+    active: true,
+    notificationId: active._id,
+    title: active.title,
+    message: active.message,
+    sentAt: active.sentAt,
+    session: {
+      id: session._id,
+      title: session.title,
+      course: session.courseId?.title || '',
+      group: session.groupId?.name || '',
+      startAt: session.startAt,
+      startAtDisplay: formatAcademyDisplay(session.startAt, timezone),
+      timezone,
+      durationMinutes: session.durationMinutes,
+      status: session.status,
+      liveNow: secondsUntilStart <= 0,
+      secondsUntilStart
+    }
+  });
+}
+
 async function notifications(req, res) {
   const enrollments = await Enrollment.find({
     academyId: req.academyId,
@@ -868,6 +934,7 @@ module.exports = {
   payments,
   certificates,
   notifications,
+  urgentNotification,
   profile,
   updateProfile,
   changePassword
