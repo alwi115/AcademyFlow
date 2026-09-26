@@ -1,5 +1,6 @@
 const Lesson = require('../models/Lesson');
 const Attendance = require('../models/Attendance');
+const Group = require('../models/Group');
 const Assessment = require('../models/Assessment');
 const AssignmentSubmission = require('../models/AssignmentSubmission');
 const Notification = require('../models/Notification');
@@ -169,11 +170,41 @@ async function createAttendance(req, res) {
 
   const enrollment = await assertStudentEnrollment(req, studentId, courseId);
 
+  let resolvedGroupId = enrollment.groupId || null;
+
+  if (groupId) {
+    const group = await Group.findOne({
+      _id: groupId,
+      academyId: req.academyId,
+      courseId,
+      status: { $ne: 'cancelled' }
+    }).select('_id');
+
+    if (!group) {
+      return res.status(400).json({
+        message: 'المجموعة المحددة لا تتبع هذه الأكاديمية والدورة'
+      });
+    }
+
+    // A teacher must not use a different group for a student who is already
+    // enrolled in a specific group for this course.
+    if (
+      enrollment.groupId &&
+      String(enrollment.groupId) !== String(group._id)
+    ) {
+      return res.status(400).json({
+        message: 'الطالب غير مسجل في المجموعة المحددة'
+      });
+    }
+
+    resolvedGroupId = group._id;
+  }
+
   const row = await Attendance.create({
     academyId: req.academyId,
     studentId,
     courseId,
-    groupId: groupId || enrollment.groupId || null,
+    groupId: resolvedGroupId,
     date,
     status: ['present','absent','late','excused'].includes(status)
       ? status
