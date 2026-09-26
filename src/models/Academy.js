@@ -21,6 +21,18 @@ const AcademySchema = new mongoose.Schema({
     primaryColor: { type: String, default: '#8B1E2D' },
     secondaryColor: { type: String, default: '#111827' },
     coverUrl: String
+  },
+  zoomIntegration: {
+    connected: { type: Boolean, default: false },
+    zoomUserId: { type: String, default: '' },
+    zoomEmail: { type: String, default: '' },
+    zoomDisplayName: { type: String, default: '' },
+    tokensEncrypted: { type: String, default: '', select: false },
+    accessTokenExpiresAt: Date,
+    connectedAt: Date,
+    connectedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    oauthStateHash: { type: String, default: '', select: false },
+    oauthStateExpiresAt: { type: Date, select: false }
   }
 }, { timestamps: true });
 
