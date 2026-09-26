@@ -264,13 +264,13 @@ async function options(req, res) {
         _id: { $in: scope.studentIds },
         role: 'student',
         active: true
-      }).select('name email').sort({ name: 1 }),
+      }).select('name').sort({ name: 1 }),
       User.find({
         academyId,
         _id: { $in: scope.instructorIds },
         role: 'instructor',
         active: true
-      }).select('name email').sort({ name: 1 }),
+      }).select('name').sort({ name: 1 }),
       Course.find({
         academyId,
         _id: { $in: scope.courseIds },
@@ -299,10 +299,10 @@ async function options(req, res) {
 
   const [students, instructors, courses, groups, branches] = await Promise.all([
     needsStudents
-      ? User.find({ academyId, role: 'student', active: true }).select('name email').sort({ name: 1 })
+      ? User.find({ academyId, role: 'student', active: true }).select('name').sort({ name: 1 })
       : [],
     needsInstructors
-      ? User.find({ academyId, role: 'instructor', active: true }).select('name email').sort({ name: 1 })
+      ? User.find({ academyId, role: 'instructor', active: true }).select('name').sort({ name: 1 })
       : [],
     needsCourses
       ? Course.find({ academyId, status: { $ne: 'archived' } }).select('title code').sort({ title: 1 })
