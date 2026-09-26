@@ -13,6 +13,7 @@ const OPERATIONS_ROLES = ['owner','admin','branch_manager','reception'];
 const CONTENT_ROLES = ['owner','admin','content_manager'];
 const FINANCE_ROLES = ['owner','admin','accountant'];
 const COMMUNICATION_ROLES = ['owner','admin','support'];
+const QUIZ_REVIEW_ROLES = ['owner','admin'];
 
 router.use(auth, tenant, allowRoles(...ACADEMY_ROLES));
 
@@ -54,9 +55,9 @@ router.patch('/quizzes/:id', allowRoles(...CONTENT_ROLES), q.updateQuiz);
 router.post('/quizzes/:id/questions', allowRoles(...CONTENT_ROLES), q.createQuestion);
 router.patch('/quizzes/:id/questions/:questionId', allowRoles(...CONTENT_ROLES), q.updateQuestion);
 router.delete('/quizzes/:id/questions/:questionId', allowRoles(...CONTENT_ROLES), q.deleteQuestion);
-router.get('/quizzes/:id/attempts', allowRoles(...CONTENT_ROLES), q.listAttempts);
-router.get('/quizzes/:id/attempts/:attemptId', allowRoles(...CONTENT_ROLES), q.attemptDetails);
-router.patch('/quizzes/:id/attempts/:attemptId/questions/:questionId/grade', allowRoles(...CONTENT_ROLES), q.gradeShortAnswer);
+router.get('/quizzes/:id/attempts', allowRoles(...QUIZ_REVIEW_ROLES), q.listAttempts);
+router.get('/quizzes/:id/attempts/:attemptId', allowRoles(...QUIZ_REVIEW_ROLES), q.attemptDetails);
+router.patch('/quizzes/:id/attempts/:attemptId/questions/:questionId/grade', allowRoles(...QUIZ_REVIEW_ROLES), q.gradeShortAnswer);
 
 router.get('/payments', allowRoles(...FINANCE_ROLES), c.listPayments);
 router.post('/payments', allowRoles(...FINANCE_ROLES), c.createPayment);
