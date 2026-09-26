@@ -86,7 +86,9 @@ function encryptBuffer(buffer) {
   }
 
   const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv, {
+    authTagLength: 16
+  });
   const ciphertext = Buffer.concat([cipher.update(buffer), cipher.final()]);
   const tag = cipher.getAuthTag();
 
@@ -123,7 +125,9 @@ function decryptBuffer(buffer, metadata) {
     const iv = buffer.subarray(0, 12);
     const tag = buffer.subarray(12, 28);
     const ciphertext = buffer.subarray(28);
-    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv, {
+      authTagLength: 16
+    });
     decipher.setAuthTag(tag);
     return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
   } catch {
