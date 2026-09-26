@@ -19,10 +19,16 @@ function cookieOptions() {
   return {
     httpOnly: true,
     secure: isSecureCookie(),
-    sameSite: 'strict',
+    sameSite: 'lax',
     path: '/',
     maxAge: SESSION_MS
   };
+}
+
+function clearLegacySessionCookies(res) {
+  for (const path of ['/', '/api', '/api/auth', '/academy', '/student', '/instructor', '/superadmin', '/owner']) {
+    res.clearCookie(COOKIE_NAME, { path });
+  }
 }
 
 function sign(user) {
@@ -164,6 +170,7 @@ async function login(req, res) {
   user.lastLoginAt = new Date();
   await user.save();
 
+  clearLegacySessionCookies(res);
   res.cookie(COOKIE_NAME, sign(user), cookieOptions());
 
   res.set({
@@ -183,7 +190,7 @@ async function me(req, res) {
   }).select('name email username role academyId branchId legalAcceptance');
 
   if (!user) {
-    res.clearCookie(COOKIE_NAME, { path: '/' });
+    clearLegacySessionCookies(res);
     return res.status(401).json({ message: 'Unauthorized' });
   }
 
@@ -193,7 +200,7 @@ async function me(req, res) {
     academy = await Academy.findById(user.academyId).select('code name status');
 
     if (!academy || ['frozen','suspended'].includes(academy.status)) {
-      res.clearCookie(COOKIE_NAME, { path: '/' });
+      clearLegacySessionCookies(res);
       return res.status(403).json({ message: 'Account unavailable' });
     }
   }
@@ -263,12 +270,7 @@ async function acceptLegal(req, res) {
 }
 
 function logout(req, res) {
-  res.clearCookie(COOKIE_NAME, {
-    httpOnly: true,
-    secure: isSecureCookie(),
-    sameSite: 'strict',
-    path: '/'
-  });
+  clearLegacySessionCookies(res);
 
   res.set({
     'Cache-Control': 'no-store',
