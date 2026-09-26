@@ -1465,6 +1465,37 @@ const AF = (() => {
         </div>
       </form>
 
+      <section class="academy-card academy-section" id="academyZoomSection">
+        <div class="academy-card-head">
+          <div>
+            <h2>تكامل Zoom</h2>
+            <p>كل أكاديمية تربط حساب Zoom الخاص بها، وتُنشأ المحاضرات من حسابها مباشرة.</p>
+          </div>
+          <div id="academyZoomState"><span class="academy-status info">جاري فحص الربط...</span></div>
+        </div>
+
+        <div class="academy-details-grid" id="academyZoomDetails">
+          <div class="academy-detail-item"><small>الحالة</small><div>جاري قراءة حالة Zoom...</div></div>
+          <div class="academy-detail-item"><small>الحساب المرتبط</small><div>—</div></div>
+          <div class="academy-detail-item"><small>تاريخ الربط</small><div>—</div></div>
+          <div class="academy-detail-item"><small>نوع الربط</small><div>User-managed OAuth</div></div>
+        </div>
+
+        <div class="academy-note" style="margin-top:12px">
+          بيانات Zoom السرية محفوظة في Railway، وتوكنات كل أكاديمية تُحفظ مشفّرة في قاعدة البيانات.
+          ${user.role === 'owner' ? 'المالك فقط يقدر يربط أو يفصل حساب Zoom.' : 'ربط الحساب أو فصله متاح لمالك الأكاديمية فقط.'}
+        </div>
+
+        <div class="academy-row-actions" style="margin-top:12px">
+          ${user.role === 'owner' ? `
+            <button class="btn primary" id="academyConnectZoom" type="button">ربط حساب Zoom</button>
+            <button class="btn soft" id="academyDisconnectZoom" type="button" hidden>فصل حساب Zoom</button>
+          ` : ''}
+          <button class="btn soft" id="academyRefreshZoomStatus" type="button">تحديث حالة Zoom</button>
+          <span id="academyZoomMsg" class="academy-note"></span>
+        </div>
+      </section>
+
       <section class="academy-card academy-section" id="academyEmailSection">
         <div class="academy-card-head">
           <div>
@@ -1505,6 +1536,119 @@ const AF = (() => {
         </div>
       </section>
     `;
+
+    const zoomState = document.getElementById('academyZoomState');
+    const zoomDetails = document.getElementById('academyZoomDetails');
+    const zoomMsg = document.getElementById('academyZoomMsg');
+    const zoomConnect = document.getElementById('academyConnectZoom');
+    const zoomDisconnect = document.getElementById('academyDisconnectZoom');
+    const zoomRefresh = document.getElementById('academyRefreshZoomStatus');
+
+    const showZoomMessageFromRedirect = () => {
+      const params = new URLSearchParams(location.search);
+      const result = params.get('zoom');
+      if (!result || !zoomMsg) return;
+
+      if (result === 'connected') {
+        zoomMsg.style.color = 'var(--success)';
+        zoomMsg.textContent = 'تم ربط حساب Zoom بنجاح.';
+      } else if (result === 'declined') {
+        zoomMsg.style.color = 'var(--text-mute)';
+        zoomMsg.textContent = 'تم إلغاء عملية ربط Zoom.';
+      } else if (result === 'error') {
+        zoomMsg.style.color = 'var(--danger)';
+        zoomMsg.textContent = 'تعذر إكمال ربط Zoom. حاول الربط مرة ثانية.';
+      }
+
+      params.delete('zoom');
+      params.delete('reason');
+      const query = params.toString();
+      history.replaceState({}, '', location.pathname + (query ? '?' + query : ''));
+    };
+
+    const loadZoomStatus = async () => {
+      if (!zoomState || !zoomDetails) return;
+      zoomState.innerHTML = '<span class="academy-status info">جاري الفحص...</span>';
+
+      try {
+        const z = await api('/api/zoom/status');
+
+        if (!z.appConfigured) {
+          zoomState.innerHTML = '<span class="academy-status bad">إعداد السيرفر ناقص</span>';
+        } else if (z.connected) {
+          zoomState.innerHTML = '<span class="academy-status good">متصل</span>';
+        } else {
+          zoomState.innerHTML = '<span class="academy-status warn">غير متصل</span>';
+        }
+
+        zoomDetails.innerHTML = `
+          <div class="academy-detail-item"><small>الحالة</small><div>${z.connected ? 'حساب Zoom مربوط وجاهز لإنشاء المحاضرات.' : (z.appConfigured ? 'التطبيق جاهز، لكن الأكاديمية ما ربطت حساب Zoom بعد.' : 'أضف متغيرات Zoom المطلوبة في Railway أولاً.')}</div></div>
+          <div class="academy-detail-item"><small>الحساب المرتبط</small><div>${esc(z.displayName || z.email || '—')}${z.email && z.displayName ? '<br><small>'+esc(z.email)+'</small>' : ''}</div></div>
+          <div class="academy-detail-item"><small>تاريخ الربط</small><div>${z.connectedAt ? fmtDate(z.connectedAt,true) : '—'}</div></div>
+          <div class="academy-detail-item"><small>نوع الربط</small><div>User-managed OAuth</div></div>
+        `;
+
+        if (zoomConnect) {
+          zoomConnect.hidden = Boolean(z.connected);
+          zoomConnect.disabled = !z.appConfigured;
+        }
+        if (zoomDisconnect) zoomDisconnect.hidden = !z.connected;
+      } catch (err) {
+        zoomState.innerHTML = '<span class="academy-status bad">تعذر الفحص</span>';
+        zoomDetails.innerHTML = '<div class="academy-detail-item" style="grid-column:1/-1"><small>السبب</small><div>'+esc(err.message)+'</div></div>';
+      }
+    };
+
+    if (zoomConnect) {
+      zoomConnect.onclick = async () => {
+        const original = zoomConnect.textContent;
+        zoomConnect.disabled = true;
+        zoomConnect.textContent = 'جاري فتح Zoom...';
+        if (zoomMsg) zoomMsg.textContent = '';
+
+        try {
+          const result = await api('/api/zoom/connect', { method:'POST' });
+          if (!result?.authorizationUrl) throw new Error('تعذر إنشاء رابط تفويض Zoom');
+          location.href = result.authorizationUrl;
+        } catch (err) {
+          if (zoomMsg) {
+            zoomMsg.style.color = 'var(--danger)';
+            zoomMsg.textContent = err.message;
+          }
+          zoomConnect.disabled = false;
+          zoomConnect.textContent = original;
+        }
+      };
+    }
+
+    if (zoomDisconnect) {
+      zoomDisconnect.onclick = async () => {
+        if (!confirm('متأكد تريد تفصل حساب Zoom عن الأكاديمية؟')) return;
+        zoomDisconnect.disabled = true;
+        if (zoomMsg) zoomMsg.textContent = '';
+
+        try {
+          await api('/api/zoom/disconnect', { method:'POST' });
+          if (zoomMsg) {
+            zoomMsg.style.color = 'var(--success)';
+            zoomMsg.textContent = 'تم فصل حساب Zoom.';
+          }
+          await loadZoomStatus();
+        } catch (err) {
+          if (zoomMsg) {
+            zoomMsg.style.color = 'var(--danger)';
+            zoomMsg.textContent = err.message;
+          }
+        } finally {
+          zoomDisconnect.disabled = false;
+        }
+      };
+    }
+
+    if (zoomRefresh) zoomRefresh.onclick = loadZoomStatus;
+
+    showZoomMessageFromRedirect();
+    loadZoomStatus();
 
     const loadEmailStatus = async () => {
       const state = document.getElementById('academyEmailState');

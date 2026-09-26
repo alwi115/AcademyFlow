@@ -79,6 +79,7 @@ app.use('/api/academy', require('./routes/academy.routes'));
 app.use('/api/student', require('./routes/student.routes'));
 app.use('/api/instructor', require('./routes/instructor.routes'));
 app.use('/api/live-sessions', require('./routes/live.routes'));
+app.use('/api/zoom', require('./routes/zoom.routes'));
 
 app.use((err, req, res, next) => {
   console.error(err);
