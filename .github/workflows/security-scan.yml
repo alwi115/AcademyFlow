@@ -190,6 +190,42 @@ jobs:
       - name: Run RBAC regression tests
         run: npm run test:rbac
 
+
+  backup_restore:
+    name: Backup and restore regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27019:27017
+    env:
+      MONGODB_URI: mongodb://127.0.0.1:27019/academyflow_backup_test
+      BACKUP_DIR: /tmp/academyflow-backup-ci
+      NODE_ENV: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: npm install --ignore-scripts
+
+      - name: Check backup JavaScript syntax
+        shell: bash
+        run: |
+          node --check src/services/backup.service.js
+          node --check src/services/backup-worker.service.js
+          node --check scripts/backup-restore-test.js
+
+      - name: Run destructive backup restore regression
+        run: npm run test:backup-restore
+
   dast:
     name: DAST - OWASP ZAP baseline
     runs-on: ubuntu-latest
