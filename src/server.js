@@ -10,6 +10,8 @@ const liveReminderWorker = require('./services/live-reminder.service');
 const backupWorker = require('./services/backup-worker.service');
 const backupService = require('./services/backup.service');
 const SystemError = require('./models/SystemError');
+const systemMonitor = require('./services/system-monitor.service');
+const auditMiddleware = require('./middleware/audit');
 
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 64) {
   throw new Error('JWT_SECRET must be at least 64 characters');
@@ -134,6 +136,8 @@ app.post('/api/webhooks/zoom', express.raw({ type: 'application/json', limit: '1
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false, limit: '16kb' }));
 
+app.use(auditMiddleware);
+
 app.use(rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 400,
@@ -214,6 +218,7 @@ async function start() {
   await bootstrapSuperAdmin();
   liveReminderWorker.start();
   backupWorker.start();
+  systemMonitor.start();
 
   app.listen(port, () => {
     console.log(`AcademyFlow running on http://localhost:${port}`);
