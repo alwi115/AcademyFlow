@@ -517,6 +517,19 @@ async function health(req, res) {
   });
 }
 
+async function runHealthMonitor(req, res) {
+  const issues = await systemMonitor.run();
+
+  await audit(req, 'system.monitor.run', 'system', '', 'System monitor', {
+    issueCount: issues?.length || 0
+  });
+
+  res.json({
+    ok: true,
+    issueCount: issues?.length || 0
+  });
+}
+
 async function listBackups(req, res) {
   const [rows, storage] = await Promise.all([
     backupService.listBackups(),
@@ -638,6 +651,7 @@ module.exports = {
   togglePlan,
   subscriptions,
   health,
+  runHealthMonitor,
   listBackups,
   createBackup,
   validateBackup,
