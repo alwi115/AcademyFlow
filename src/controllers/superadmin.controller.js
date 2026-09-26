@@ -406,7 +406,11 @@ async function health(req, res) {
 
   const backupAutoEnabled =
     process.env.AUTO_BACKUP_ENABLED !== 'false' &&
-    backupService.explicitStorageConfigured();
+    backupService.explicitStorageConfigured() &&
+    (
+      process.env.NODE_ENV !== 'production' ||
+      backupService.encryptionConfigured()
+    );
 
   const critical =
     !dbPingOk ||
@@ -484,7 +488,8 @@ async function health(req, res) {
       zoomWebhookConfigured: Boolean(process.env.ZOOM_WEBHOOK_SECRET_TOKEN),
       zoomTokenEncryptionConfigured: Boolean(process.env.ZOOM_TOKEN_ENCRYPTION_KEY),
       sendgridConfigured: email.configured,
-      backupDirectoryConfigured: storage.explicitlyConfigured
+      backupDirectoryConfigured: storage.explicitlyConfigured,
+      backupEncryptionConfigured: storage.encryptionConfigured
     },
     counts: { academies, users, plans, auditLogs: logs },
     recentErrors,
@@ -503,7 +508,11 @@ async function listBackups(req, res) {
     storage,
     automaticEnabled:
       process.env.AUTO_BACKUP_ENABLED !== 'false' &&
-      backupService.explicitStorageConfigured(),
+      backupService.explicitStorageConfigured() &&
+      (
+        process.env.NODE_ENV !== 'production' ||
+        backupService.encryptionConfigured()
+      ),
     productionRestoreEnabled:
       process.env.NODE_ENV !== 'production' ||
       process.env.ENABLE_PRODUCTION_RESTORE === 'true'
