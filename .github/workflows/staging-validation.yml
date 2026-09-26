@@ -9,6 +9,10 @@ permissions:
   contents: read
   actions: read
 
+concurrency:
+  group: academyflow-staging-main-v12
+  cancel-in-progress: true
+
 jobs:
   staging:
     name: Validate staging deployment

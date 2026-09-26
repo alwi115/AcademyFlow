@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: academyflow-security-main-v3
+  group: academyflow-security-main-v12
   cancel-in-progress: true
 
 jobs:
