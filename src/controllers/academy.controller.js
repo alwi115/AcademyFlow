@@ -98,6 +98,45 @@ async function branchGroupIds(req, options) {
   return rows ? rows.map(row => row._id) : null;
 }
 
+async function branchScope(req) {
+  if (!isBranchManager(req)) return null;
+
+  const groups = await branchGroups(req, { includeCancelled: true });
+  const groupIds = groups.map(row => row._id);
+  const courseIds = [...new Set(groups.map(row => String(row.courseId)).filter(Boolean))];
+
+  const [enrollments, courses] = await Promise.all([
+    Enrollment.find({
+      academyId: req.academyId,
+      groupId: { $in: groupIds },
+      status: { $in: ['active','paused','completed'] }
+    }).select('studentId groupId courseId status'),
+    Course.find({
+      academyId: req.academyId,
+      _id: { $in: courseIds }
+    }).select('_id instructorId status')
+  ]);
+
+  const studentIds = [...new Set(
+    enrollments.map(row => String(row.studentId)).filter(Boolean)
+  )];
+
+  const instructorIds = [...new Set([
+    ...groups.map(row => String(row.instructorId || '')).filter(Boolean),
+    ...courses.map(row => String(row.instructorId || '')).filter(Boolean)
+  ])];
+
+  return {
+    groups,
+    groupIds,
+    courseIds,
+    courses,
+    enrollments,
+    studentIds,
+    instructorIds
+  };
+}
+
 
 async function dashboard(req, res) {
   const academyId = req.academyId;
@@ -105,10 +144,50 @@ async function dashboard(req, res) {
   const now = new Date();
   const role = req.user.role;
 
-  const canSeePeople = ['owner','admin','branch_manager','reception'].includes(role);
-  const canSeeContent = ['owner','admin','branch_manager','reception','content_manager'].includes(role);
+  if (isBranchManager(req)) {
+    const scope = await branchScope(req);
+    const activeEnrollments = scope.enrollments.filter(row => row.status === 'active').length;
+
+    const upcomingQuery = {
+      academyId,
+      groupId: { $in: scope.groupIds },
+      startAt: { $gte: now },
+      status: { $in: ['scheduled','live'] }
+    };
+
+    const [upcomingLive, upcomingSessions] = await Promise.all([
+      LiveSession.countDocuments(upcomingQuery),
+      LiveSession.find(upcomingQuery)
+        .populate('courseId', 'title')
+        .populate('instructorId', 'name')
+        .sort({ startAt: 1 })
+        .limit(5)
+    ]);
+
+    return res.json({
+      students: scope.studentIds.length,
+      instructors: scope.instructorIds.length,
+      courses: scope.courseIds.length,
+      groups: scope.groups.filter(row => ['planned','active'].includes(row.status)).length,
+      activeEnrollments,
+      upcomingLive,
+      revenue: null,
+      upcomingSessions: upcomingSessions.map(x => ({
+        id: x._id,
+        title: x.title,
+        startAt: x.startAt,
+        durationMinutes: x.durationMinutes,
+        course: x.courseId?.title || '',
+        instructor: x.instructorId?.name || '',
+        zoomJoinUrl: ''
+      }))
+    });
+  }
+
+  const canSeePeople = ['owner','admin','reception'].includes(role);
+  const canSeeContent = ['owner','admin','reception','content_manager'].includes(role);
   const canSeeFinance = ['owner','admin','accountant'].includes(role);
-  const canSeeSchedule = ['owner','admin','branch_manager','reception','content_manager'].includes(role);
+  const canSeeSchedule = ['owner','admin','reception','content_manager'].includes(role);
   const canOpenZoom = ['owner','admin'].includes(role);
 
   const [
@@ -176,11 +255,47 @@ async function options(req, res) {
   const academyId = req.academyId;
   const role = req.user.role;
 
-  const needsStudents = ['owner','admin','branch_manager','reception','accountant','content_manager'].includes(role);
-  const needsInstructors = ['owner','admin','branch_manager','reception','content_manager'].includes(role);
-  const needsCourses = ['owner','admin','branch_manager','reception','accountant','content_manager'].includes(role);
-  const needsGroups = ['owner','admin','branch_manager','reception'].includes(role);
-  const needsBranches = ['owner','admin','branch_manager','reception'].includes(role);
+  if (isBranchManager(req)) {
+    const scope = await branchScope(req);
+
+    const [students, instructors, courses, groups, branches] = await Promise.all([
+      User.find({
+        academyId,
+        _id: { $in: scope.studentIds },
+        role: 'student',
+        active: true
+      }).select('name email').sort({ name: 1 }),
+      User.find({
+        academyId,
+        _id: { $in: scope.instructorIds },
+        role: 'instructor',
+        active: true
+      }).select('name email').sort({ name: 1 }),
+      Course.find({
+        academyId,
+        _id: { $in: scope.courseIds },
+        status: { $ne: 'archived' }
+      }).select('title code').sort({ title: 1 }),
+      Group.find({
+        academyId,
+        branchId: req.user.branchId,
+        status: { $ne: 'cancelled' }
+      }).select('name courseId').sort({ name: 1 }),
+      Branch.find({
+        _id: req.user.branchId,
+        academyId,
+        active: true
+      }).select('name code')
+    ]);
+
+    return res.json({ students, instructors, courses, groups, branches });
+  }
+
+  const needsStudents = ['owner','admin','reception','accountant','content_manager'].includes(role);
+  const needsInstructors = ['owner','admin','reception','content_manager'].includes(role);
+  const needsCourses = ['owner','admin','reception','accountant','content_manager'].includes(role);
+  const needsGroups = ['owner','admin','reception'].includes(role);
+  const needsBranches = ['owner','admin','reception'].includes(role);
 
   const [students, instructors, courses, groups, branches] = await Promise.all([
     needsStudents
@@ -225,8 +340,18 @@ async function listUsers(req, res) {
   else if (['student','instructor'].includes(kind)) roleFilter = kind;
   else return res.status(400).json({ message: 'Invalid user kind' });
 
-  const rows = await User.find({ academyId, role: roleFilter })
-    .select('name email phone role active lastLoginAt createdAt')
+  const query = { academyId, role: roleFilter };
+
+  if (isBranchManager(req)) {
+    const scope = await branchScope(req);
+    query._id = {
+      $in: kind === 'student' ? scope.studentIds : scope.instructorIds
+    };
+  }
+
+  const rows = await User.find(query)
+    .select('name email phone role branchId active lastLoginAt createdAt')
+    .populate('branchId', 'name code')
     .sort({ createdAt: -1 });
 
   res.json(rows);
