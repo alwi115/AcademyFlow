@@ -4,6 +4,7 @@ const SystemError = require('../models/SystemError');
 const SystemAlert = require('../models/SystemAlert');
 const backupService = require('./backup.service');
 const mailer = require('./mailer.service');
+const externalBackup = require('./external-backup.service');
 
 let timer = null;
 let running = false;
@@ -72,7 +73,7 @@ async function collectIssues() {
     }
   }
 
-  const [backups, storage, errorCount, brokenZoom] = await Promise.all([
+  const [backups, storage, errorCount, brokenZoom, externalStorage] = await Promise.all([
     backupService.listBackups().catch(() => []),
     backupService.storageStatus(),
     SystemError.countDocuments({
@@ -86,7 +87,8 @@ async function collectIssues() {
         { 'zoomIntegration.zoomUserId': { $in: ['', null] } },
         { 'zoomIntegration.tokensEncrypted': { $in: ['', null] } }
       ]
-    })
+    }),
+    externalBackup.healthCheck()
   ]);
 
   const staleHours = numberEnv('BACKUP_STALE_HOURS', 30, 2, 720);
@@ -160,6 +162,30 @@ async function collectIssues() {
       title: 'تكاملات Zoom تحتاج إصلاح',
       message: `${brokenZoom} أكاديمية لديها ربط Zoom غير مكتمل.`,
       details: { brokenZoom }
+    });
+  }
+
+  if (externalStorage.configured && !externalStorage.ok) {
+    issues.push({
+      key: 'backup.external_unavailable',
+      severity: 'critical',
+      title: 'التخزين الخارجي للنسخ غير متاح',
+      message: externalStorage.reason || 'فشل الاتصال بمخزن النسخ الخارجي.'
+    });
+  }
+
+  if (
+    externalStorage.configured &&
+    latest &&
+    latest.external?.configured &&
+    !latest.external?.uploaded
+  ) {
+    issues.push({
+      key: 'backup.external_upload_failed',
+      severity: 'critical',
+      title: 'فشل رفع آخر Backup خارج Railway',
+      message: latest.external?.error || 'آخر نسخة محلية لم تصل إلى التخزين الخارجي.',
+      details: { latestBackupId: latest.id }
     });
   }
 
