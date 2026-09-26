@@ -11,6 +11,8 @@ function sanitize(value, depth = 0) {
   }
 
   if (value instanceof Date) return value;
+  if (Buffer.isBuffer(value)) return '[buffer]';
+  if (typeof value?.toHexString === 'function') return value.toHexString();
   if (typeof value !== 'object') {
     if (typeof value === 'string') return value.slice(0, 2000);
     return value;
