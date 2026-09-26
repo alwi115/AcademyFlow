@@ -861,6 +861,11 @@ const SA = (() => {
               <strong>${esc(activeAlerts.length)}</strong>
               <p>${activeAlerts.some(x => x.severity === 'critical') ? 'يوجد تنبيه حرج' : 'الحالة تحت المراقبة'}</p>
             </article>
+            <article class="sa-health-item">
+              <small>الجاهزية القانونية</small>
+              <strong>${h.legalReadiness?.complete ? 'مكتملة' : 'تحتاج بيانات'}</strong>
+              <p>${h.legalReadiness?.complete ? 'الهوية القانونية الأساسية مضبوطة' : 'ناقص: '+esc((h.legalReadiness?.missing || []).join(', '))}</p>
+            </article>
           </div>
 
           <section class="sa-card sa-section" style="box-shadow:none">
