@@ -655,6 +655,7 @@ async function listAudit(req, res) {
   const limit = Math.min(Math.max(Number(req.query.limit || 100), 1), 300);
   const rows = await AuditLog.find()
     .populate('actorId', 'name username email')
+    .populate('academyId', 'name code')
     .sort({ createdAt: -1 })
     .limit(limit);
   res.json(rows);
