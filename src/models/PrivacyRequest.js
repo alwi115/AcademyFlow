@@ -12,6 +12,7 @@ const PrivacyRequestSchema = new mongoose.Schema({
       'portability',
       'objection',
       'withdraw_consent',
+      'stop_notifications',
       'complaint'
     ],
     index: true
