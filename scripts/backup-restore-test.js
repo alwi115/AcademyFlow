@@ -29,6 +29,8 @@ async function connectWithRetry() {
 
 async function main() {
   process.env.NODE_ENV = 'test';
+  process.env.BACKUP_ENCRYPTION_KEY = process.env.BACKUP_ENCRYPTION_KEY ||
+    'backup-regression-encryption-key-0123456789-abcdefghijklmnopqrstuvwxyz';
   process.env.BACKUP_DIR = process.env.BACKUP_DIR ||
     await fs.mkdtemp(path.join(os.tmpdir(), 'academyflow-backup-test-'));
 
@@ -129,7 +131,7 @@ async function main() {
 
   // Corruption must be detected before restore.
   const corrupt = await backupService.createBackup({ reason: 'corruption-test' });
-  const corruptPath = path.join(process.env.BACKUP_DIR, corrupt.id + '.json.gz');
+  const corruptPath = path.join(process.env.BACKUP_DIR, corrupt.id + '.backup');
   const bytes = await fs.readFile(corruptPath);
   bytes[0] = bytes[0] ^ 0xff;
   await fs.writeFile(corruptPath, bytes);
