@@ -4,7 +4,9 @@ let timer = null;
 
 function enabled() {
   if (process.env.AUTO_BACKUP_ENABLED === 'false') return false;
-  return backups.explicitStorageConfigured();
+  if (!backups.explicitStorageConfigured()) return false;
+  if (process.env.NODE_ENV === 'production' && !backups.encryptionConfigured()) return false;
+  return true;
 }
 
 function intervalMs() {
