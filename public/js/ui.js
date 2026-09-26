@@ -42,7 +42,6 @@
   function applyTheme(theme, persist = true){
     const next = normalizeTheme(theme);
     document.documentElement.setAttribute('data-theme', next);
-    document.documentElement.style.colorScheme = next;
 
     if(persist) localStorage.setItem(THEME_KEY, next);
 
