@@ -110,6 +110,89 @@ async function main() {
   const token = tokenFor(owner);
 
   try {
+    async function csrfCookieAndToken() {
+      const response = await fetch(base + '/api/auth/csrf');
+      assert.strictEqual(response.status, 200);
+      const data = await response.json();
+      const cookies = typeof response.headers.getSetCookie === 'function'
+        ? response.headers.getSetCookie()
+        : [response.headers.get('set-cookie') || ''];
+      const cookie = cookies
+        .map(value => String(value).split(';')[0])
+        .find(value => value.startsWith('af_csrf='));
+      assert(cookie);
+      return { cookie, token: data.csrfToken };
+    }
+
+    function activeSessionCookie(response) {
+      const cookies = typeof response.headers.getSetCookie === 'function'
+        ? response.headers.getSetCookie()
+        : [response.headers.get('set-cookie') || ''];
+
+      const candidates = cookies
+        .map(value => String(value))
+        .filter(value => value.startsWith('af_session='))
+        .filter(value => !/^af_session=;/.test(value))
+        .filter(value => !/Max-Age=0/i.test(value));
+
+      assert(candidates.length > 0, 'active af_session cookie missing');
+      return candidates[candidates.length - 1].split(';')[0];
+    }
+
+    const superCsrf = await csrfCookieAndToken();
+    const superLogin = await fetch(base + '/api/auth/login', {
+      method: 'POST',
+      headers: {
+        Origin: base,
+        Cookie: superCsrf.cookie,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        _csrf: superCsrf.token,
+        username: 'legal-superadmin',
+        password: 'LegalAcceptancePassword123!'
+      })
+    });
+    assert.strictEqual(superLogin.status, 200);
+    const superSessionCookie = activeSessionCookie(superLogin);
+
+    const superMe = await fetch(base + '/api/auth/me', {
+      headers: {
+        Cookie: 'af_session=stale.invalid.cookie; ' + superSessionCookie
+      }
+    });
+    assert.strictEqual(superMe.status, 200);
+    const superMeBody = await superMe.json();
+    assert.strictEqual(superMeBody.user.role, 'superadmin');
+
+    const ownerCsrfLogin = await csrfCookieAndToken();
+    const ownerLogin = await fetch(base + '/api/auth/login', {
+      method: 'POST',
+      headers: {
+        Origin: base,
+        Cookie: ownerCsrfLogin.cookie,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        _csrf: ownerCsrfLogin.token,
+        academyCode: 'LEGAL-A',
+        email: 'legal-owner@example.test',
+        password: 'LegalAcceptancePassword123!'
+      })
+    });
+    assert.strictEqual(ownerLogin.status, 200);
+    const ownerSessionCookie = activeSessionCookie(ownerLogin);
+
+    const ownerMe = await fetch(base + '/api/auth/me', {
+      headers: {
+        Cookie: 'af_session=expired.legacy.cookie; ' + ownerSessionCookie
+      }
+    });
+    assert.strictEqual(ownerMe.status, 200);
+    const ownerMeBody = await ownerMe.json();
+    assert.strictEqual(ownerMeBody.user.role, 'owner');
+    assert.strictEqual(ownerMeBody.user.legalAcceptanceRequired, true);
+
     const configRes = await fetch(base + '/api/public/legal-config');
     assert.strictEqual(configRes.status, 200);
     const config = await configRes.json();
