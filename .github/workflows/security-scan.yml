@@ -27,7 +27,7 @@ jobs:
           node-version: "22"
 
       - name: Install dependencies
-        run: npm install --ignore-scripts
+        run: npm ci --ignore-scripts
 
       - name: Prepare report directory
         run: mkdir -p security-reports
@@ -152,7 +152,7 @@ jobs:
           node-version: "22"
 
       - name: Install dependencies
-        run: npm install --ignore-scripts
+        run: npm ci --ignore-scripts
 
       - name: Check JavaScript syntax
         shell: bash
@@ -184,7 +184,7 @@ jobs:
           node-version: "22"
 
       - name: Install dependencies
-        run: npm install --ignore-scripts
+        run: npm ci --ignore-scripts
 
       - name: Check JavaScript syntax
         shell: bash
@@ -219,7 +219,7 @@ jobs:
           node-version: "22"
 
       - name: Install dependencies
-        run: npm install --ignore-scripts
+        run: npm ci --ignore-scripts
 
       - name: Check backup JavaScript syntax
         shell: bash
