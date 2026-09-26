@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { auth, allowRoles } = require('../middleware/auth');
 const c = require('../controllers/superadmin.controller');
+const compliance = require('../controllers/compliance.controller');
 
 router.use(auth, allowRoles('superadmin'));
 
@@ -28,6 +29,12 @@ router.post('/backups/:id/restore', c.restoreBackup);
 
 router.get('/privacy-requests', c.listPrivacyRequests);
 router.patch('/privacy-requests/:id', c.updatePrivacyRequest);
+
+router.get('/compliance/processing-activities', compliance.listProcessingActivities);
+router.post('/compliance/processing-activities/:id/review', compliance.reviewProcessingActivity);
+router.get('/compliance/incidents', compliance.listPrivacyIncidents);
+router.post('/compliance/incidents', compliance.createPrivacyIncident);
+router.patch('/compliance/incidents/:id', compliance.updatePrivacyIncident);
 
 router.get('/audit', c.listAudit);
 
