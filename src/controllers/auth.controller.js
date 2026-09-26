@@ -131,7 +131,7 @@ async function login(req, res) {
       email,
       active: true,
       role: { $ne: 'superadmin' }
-    }).select('+passwordHash +failedLoginAttempts +lockUntil legalAcceptance');
+    }).select('+passwordHash +failedLoginAttempts +lockUntil');
   } else {
     if (!/^[a-z0-9._-]{3,40}$/.test(username)) {
       return invalidCredentials(res);
@@ -142,7 +142,7 @@ async function login(req, res) {
       username,
       active: true,
       role: 'superadmin'
-    }).select('+passwordHash +failedLoginAttempts +lockUntil legalAcceptance');
+    }).select('+passwordHash +failedLoginAttempts +lockUntil');
   }
 
   if (user?.lockUntil && user.lockUntil.getTime() > Date.now()) {
