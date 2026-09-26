@@ -1,0 +1,5 @@
+const CURRENT_LEGAL_VERSION = '2026-09-27';
+
+module.exports = {
+  CURRENT_LEGAL_VERSION
+};
