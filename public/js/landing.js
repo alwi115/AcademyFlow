@@ -80,7 +80,6 @@
     };
 
     let activeIndex=0;
-    let rotation=0;
 
     const activate=(index)=>{
       if(index<0) index=buttons.length-1;
@@ -97,13 +96,7 @@
         button.setAttribute('aria-pressed',on?'true':'false');
       });
 
-      const target=data.angle;
-      const current=((rotation%360)+360)%360;
-      let delta=target-current;
-      if(delta>180) delta-=360;
-      if(delta<-180) delta+=360;
-      rotation+=delta;
-      if(rotor) rotor.style.transform='rotate('+rotation+'deg)';
+      root.dataset.angle=String(data.angle);
 
       detail.classList.remove('is-changing');
       void detail.offsetWidth;
@@ -132,6 +125,7 @@
       });
     });
     if(core) core.addEventListener('click',()=>activate(activeIndex+1));
+    root.dataset.angle='0';
   };
 
   document.addEventListener('DOMContentLoaded',()=>{
