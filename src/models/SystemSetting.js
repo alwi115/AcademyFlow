@@ -10,6 +10,7 @@ const SystemSettingSchema = new mongoose.Schema({
   supportPhone: { type: String, default: '', trim: true },
   legalEntityName: { type: String, default: '', trim: true, maxlength: 240 },
   commercialRegistrationNumber: { type: String, default: '', trim: true, maxlength: 120 },
+  ecommerceLicenseNumber: { type: String, default: '', trim: true, maxlength: 120 },
   taxNumber: { type: String, default: '', trim: true, maxlength: 120 },
   businessAddress: { type: String, default: '', trim: true, maxlength: 500 },
   privacyOfficerEmail: { type: String, default: '', trim: true, lowercase: true, maxlength: 254 },
