@@ -1341,6 +1341,29 @@ const SA = (() => {
             </section>
           </div>
 
+          <section class="sa-card sa-section" style="box-shadow:none">
+            <div class="sa-card-head">
+              <div>
+                <h2>الهوية القانونية والتجارية</h2>
+                <p>تظهر هذه البيانات في السياسات العامة. لا تضع أرقامًا غير حقيقية.</p>
+              </div>
+            </div>
+            <div class="sa-settings-grid">
+              <section class="sa-settings-block">
+                <h3>بيانات المنشأة</h3>
+                <div class="field"><label>الاسم القانوني للمنشأة</label><input name="legalEntityName" value="${esc(s.legalEntityName || '')}" placeholder="الاسم كما يظهر في السجل التجاري"></div>
+                <div class="field"><label>رقم السجل التجاري</label><input name="commercialRegistrationNumber" value="${esc(s.commercialRegistrationNumber || '')}"></div>
+                <div class="field"><label>الرقم الضريبي (إن وجد)</label><input name="taxNumber" value="${esc(s.taxNumber || '')}"></div>
+                <div class="field"><label>عنوان النشاط</label><textarea name="businessAddress">${esc(s.businessAddress || '')}</textarea></div>
+              </section>
+              <section class="sa-settings-block">
+                <h3>حماية البيانات</h3>
+                <div class="field"><label>بريد مسؤول حماية البيانات / الخصوصية</label><input name="privacyOfficerEmail" type="email" value="${esc(s.privacyOfficerEmail || '')}"></div>
+                <div class="sa-note">يُستخدم هذا البريد في سياسة الخصوصية وطلبات أصحاب البيانات. يفضّل بريدًا وظيفيًا مستقلًا عن البريد الشخصي.</div>
+              </section>
+            </div>
+          </section>
+
           <div class="sa-card sa-section">
             <div class="sa-card-head">
               <div><h2>حفظ التغييرات</h2><p>التجربة وفترة السماح الجديدة تطبق على الأكاديميات التي يتم إنشاؤها بعد الحفظ.</p></div>
