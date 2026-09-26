@@ -8,7 +8,7 @@
   <title>AcademyFlow | نظام تشغيل الأكاديمية</title>
   <meta name="description" content="AcademyFlow يجمع الطلاب والمدربين والدورات والحضور والمحاضرات المباشرة والتقارير وإدارة الأكاديمية في مسار واحد واضح.">
   <link rel="stylesheet" href="/css/app.css">
-  <link rel="stylesheet" href="/css/landing.css?v=2">
+  <link rel="stylesheet" href="/css/landing.css?v=3">
   <script src="/js/ui.js"></script>
 </head>
 <body class="visitor-home">
@@ -109,34 +109,88 @@
         </p>
       </section>
 
-      <section class="system-map-section" id="system">
+      <section class="system-map-section system-explorer" id="system">
         <div class="system-map-copy" data-reveal>
-          <span class="section-index">02 — SYSTEM MAP</span>
-          <h2>وش موجود داخل AcademyFlow؟</h2>
+          <span class="section-index">02 — INTERACTIVE SYSTEM MAP</span>
+          <h2>لفّ العجلة.<br>وشوف النظام من الداخل.</h2>
           <p>
-            مو قائمة مميزات محطوطة جنب بعض. كل جزء مربوط بجزء ثاني، عشان الأكاديمية تقدر تمشي من التسجيل إلى المتابعة والتقارير بدون انقطاع.
+            كل جزء في AcademyFlow مرتبط بالباقي. اختر أي نقطة من العجلة، وبتشوف وش تسوي فعليًا داخل الأكاديمية وكيف ترتبط بباقي المنظومة.
           </p>
-          <div class="system-legend">
-            <span><i></i> إدارة وتشغيل</span>
-            <span><i></i> تعليم ومتابعة</span>
-            <span><i></i> حماية وصلاحيات</span>
+
+          <div class="wheel-hint" aria-hidden="true">
+            <span>اضغط على أي دائرة</span>
+            <i></i>
+            <b>EXPLORE</b>
+          </div>
+
+          <div class="system-detail" id="systemDetail" aria-live="polite">
+            <div class="system-detail-top">
+              <span class="system-detail-index" id="systemDetailIndex">01</span>
+              <span class="system-detail-tag" id="systemDetailTag">STUDENT CORE</span>
+            </div>
+            <h3 id="systemDetailTitle">الطلاب</h3>
+            <p id="systemDetailText">
+              ملف واحد يمشي مع الطالب من أول تسجيله، ويربط دوراته وحضوره ومحاضراته بدل ما تتوزع معلوماته في أكثر من مكان.
+            </p>
+            <div class="system-detail-links">
+              <span id="systemDetailLinkA">التسجيل</span>
+              <span id="systemDetailLinkB">الدورات</span>
+              <span id="systemDetailLinkC">الحضور</span>
+            </div>
+            <div class="system-detail-foot">
+              <span>مرتبط مع</span>
+              <strong id="systemDetailConnected">الدورات · الحضور · التقارير</strong>
+            </div>
           </div>
         </div>
 
-        <div class="system-orbit" data-reveal aria-label="خريطة مكونات AcademyFlow">
-          <div class="system-core">
-            <b>Academy<br>Flow</b>
-            <small>OPERATING CORE</small>
+        <div class="wheel-stage" data-reveal>
+          <div class="wheel-axis axis-x" aria-hidden="true"></div>
+          <div class="wheel-axis axis-y" aria-hidden="true"></div>
+
+          <div class="system-wheel" id="systemWheel" role="group" aria-label="استكشف أقسام AcademyFlow">
+            <div class="wheel-rotor" id="wheelRotor" aria-hidden="true">
+              <i class="rotor-line"></i>
+              <i class="rotor-dot"></i>
+            </div>
+
+            <button class="wheel-item w1 is-active" type="button" data-feature="students" aria-pressed="true">
+              <span class="wheel-no">01</span><b>الطلاب</b><small>STUDENTS</small>
+            </button>
+            <button class="wheel-item w2" type="button" data-feature="courses" aria-pressed="false">
+              <span class="wheel-no">02</span><b>الدورات</b><small>COURSES</small>
+            </button>
+            <button class="wheel-item w3" type="button" data-feature="instructors" aria-pressed="false">
+              <span class="wheel-no">03</span><b>المدربين</b><small>INSTRUCTORS</small>
+            </button>
+            <button class="wheel-item w4" type="button" data-feature="zoom" aria-pressed="false">
+              <span class="wheel-no">04</span><b>Zoom</b><small>LIVE</small>
+            </button>
+            <button class="wheel-item w5" type="button" data-feature="attendance" aria-pressed="false">
+              <span class="wheel-no">05</span><b>الحضور</b><small>ATTENDANCE</small>
+            </button>
+            <button class="wheel-item w6" type="button" data-feature="reports" aria-pressed="false">
+              <span class="wheel-no">06</span><b>التقارير</b><small>REPORTS</small>
+            </button>
+            <button class="wheel-item w7" type="button" data-feature="branches" aria-pressed="false">
+              <span class="wheel-no">07</span><b>الفروع</b><small>BRANCHES</small>
+            </button>
+            <button class="wheel-item w8" type="button" data-feature="roles" aria-pressed="false">
+              <span class="wheel-no">08</span><b>الصلاحيات</b><small>ROLES</small>
+            </button>
+
+            <button class="wheel-core" id="wheelCore" type="button" aria-label="الانتقال للعنصر التالي">
+              <span class="wheel-core-kicker">ACADEMYFLOW</span>
+              <strong id="wheelCoreTitle">الطلاب</strong>
+              <small>اضغط للمحطة التالية ↺</small>
+            </button>
           </div>
 
-          <a class="system-circle c1" href="#flow"><b>الطلاب</b><small>ملفات · تسجيل · متابعة</small></a>
-          <a class="system-circle c2" href="#flow"><b>الدورات</b><small>جداول · تسجيل · محتوى</small></a>
-          <a class="system-circle c3" href="#portals"><b>المدربين</b><small>وصول · محاضرات · طلاب</small></a>
-          <a class="system-circle c4" href="#live"><b>Zoom</b><small>محاضرات مباشرة</small></a>
-          <a class="system-circle c5" href="#flow"><b>الحضور</b><small>متابعة يومية</small></a>
-          <a class="system-circle c6" href="#flow"><b>التقارير</b><small>صورة أوضح للإدارة</small></a>
-          <a class="system-circle c7" href="#portals"><b>الفروع</b><small>إدارة منفصلة ومترابطة</small></a>
-          <a class="system-circle c8" href="#portals"><b>الصلاحيات</b><small>كل دور يشوف اللي يخصه</small></a>
+          <div class="wheel-caption">
+            <span><b>08</b> وحدات مترابطة</span>
+            <span><b>01</b> تدفّق واحد</span>
+            <span class="wheel-caption-note">مو قائمة مميزات — هذي خريطة شغل الأكاديمية.</span>
+          </div>
         </div>
       </section>
 
@@ -286,6 +340,6 @@
     </footer>
   </div>
 
-  <script src="/js/landing.js?v=1"></script>
+  <script src="/js/landing.js?v=2"></script>
 </body>
 </html>
