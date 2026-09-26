@@ -164,7 +164,7 @@ async function me(req, res) {
   const user = await User.findOne({
     _id: req.user.sub,
     active: true
-  }).select('name email username role academyId');
+  }).select('name email username role academyId branchId');
 
   if (!user) {
     res.clearCookie(COOKIE_NAME, { path: '/' });
