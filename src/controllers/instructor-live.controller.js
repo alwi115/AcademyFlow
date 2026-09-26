@@ -23,7 +23,7 @@ function clean(value) {
 }
 
 async function liveSessions(req, res) {
-  const academy = await Academy.findById(req.academyId).select('timezone');
+  const academy = await Academy.findById(req.academyId).select('timezone zoomIntegration.connected');
   const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
 
   const rows = await LiveSession.find({
@@ -82,7 +82,7 @@ async function createLiveSession(req, res) {
   }
 
   const course = await assertCourse(req, courseId);
-  const academy = await Academy.findById(req.academyId).select('timezone');
+  const academy = await Academy.findById(req.academyId).select('timezone zoomIntegration.connected');
   const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
   const normalizedStartAt = parseAcademyDateTime(startAt, timezone);
   const duration = Math.max(1, Number(durationMinutes || 60));
@@ -134,13 +134,13 @@ async function createLiveSession(req, res) {
 
   let zoomWarning = '';
 
-  if (!zoom.configured()) {
-    zoomWarning = 'تم حفظ المحاضرة، لكن تكامل Zoom غير مفعّل في إعدادات السيرفر.';
+  if (!zoom.configured() || !zoom.isConnected(academy)) {
+    zoomWarning = 'تم حفظ المحاضرة، لكن حساب Zoom غير مربوط بهذه الأكاديمية بعد.';
     row.zoomProvisionError = 'Zoom integration is not configured';
     await row.save();
   } else {
     try {
-      const meeting = await zoom.createMeeting({
+      const meeting = await zoom.createMeeting(academy, {
         topic: clean(title),
         startTime: normalizedStartAt,
         duration,
@@ -249,7 +249,7 @@ async function liveAttendance(req, res) {
       };
     });
 
-  const academy = await Academy.findById(req.academyId).select('timezone');
+  const academy = await Academy.findById(req.academyId).select('timezone zoomIntegration.connected');
   const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
 
   res.json({
@@ -339,7 +339,7 @@ async function updateLiveSession(req, res) {
     return res.status(404).json({ message: 'المحاضرة غير موجودة أو لا تملك صلاحيتها' });
   }
 
-  const academy = await Academy.findById(req.academyId).select('timezone');
+  const academy = await Academy.findById(req.academyId).select('timezone zoomIntegration.connected');
   const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
 
   let nextCourseId = row.courseId;
@@ -411,14 +411,14 @@ async function updateLiveSession(req, res) {
   }
 
   if (nextStatus === 'cancelled' && previousStatus !== 'cancelled') {
-    await zoom.deleteMeeting(row.zoomMeetingId);
+    await zoom.deleteMeeting(academy, row.zoomMeetingId);
     row.zoomMeetingId = '';
     row.zoomJoinUrl = '';
     row.zoomStartUrl = '';
     row.zoomPassword = '';
   } else if (previousStatus === 'cancelled' && nextStatus === 'scheduled') {
-    if (zoom.configured()) {
-      const meeting = await zoom.createMeeting({
+    if (zoom.configured() && zoom.isConnected(academy)) {
+      const meeting = await zoom.createMeeting(academy, {
         topic: nextTitle,
         startTime: nextStartAt,
         duration: nextDuration,
@@ -433,9 +433,10 @@ async function updateLiveSession(req, res) {
   } else if (
     !row.zoomMeetingId &&
     nextStatus === 'scheduled' &&
-    zoom.configured()
+    zoom.configured() &&
+    zoom.isConnected(academy)
   ) {
-    const meeting = await zoom.createMeeting({
+    const meeting = await zoom.createMeeting(academy, {
       topic: nextTitle,
       startTime: nextStartAt,
       duration: Number(nextDuration),
@@ -455,7 +456,7 @@ async function updateLiveSession(req, res) {
       req.body.durationMinutes !== undefined
     )
   ) {
-    await zoom.updateMeeting(row.zoomMeetingId, {
+    await zoom.updateMeeting(academy, row.zoomMeetingId, {
       topic: nextTitle,
       startTime: nextStartAt,
       duration: nextDuration,
