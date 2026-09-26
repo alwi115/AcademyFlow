@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://academyflow.up.railway.app/</loc>
-  </url>
+  <url><loc>https://academyflow.up.railway.app/</loc></url>
+  <url><loc>https://academyflow.up.railway.app/legal/</loc></url>
+  <url><loc>https://academyflow.up.railway.app/legal/privacy.html</loc></url>
+  <url><loc>https://academyflow.up.railway.app/legal/terms.html</loc></url>
+  <url><loc>https://academyflow.up.railway.app/legal/refund.html</loc></url>
+  <url><loc>https://academyflow.up.railway.app/legal/data-deletion.html</loc></url>
+  <url><loc>https://academyflow.up.railway.app/legal/cookies.html</loc></url>
+  <url><loc>https://academyflow.up.railway.app/legal/acceptable-use.html</loc></url>
+  <url><loc>https://academyflow.up.railway.app/legal/support.html</loc></url>
+  <url><loc>https://academyflow.up.railway.app/legal/dpa.html</loc></url>
+  <url><loc>https://academyflow.up.railway.app/legal/privacy-request.html</loc></url>
 </urlset>
