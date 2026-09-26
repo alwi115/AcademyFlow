@@ -89,6 +89,12 @@ async function updateCourse(req, res) {
   }
 
   if (req.body.price !== undefined) {
+    if (req.user.role === 'content_manager') {
+      return res.status(403).json({
+        message: 'إدارة المحتوى لا تملك صلاحية تعديل سعر الدورة'
+      });
+    }
+
     const price = Number(req.body.price);
     if (!Number.isFinite(price) || price < 0) {
       return res.status(400).json({ message: 'سعر الدورة غير صحيح' });
