@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const Academy = require('../models/Academy');
 const LiveSession = require('../models/LiveSession');
 const LiveAttendance = require('../models/LiveAttendance');
 const User = require('../models/User');
@@ -98,6 +99,66 @@ async function handleParticipantJoined(session, participant) {
   });
 }
 
+async function handleAppDeauthorized(body) {
+  const payload = body?.payload || {};
+  const zoomUserId = String(payload.user_id || '').trim();
+  const clientId = String(payload.client_id || '').trim();
+
+  if (!zoomUserId) return 0;
+
+  // Ignore a deauthorization payload that names another app. The webhook
+  // signature is still verified before this function is reached.
+  if (
+    clientId &&
+    process.env.ZOOM_CLIENT_ID &&
+    clientId !== process.env.ZOOM_CLIENT_ID
+  ) {
+    return 0;
+  }
+
+  const academies = await Academy.find({
+    'zoomIntegration.zoomUserId': zoomUserId
+  }).select(
+    '_id +zoomIntegration.tokensEncrypted +zoomIntegration.oauthStateHash +zoomIntegration.oauthStateExpiresAt'
+  );
+
+  if (!academies.length) return 0;
+
+  for (const academy of academies) {
+    academy.zoomIntegration = {
+      connected: false,
+      zoomUserId: '',
+      zoomEmail: '',
+      zoomDisplayName: '',
+      tokensEncrypted: '',
+      accessTokenExpiresAt: null,
+      connectedAt: null,
+      connectedBy: null,
+      oauthStateHash: '',
+      oauthStateExpiresAt: null
+    };
+
+    await academy.save();
+  }
+
+  // Remove Zoom-specific meeting metadata retained by AcademyFlow after the
+  // user removes the app. AcademyFlow's own class records stay intact.
+  await LiveSession.updateMany(
+    { academyId: { $in: academies.map(academy => academy._id) } },
+    {
+      $set: {
+        zoomMeetingId: '',
+        zoomJoinUrl: '',
+        zoomStartUrl: '',
+        zoomPassword: '',
+        zoomProvisionError: 'Zoom app deauthorized'
+      }
+    }
+  );
+
+  return academies.length;
+}
+
 async function handleParticipantLeft(session, participant) {
   const participantId = String(participant?.id || participant?.user_id || '');
 
@@ -154,6 +215,11 @@ async function handle(req, res) {
       .digest('hex');
 
     return res.json({ plainToken, encryptedToken });
+  }
+
+  if (body.event === 'app_deauthorized') {
+    await handleAppDeauthorized(body);
+    return res.json({ ok: true });
   }
 
   const object = body.payload?.object || {};
