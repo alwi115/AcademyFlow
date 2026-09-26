@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   staging:
@@ -127,3 +128,72 @@ jobs:
           path: staging-reports/
           if-no-files-found: warn
           retention-days: 30
+
+
+  promote:
+    name: Promote only after all release gates pass
+    needs: staging
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_SHA: ${{ github.sha }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Wait for Security and Readiness on same SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          wait_for_workflow() {
+            local workflow_name="$1"
+            for attempt in $(seq 1 30); do
+              result="$(gh api "repos/$REPO/actions/runs?head_sha=$RELEASE_SHA&per_page=100"                 --jq '.workflow_runs | map(select(.name == "'"$workflow_name"'")) | sort_by(.created_at) | last | [.status,.conclusion] | @tsv' || true)"
+
+              status="$(printf '%s' "$result" | cut -f1)"
+              conclusion="$(printf '%s' "$result" | cut -f2)"
+
+              if [ "$status" = "completed" ]; then
+                if [ "$conclusion" != "success" ]; then
+                  echo "$workflow_name failed for $RELEASE_SHA: $conclusion"
+                  exit 1
+                fi
+                echo "$workflow_name passed for $RELEASE_SHA"
+                return 0
+              fi
+
+              echo "Waiting for $workflow_name on $RELEASE_SHA (attempt $attempt/30)..."
+              sleep 20
+            done
+
+            echo "Timed out waiting for $workflow_name"
+            exit 1
+          }
+
+          wait_for_workflow "AcademyFlow Security Scan"
+          wait_for_workflow "AcademyFlow Readiness"
+
+      - name: Fast-forward production ref only
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          compare="$(gh api "repos/$REPO/compare/production...$RELEASE_SHA")"
+          status="$(printf '%s' "$compare" | jq -r '.status')"
+
+          case "$status" in
+            ahead|identical)
+              ;;
+            *)
+              echo "Production cannot be safely fast-forwarded (compare status: $status)."
+              exit 1
+              ;;
+          esac
+
+          gh api             --method PATCH             "repos/$REPO/git/refs/heads/production"             -f sha="$RELEASE_SHA"             -F force=false
+
+          echo "Production promoted to validated SHA: $RELEASE_SHA"
