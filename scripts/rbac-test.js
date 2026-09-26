@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 const Academy = require('../src/models/Academy');
 const User = require('../src/models/User');
 const Course = require('../src/models/Course');
+const Branch = require('../src/models/Branch');
 const Group = require('../src/models/Group');
 const Enrollment = require('../src/models/Enrollment');
 const LiveSession = require('../src/models/LiveSession');
@@ -38,7 +39,8 @@ function sessionToken(user) {
     {
       sub: String(user._id),
       role: user.role,
-      academyId: user.academyId ? String(user.academyId) : null
+      academyId: user.academyId ? String(user.academyId) : null,
+      branchId: user.branchId ? String(user.branchId) : null
     },
     process.env.JWT_SECRET,
     { algorithm: 'HS256', expiresIn: '1h' }
@@ -61,9 +63,26 @@ async function main() {
     status: 'active'
   });
 
-  async function makeUser(role, name) {
+  const branchA = await Branch.create({
+    academyId: academy._id,
+    name: 'Branch A',
+    code: 'BR-A',
+    city: 'Salalah',
+    active: true
+  });
+
+  const branchB = await Branch.create({
+    academyId: academy._id,
+    name: 'Branch B',
+    code: 'BR-B',
+    city: 'Muscat',
+    active: true
+  });
+
+  async function makeUser(role, name, branchId = null) {
     return User.create({
       academyId: academy._id,
+      branchId,
       name,
       email: role + '-' + Date.now() + '-' + Math.random().toString(16).slice(2) + '@example.test',
       passwordHash,
@@ -74,27 +93,51 @@ async function main() {
 
   const users = {};
   for (const role of [
-    'owner','admin','branch_manager','accountant','reception',
+    'owner','admin','accountant','reception',
     'content_manager','support','instructor','student'
   ]) {
     users[role] = await makeUser(role, role);
   }
+
+  users.branch_manager = await makeUser('branch_manager', 'branch_manager', branchA._id);
+
   const unEnrolledStudent = await makeUser('student', 'Unenrolled student');
+  const branchBInstructor = await makeUser('instructor', 'Branch B Instructor');
+  const branchBStudent = await makeUser('student', 'Branch B Student');
 
   const course = await Course.create({
     academyId: academy._id,
-    title: 'RBAC Course',
-    code: 'RBAC-COURSE',
+    title: 'RBAC Course A',
+    code: 'RBAC-COURSE-A',
     instructorId: users.instructor._id,
     price: 25,
     status: 'active'
   });
 
+  const courseB = await Course.create({
+    academyId: academy._id,
+    title: 'RBAC Course B',
+    code: 'RBAC-COURSE-B',
+    instructorId: branchBInstructor._id,
+    price: 30,
+    status: 'active'
+  });
+
   const group = await Group.create({
     academyId: academy._id,
+    branchId: branchA._id,
     courseId: course._id,
     instructorId: users.instructor._id,
-    name: 'RBAC Group',
+    name: 'RBAC Group A',
+    status: 'active'
+  });
+
+  const groupB = await Group.create({
+    academyId: academy._id,
+    branchId: branchB._id,
+    courseId: courseB._id,
+    instructorId: branchBInstructor._id,
+    name: 'RBAC Group B',
     status: 'active'
   });
 
@@ -106,14 +149,33 @@ async function main() {
     status: 'active'
   });
 
+  await Enrollment.create({
+    academyId: academy._id,
+    studentId: branchBStudent._id,
+    courseId: courseB._id,
+    groupId: groupB._id,
+    status: 'active'
+  });
+
   await LiveSession.create({
     academyId: academy._id,
     courseId: course._id,
     groupId: group._id,
-    title: 'RBAC Live',
+    title: 'RBAC Live A',
     instructorId: users.instructor._id,
     startAt: new Date(Date.now() + 60 * 60 * 1000),
-    zoomJoinUrl: 'https://zoom.example.test/join/secret',
+    zoomJoinUrl: 'https://zoom.example.test/join/secret-a',
+    status: 'scheduled'
+  });
+
+  await LiveSession.create({
+    academyId: academy._id,
+    courseId: courseB._id,
+    groupId: groupB._id,
+    title: 'RBAC Live B',
+    instructorId: branchBInstructor._id,
+    startAt: new Date(Date.now() + 90 * 60 * 1000),
+    zoomJoinUrl: 'https://zoom.example.test/join/secret-b',
     status: 'scheduled'
   });
 
@@ -236,11 +298,40 @@ async function main() {
       status: 'present'
     });
 
-    // Branch manager: operational data, but cannot create branches or access finance.
-    await expect('branch_manager', 'GET', '/api/academy/branches', 200);
-    await expect('branch_manager', 'GET', '/api/academy/groups', 200);
-    await expect('branch_manager', 'GET', '/api/academy/enrollments', 200);
-    await expect('branch_manager', 'GET', '/api/academy/attendance', 200);
+    // Branch manager: operational data is restricted to the assigned branch only.
+    const branchRows = await expect('branch_manager', 'GET', '/api/academy/branches', 200);
+    assert.strictEqual(branchRows.body.length, 1);
+    assert.strictEqual(String(branchRows.body[0]._id), String(branchA._id));
+
+    const branchGroups = await expect('branch_manager', 'GET', '/api/academy/groups', 200);
+    assert.strictEqual(branchGroups.body.length, 1);
+    assert.strictEqual(String(branchGroups.body[0]._id), String(group._id));
+
+    const branchEnrollments = await expect('branch_manager', 'GET', '/api/academy/enrollments', 200);
+    assert.strictEqual(branchEnrollments.body.length, 1);
+    assert.strictEqual(String(branchEnrollments.body[0].studentId._id), String(users.student._id));
+
+    const branchStudents = await expect('branch_manager', 'GET', '/api/academy/users?kind=student', 200);
+    assert.strictEqual(branchStudents.body.length, 1);
+    assert.strictEqual(String(branchStudents.body[0]._id), String(users.student._id));
+
+    const branchOptions = await expect('branch_manager', 'GET', '/api/academy/options', 200);
+    assert.strictEqual(branchOptions.body.branches.length, 1);
+    assert.strictEqual(branchOptions.body.groups.length, 1);
+    assert.strictEqual(branchOptions.body.students.length, 1);
+    assert.strictEqual(branchOptions.body.courses.length, 1);
+    assert.strictEqual(String(branchOptions.body.branches[0]._id), String(branchA._id));
+    assert.strictEqual(String(branchOptions.body.groups[0]._id), String(group._id));
+    assert.strictEqual(String(branchOptions.body.courses[0]._id), String(course._id));
+
+    const branchDashboard = await expect('branch_manager', 'GET', '/api/academy/dashboard', 200);
+    assert.strictEqual(branchDashboard.body.groups, 1);
+    assert.strictEqual(branchDashboard.body.students, 1);
+    assert.strictEqual(branchDashboard.body.courses, 1);
+    assert.strictEqual(branchDashboard.body.revenue, null);
+    assert.strictEqual(branchDashboard.body.upcomingSessions.length, 1);
+    assert.strictEqual(branchDashboard.body.upcomingSessions[0].zoomJoinUrl, '');
+
     await expect('branch_manager', 'POST', '/api/academy/branches', 403, {
       name: 'Forbidden branch',
       code: 'NOPE2'
@@ -248,6 +339,24 @@ async function main() {
     await expect('branch_manager', 'GET', '/api/academy/payments', 403);
     await expect('branch_manager', 'GET', '/api/academy/reports', 403);
     await expect('branch_manager', 'GET', '/api/academy/users?kind=staff', 403);
+
+    // Cross-branch writes must be blocked even when the manager knows object IDs.
+    await expect('branch_manager', 'PATCH', '/api/academy/groups/' + groupB._id, 404, {
+      name: 'Hijacked Group B'
+    });
+    await expect('branch_manager', 'POST', '/api/academy/enrollments', 403, {
+      studentId: String(branchBStudent._id),
+      courseId: String(courseB._id),
+      groupId: String(groupB._id),
+      status: 'active'
+    });
+    await expect('branch_manager', 'POST', '/api/academy/attendance', 403, {
+      studentId: String(branchBStudent._id),
+      courseId: String(courseB._id),
+      groupId: String(groupB._id),
+      date: new Date().toISOString(),
+      status: 'present'
+    });
 
     // Content manager: content and certificates, but never pricing or finance.
     await expect('content_manager', 'GET', '/api/academy/courses', 200);
