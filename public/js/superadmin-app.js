@@ -21,6 +21,7 @@ const SA = (() => {
     subscriptions: ['الاشتراكات','تعيين الباقات وتمديد الاشتراكات ومتابعة تواريخ الانتهاء.'],
     health: ['صحة النظام','فحص فعلي لاتصال قاعدة البيانات والسيرفر والإعدادات الأساسية.'],
     audit: ['سجل العمليات','سجل إجراءات مالك النظام على الأكاديميات والباقات والإعدادات.'],
+    privacy: ['طلبات الخصوصية','متابعة طلبات الوصول والتصحيح والحذف والنقل والاعتراض.'],
     settings: ['إعدادات المنصة','إعدادات التجربة والسماح والدعم والهوية العامة للمنصة.']
   };
 
@@ -31,6 +32,7 @@ const SA = (() => {
     ['subscriptions','الاشتراكات','S'],
     ['health','صحة النظام','H'],
     ['audit','سجل العمليات','L'],
+    ['privacy','طلبات الخصوصية','P'],
     ['settings','الإعدادات','⚙']
   ];
 
@@ -1186,6 +1188,129 @@ const SA = (() => {
     await load();
   }
 
+  async function renderPrivacy() {
+    const target = document.getElementById('saPageContent');
+    target.innerHTML = `
+      <section class="sa-card">
+        <div class="sa-card-head">
+          <div>
+            <h2>طلبات حقوق البيانات</h2>
+            <p>راجع الطلب، تحقق من هوية صاحبه، ثم وثّق حالة المعالجة.</p>
+          </div>
+          <div class="sa-actions">
+            <select class="sa-search" id="privacyStatusFilter">
+              <option value="">كل الحالات</option>
+              <option value="received">مستلم</option>
+              <option value="verifying">تحقق من الهوية</option>
+              <option value="in_progress">قيد التنفيذ</option>
+              <option value="completed">مكتمل</option>
+              <option value="rejected">مرفوض</option>
+            </select>
+            <button class="btn secondary" id="privacyRefresh" type="button">تحديث</button>
+          </div>
+        </div>
+        <div id="privacyRows"><div class="sa-empty">جاري التحميل...</div></div>
+      </section>
+    `;
+
+    const typeLabels = {
+      access: 'نسخة من البيانات',
+      correction: 'تصحيح / تحديث',
+      deletion: 'حذف البيانات',
+      portability: 'نقل البيانات',
+      objection: 'اعتراض',
+      withdraw_consent: 'سحب الموافقة',
+      complaint: 'شكوى خصوصية'
+    };
+
+    const statusLabelsLocal = {
+      received: 'مستلم',
+      verifying: 'تحقق',
+      in_progress: 'قيد التنفيذ',
+      completed: 'مكتمل',
+      rejected: 'مرفوض'
+    };
+
+    let rows = [];
+
+    const draw = () => {
+      const filter = document.getElementById('privacyStatusFilter').value;
+      const shown = filter ? rows.filter(x => x.status === filter) : rows;
+
+      document.getElementById('privacyRows').innerHTML = `
+        <div class="sa-table-wrap">
+          <table class="sa-table">
+            <thead><tr><th>الطلب</th><th>صاحب الطلب</th><th>النوع</th><th>الحالة</th><th>التحقق</th><th>التاريخ</th><th></th></tr></thead>
+            <tbody>
+              ${shown.length ? shown.map(x => `
+                <tr>
+                  <td class="sa-row-title"><b>${esc(x.requestNumber)}</b><small>${esc(x.academyCode || 'بدون كود')}</small></td>
+                  <td><b>${esc(x.name)}</b><small style="display:block;color:var(--text-mute)">${esc(x.email)}</small></td>
+                  <td>${esc(typeLabels[x.type] || x.type)}</td>
+                  <td><span class="sa-status ${x.status === 'completed' ? 'good' : x.status === 'rejected' ? 'bad' : 'warn'}">${esc(statusLabelsLocal[x.status] || x.status)}</span></td>
+                  <td>${x.identityVerified ? '<span class="sa-status good">تم</span>' : '<span class="sa-status warn">مطلوب</span>'}</td>
+                  <td>${fmtDate(x.createdAt,true)}</td>
+                  <td><button class="btn ghost privacy-open" data-id="${esc(x._id)}" type="button">مراجعة</button></td>
+                </tr>
+              `).join('') : '<tr><td colspan="7" class="sa-empty">لا توجد طلبات بهذه الحالة.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      document.querySelectorAll('.privacy-open').forEach(button => {
+        button.onclick = async () => {
+          const row = rows.find(x => x._id === button.dataset.id);
+          if (!row) return;
+
+          await openModal({
+            title: 'طلب '+row.requestNumber,
+            subtitle: (typeLabels[row.type] || row.type)+' · '+row.email,
+            values: {
+              status: row.status,
+              identityVerified: row.identityVerified,
+              internalNote: row.internalNote || ''
+            },
+            fields: [
+              ['status','الحالة','select',true,[
+                ['received','مستلم'],
+                ['verifying','تحقق من الهوية'],
+                ['in_progress','قيد التنفيذ'],
+                ['completed','مكتمل'],
+                ['rejected','مرفوض']
+              ]],
+              ['identityVerified','تم التحقق من الهوية','checkbox',false,'لا تنفذ طلب الوصول أو الحذف قبل التحقق المناسب.',true],
+              ['internalNote','ملاحظات داخلية','textarea',false,null,true]
+            ],
+            submitLabel: 'حفظ حالة الطلب',
+            onSubmit: async data => {
+              data.identityVerified = Boolean(data.identityVerified);
+              await api('/api/superadmin/privacy-requests/'+encodeURIComponent(row._id),{
+                method:'PATCH',
+                body:JSON.stringify(data)
+              });
+              toast('تم تحديث طلب الخصوصية');
+              await load();
+            }
+          });
+        };
+      });
+    };
+
+    const load = async () => {
+      try {
+        rows = await api('/api/superadmin/privacy-requests');
+        draw();
+      } catch (err) {
+        document.getElementById('privacyRows').innerHTML = '<div class="sa-empty">'+esc(err.message)+'</div>';
+      }
+    };
+
+    document.getElementById('privacyStatusFilter').onchange = draw;
+    document.getElementById('privacyRefresh').onclick = load;
+    await load();
+  }
+
   async function renderSettings() {
     const target = document.getElementById('saPageContent');
     target.innerHTML = '<div class="sa-empty">جاري تحميل الإعدادات...</div>';
@@ -1262,6 +1387,7 @@ const SA = (() => {
     if (page === 'subscriptions') return renderSubscriptions();
     if (page === 'health') return renderHealth();
     if (page === 'audit') return renderAudit();
+    if (page === 'privacy') return renderPrivacy();
     if (page === 'settings') return renderSettings();
 
     document.getElementById('saPageContent').innerHTML = '<div class="sa-card sa-empty">الصفحة غير موجودة.</div>';
