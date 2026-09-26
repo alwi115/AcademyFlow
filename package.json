@@ -9,7 +9,8 @@
     "start": "node src/server.js",
     "test:tenant-isolation": "node scripts/tenant-isolation-test.js",
     "test:rbac": "node scripts/rbac-test.js",
-    "test:backup-restore": "node scripts/backup-restore-test.js"
+    "test:backup-restore": "node scripts/backup-restore-test.js",
+    "test:e2e": "node scripts/e2e-test.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
