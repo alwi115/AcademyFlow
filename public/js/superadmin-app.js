@@ -840,7 +840,7 @@ const SA = (() => {
             <article class="sa-health-item">
               <small>Zoom</small>
               <strong>${esc(h.zoom.connectedAcademies)} أكاديمية مربوطة</strong>
-              <p>تنتهي خلال 24س: ${esc(h.zoom.expiringWithin24Hours)}</p>
+              <p>ربط يحتاج إصلاح: ${esc(h.zoom.brokenIntegrations)}</p>
             </article>
             <article class="sa-health-item">
               <small>أخطاء السيرفر</small>
