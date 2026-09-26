@@ -91,15 +91,32 @@ app.use((req, res, next) => {
 });
 
 app.use((req, res, next) => {
+  if (!backupService.isBusy() || !req.path.startsWith('/api/')) {
+    return next();
+  }
+
+  const operation = backupService.operation();
+  const isSuperAdminBackupRoute = req.path.startsWith('/api/superadmin/backups');
+  const mutating = ['POST','PUT','PATCH','DELETE'].includes(req.method);
+
   if (
-    backupService.isBusy() &&
-    backupService.operation() === 'restore' &&
-    req.path.startsWith('/api/') &&
+    operation === 'restore' &&
     !req.path.startsWith('/api/superadmin/')
   ) {
     res.setHeader('Retry-After', '60');
     return res.status(503).json({
       message: 'System restore is in progress. Please retry shortly.'
+    });
+  }
+
+  if (
+    operation === 'backup' &&
+    mutating &&
+    !isSuperAdminBackupRoute
+  ) {
+    res.setHeader('Retry-After', '30');
+    return res.status(503).json({
+      message: 'A consistent backup snapshot is being created. Please retry shortly.'
     });
   }
 
