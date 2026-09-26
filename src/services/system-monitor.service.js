@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Academy = require('../models/Academy');
 const SystemError = require('../models/SystemError');
 const SystemAlert = require('../models/SystemAlert');
+const SystemSetting = require('../models/SystemSetting');
 const backupService = require('./backup.service');
 const mailer = require('./mailer.service');
 const externalBackup = require('./external-backup.service');
@@ -73,7 +74,7 @@ async function collectIssues() {
     }
   }
 
-  const [backups, storage, errorCount, brokenZoom, externalStorage] = await Promise.all([
+  const [backups, storage, errorCount, brokenZoom, externalStorage, legalSettings] = await Promise.all([
     backupService.listBackups().catch(() => []),
     backupService.storageStatus(),
     SystemError.countDocuments({
@@ -88,7 +89,8 @@ async function collectIssues() {
         { 'zoomIntegration.tokensEncrypted': { $in: ['', null] } }
       ]
     }),
-    externalBackup.healthCheck()
+    externalBackup.healthCheck(),
+    SystemSetting.findOne({ key: 'platform' }).lean()
   ]);
 
   const staleHours = numberEnv('BACKUP_STALE_HOURS', 30, 2, 720);
@@ -186,6 +188,27 @@ async function collectIssues() {
       title: 'فشل رفع آخر Backup خارج Railway',
       message: latest.external?.error || 'آخر نسخة محلية لم تصل إلى التخزين الخارجي.',
       details: { latestBackupId: latest.id }
+    });
+  }
+
+  const legalRequired = [
+    ['legalEntityName', legalSettings?.legalEntityName],
+    ['commercialRegistrationNumber', legalSettings?.commercialRegistrationNumber],
+    ['businessAddress', legalSettings?.businessAddress],
+    ['supportEmail', legalSettings?.supportEmail],
+    ['privacyOfficerEmail', legalSettings?.privacyOfficerEmail]
+  ];
+  const legalMissing = legalRequired
+    .filter(([, value]) => !String(value || '').trim())
+    .map(([key]) => key);
+
+  if (legalMissing.length) {
+    issues.push({
+      key: 'legal.identity_incomplete',
+      severity: 'warning',
+      title: 'الهوية القانونية والتجارية غير مكتملة',
+      message: 'أكمل بيانات المنشأة والخصوصية في إعدادات السوبر أدمن.',
+      details: { missing: legalMissing.join(', ') }
     });
   }
 
