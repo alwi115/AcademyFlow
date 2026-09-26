@@ -194,8 +194,11 @@ async function collectIssues() {
   const legalRequired = [
     ['legalEntityName', legalSettings?.legalEntityName],
     ['commercialRegistrationNumber', legalSettings?.commercialRegistrationNumber],
+    ['ecommerceLicenseNumber', legalSettings?.ecommerceLicenseNumber],
     ['businessAddress', legalSettings?.businessAddress],
     ['supportEmail', legalSettings?.supportEmail],
+    ['supportPhone', legalSettings?.supportPhone],
+    ['privacyOfficerName', legalSettings?.privacyOfficerName],
     ['privacyOfficerEmail', legalSettings?.privacyOfficerEmail]
   ];
   const legalMissing = legalRequired
