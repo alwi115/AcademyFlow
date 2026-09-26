@@ -75,6 +75,7 @@ async function createPrivacyRequest(req, res) {
     'portability',
     'objection',
     'withdraw_consent',
+    'stop_notifications',
     'complaint'
   ]);
 
