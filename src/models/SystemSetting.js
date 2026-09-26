@@ -13,6 +13,7 @@ const SystemSettingSchema = new mongoose.Schema({
   ecommerceLicenseNumber: { type: String, default: '', trim: true, maxlength: 120 },
   taxNumber: { type: String, default: '', trim: true, maxlength: 120 },
   businessAddress: { type: String, default: '', trim: true, maxlength: 500 },
+  privacyOfficerName: { type: String, default: '', trim: true, maxlength: 180 },
   privacyOfficerEmail: { type: String, default: '', trim: true, lowercase: true, maxlength: 254 },
   maintenanceMode: { type: Boolean, default: false },
   announcement: { type: String, default: '', maxlength: 500 }
