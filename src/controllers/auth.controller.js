@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Academy = require('../models/Academy');
 const { COOKIE_NAME } = require('../middleware/auth');
+const { CURRENT_LEGAL_VERSION } = require('../config/legal');
 
 const SESSION_MS = 12 * 60 * 60 * 1000;
 const MAX_FAILED_ATTEMPTS = 5;
@@ -39,6 +40,18 @@ function sign(user) {
   );
 }
 
+function legalAcceptanceRequired(user) {
+  if (user.role !== 'owner') return false;
+
+  const legal = user.legalAcceptance || {};
+  return !(
+    legal.termsVersion === CURRENT_LEGAL_VERSION &&
+    legal.privacyVersion === CURRENT_LEGAL_VERSION &&
+    legal.dpaVersion === CURRENT_LEGAL_VERSION &&
+    legal.acceptedAt
+  );
+}
+
 function publicUser(user, academy = null) {
   return {
     id: user._id,
@@ -49,7 +62,9 @@ function publicUser(user, academy = null) {
     academyId: user.academyId,
     branchId: user.branchId || null,
     academyCode: academy?.code || null,
-    academyName: academy?.name || null
+    academyName: academy?.name || null,
+    legalAcceptanceRequired: legalAcceptanceRequired(user),
+    legalVersion: CURRENT_LEGAL_VERSION
   };
 }
 
@@ -109,7 +124,7 @@ async function login(req, res) {
       email,
       active: true,
       role: { $ne: 'superadmin' }
-    }).select('+passwordHash +failedLoginAttempts +lockUntil');
+    }).select('+passwordHash +failedLoginAttempts +lockUntil legalAcceptance');
   } else {
     if (!/^[a-z0-9._-]{3,40}$/.test(username)) {
       return invalidCredentials(res);
@@ -120,7 +135,7 @@ async function login(req, res) {
       username,
       active: true,
       role: 'superadmin'
-    }).select('+passwordHash +failedLoginAttempts +lockUntil');
+    }).select('+passwordHash +failedLoginAttempts +lockUntil legalAcceptance');
   }
 
   if (user?.lockUntil && user.lockUntil.getTime() > Date.now()) {
@@ -164,7 +179,7 @@ async function me(req, res) {
   const user = await User.findOne({
     _id: req.user.sub,
     active: true
-  }).select('name email username role academyId branchId');
+  }).select('name email username role academyId branchId legalAcceptance');
 
   if (!user) {
     res.clearCookie(COOKIE_NAME, { path: '/' });
