@@ -24,6 +24,7 @@
     setAll('[data-platform-name]', config.platformName || 'AcademyFlow', 'AcademyFlow');
     setAll('[data-legal-entity]', config.legalEntityName, 'AcademyFlow');
     setAll('[data-cr]', config.commercialRegistrationNumber, 'غير مدخل بعد');
+    setAll('[data-ecommerce-license]', config.ecommerceLicenseNumber, 'غير مطبق / غير مدخل');
     setAll('[data-tax]', config.taxNumber, 'غير مطبق / غير مدخل');
     setAll('[data-address]', config.businessAddress, 'غير مدخل بعد');
     setAll('[data-support-email]', config.supportEmail, 'استخدم نموذج طلب الخصوصية أو الدعم داخل المنصة');
