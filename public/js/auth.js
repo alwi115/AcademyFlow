@@ -22,7 +22,7 @@ async function academyFlowLogin(event, kind){
   try {
     let csrfInput = form.querySelector('input[name="_csrf"]');
 
-    if (kind !== 'superadmin' && (!csrfInput || !csrfInput.value)) {
+    if (!csrfInput || !csrfInput.value) {
       const csrfResponse = await fetch('/api/auth/csrf', {
         method: 'GET',
         credentials: 'same-origin',
