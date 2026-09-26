@@ -2,8 +2,10 @@ const router = require('express').Router();
 const { auth, allowRoles } = require('../middleware/auth');
 const tenant = require('../middleware/tenant');
 const c = require('../controllers/academy.controller');
+const q = require('../controllers/academy-quiz.controller');
 
 const ACADEMY_ROLES = ['owner','admin','branch_manager','instructor','accountant','reception','content_manager','support'];
+const QUIZ_MANAGERS = ['owner','admin','instructor','content_manager'];
 
 router.use(auth, tenant, allowRoles(...ACADEMY_ROLES));
 
@@ -33,6 +35,17 @@ router.post('/attendance', allowRoles('owner','admin','instructor','reception','
 
 router.get('/assessments', c.listAssessments);
 router.post('/assessments', allowRoles('owner','admin','instructor','content_manager'), c.createAssessment);
+
+router.get('/quizzes', allowRoles(...QUIZ_MANAGERS), q.listQuizzes);
+router.post('/quizzes', allowRoles(...QUIZ_MANAGERS), q.createQuiz);
+router.get('/quizzes/:id', allowRoles(...QUIZ_MANAGERS), q.quizDetails);
+router.patch('/quizzes/:id', allowRoles(...QUIZ_MANAGERS), q.updateQuiz);
+router.post('/quizzes/:id/questions', allowRoles(...QUIZ_MANAGERS), q.createQuestion);
+router.patch('/quizzes/:id/questions/:questionId', allowRoles(...QUIZ_MANAGERS), q.updateQuestion);
+router.delete('/quizzes/:id/questions/:questionId', allowRoles(...QUIZ_MANAGERS), q.deleteQuestion);
+router.get('/quizzes/:id/attempts', allowRoles(...QUIZ_MANAGERS), q.listAttempts);
+router.get('/quizzes/:id/attempts/:attemptId', allowRoles(...QUIZ_MANAGERS), q.attemptDetails);
+router.patch('/quizzes/:id/attempts/:attemptId/questions/:questionId/grade', allowRoles(...QUIZ_MANAGERS), q.gradeShortAnswer);
 
 router.get('/payments', allowRoles('owner','admin','accountant'), c.listPayments);
 router.post('/payments', allowRoles('owner','admin','accountant'), c.createPayment);

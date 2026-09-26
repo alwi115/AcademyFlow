@@ -42,7 +42,7 @@ const AF = (() => {
         ['lessons','الدروس والفيديو','▶'],
         ['groups','المجموعات','G'],
         ['live','المحاضرات المباشرة','Z'],
-        ['quizzes','الاختبارات','Q'],
+        ['quizzes','الاختبارات','Q', ['owner','admin','instructor','content_manager']],
         ['assignments','الواجبات','A']
       ]
     },
@@ -87,7 +87,8 @@ const AF = (() => {
     groups: ['المجموعات','تقسيم الطلاب إلى مجموعات وربطها بالدورات والفروع.'],
     enrollments: ['التسجيلات','ربط الطلاب بالدورات والمجموعات ومتابعة الحالة.'],
     attendance: ['الحضور','تسجيل الحضور والغياب والتأخير لكل طالب.'],
-    quizzes: ['الاختبارات','إنشاء اختبارات مرتبطة بالدورات ومواعيدها.'],
+    quizzes: ['الاختبارات','إنشاء وإدارة الاختبارات والأسئلة والمحاولات والنتائج.'],
+    'quiz-builder': ['منشئ الاختبار','إعداد الأسئلة ونشر الاختبار ومتابعة نتائج الطلاب.'],
     assignments: ['الواجبات','تنظيم الواجبات ومواعيد التسليم والدرجات.'],
     live: ['المحاضرات المباشرة','جدولة جلسات Zoom وربطها بالدورات والمدربين.'],
     payments: ['المدفوعات','تسجيل الدفعات ومتابعة حالة التحصيل.'],
@@ -187,7 +188,7 @@ const AF = (() => {
       const items = group.items
         .filter(item => allowed(item[3]))
         .map(item => {
-          const active = item[0] === page ? 'active' : '';
+          const active = (item[0] === page || (page === 'quiz-builder' && item[0] === 'quizzes')) ? 'active' : '';
           return '<a class="'+active+'" href="'+href(item[0])+'"><span class="academy-nav-icon">'+esc(item[2])+'</span>'+esc(item[1])+'</a>';
         }).join('');
 
@@ -971,6 +972,12 @@ const AF = (() => {
       return;
     }
 
+    if (page === 'quiz-builder' && !allowed(['owner','admin','instructor','content_manager'])) {
+      document.getElementById('pageContent').innerHTML = '<div class="academy-card academy-empty">ما عندك صلاحية للوصول إلى هذه الصفحة.</div>';
+      return;
+    }
+    if (page === 'quizzes' && window.AcademyQuizAdmin) return window.AcademyQuizAdmin.renderList();
+    if (page === 'quiz-builder' && window.AcademyQuizAdmin) return window.AcademyQuizAdmin.renderBuilder();
     if (page === 'dashboard') return renderDashboard();
     if (page === 'live') return renderLive();
     if (page === 'reports') return renderReports();

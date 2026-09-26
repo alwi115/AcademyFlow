@@ -20,7 +20,8 @@ const StudentPortal = (() => {
     course: ['الدورة','شاهد الدروس وأكملها بالتسلسل داخل AcademyFlow.'],
     live: ['المحاضرات المباشرة','جلسات Zoom المرتبطة بالدورات المسجل فيها حسابك.'],
     assignments: ['الواجبات','تابع المطلوب منك وسلّم إجابتك من نفس الصفحة.'],
-    quizzes: ['الاختبارات','الاختبارات المنشورة ضمن دوراتك.'],
+    quizzes: ['الاختبارات','ابدأ الاختبارات وتابع محاولاتك ونتائجك.'],
+    quiz: ['حل الاختبار','أجب عن الأسئلة وسيتم حفظ إجاباتك تلقائيًا.'],
     payments: ['المدفوعات','سجل الدفعات وحالتها والمبالغ المسجلة على حسابك.'],
     certificates: ['الشهادات','شهاداتك الصادرة من الأكاديمية.'],
     notifications: ['الإشعارات','آخر التنبيهات والإعلانات الموجهة للطلاب.'],
@@ -224,7 +225,7 @@ const StudentPortal = (() => {
   }
 
   function navItem(item) {
-    const isActive = item[0] === page || (page === 'course' && item[0] === 'courses');
+    const isActive = item[0] === page || (page === 'course' && item[0] === 'courses') || (page === 'quiz' && item[0] === 'quizzes');
     return '<a class="'+(isActive ? 'active' : '')+'" href="'+route(item[0])+'"><span class="student-nav-icon">'+esc(item[2])+'</span>'+esc(item[1])+'</a>';
   }
 
@@ -800,6 +801,8 @@ const StudentPortal = (() => {
   async function init() {
     renderShell();
 
+    if (page === 'quizzes' && window.StudentQuiz) return window.StudentQuiz.renderList();
+    if (page === 'quiz' && window.StudentQuiz) return window.StudentQuiz.renderQuizPage();
     if (page === 'dashboard') return renderDashboard();
     if (page === 'courses') return renderCourses();
     if (page === 'course') return renderCourse();
