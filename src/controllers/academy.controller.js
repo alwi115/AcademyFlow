@@ -90,7 +90,7 @@ async function branchGroups(req, { includeCancelled = false } = {}) {
 
   if (!includeCancelled) query.status = { $ne: 'cancelled' };
 
-  return Group.find(query).select('_id courseId instructorId');
+  return Group.find(query).select('_id courseId instructorId status');
 }
 
 async function branchGroupIds(req, options) {
