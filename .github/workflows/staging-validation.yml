@@ -1,0 +1,127 @@
+name: AcademyFlow Staging Validation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  staging:
+    name: Validate staging deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      STAGING_BASE_URL: ${{ vars.STAGING_BASE_URL }}
+    steps:
+      - name: Validate staging target
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${STAGING_BASE_URL}" ]; then
+            echo "STAGING_BASE_URL repository variable is required."
+            exit 1
+          fi
+          case "${STAGING_BASE_URL}" in
+            https://academyflow.up.railway.app|https://academyflow.up.railway.app/)
+              echo "Refusing to run staging validation against production."
+              exit 1
+              ;;
+          esac
+          if [[ "${STAGING_BASE_URL}" != https://* ]]; then
+            echo "STAGING_BASE_URL must use HTTPS."
+            exit 1
+          fi
+
+      - name: Wait for staging health
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5 6; do
+            if curl -fsS --max-time 15 "${STAGING_BASE_URL%/}/api/health" -o health.json; then
+              cat health.json
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Staging health endpoint did not become ready."
+          exit 1
+
+      - name: Capture staging security headers
+        shell: bash
+        run: |
+          mkdir -p staging-reports
+          curl -fsS -D staging-reports/headers.txt -o /dev/null "${STAGING_BASE_URL%/}/"
+          cp health.json staging-reports/health.json
+
+      - name: OWASP ZAP staging baseline
+        shell: bash
+        run: |
+          set +e
+          chmod 777 staging-reports
+          docker run --rm             -v "$PWD/staging-reports:/zap/wrk/:rw"             -t ghcr.io/zaproxy/zaproxy:stable             zap-baseline.py             -t "${STAGING_BASE_URL%/}"             -r zap-staging.html             -J zap-staging.json             -w zap-staging.md             -I
+          echo "$?" > staging-reports/zap-exit-code.txt
+          exit 0
+
+      - name: Enforce staging DAST
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          root = pathlib.Path("staging-reports")
+          failures = []
+
+          code_path = root / "zap-exit-code.txt"
+          if not code_path.exists():
+              failures.append("ZAP exit code missing")
+          else:
+              code = int(code_path.read_text().strip())
+              if code not in (0, 2):
+                  failures.append(f"ZAP scanner failed with exit code {code}")
+
+          report_path = root / "zap-staging.json"
+          if not report_path.exists():
+              failures.append("ZAP JSON report missing")
+          else:
+              report = json.loads(report_path.read_text(encoding="utf-8"))
+              alerts = []
+              for site in report.get("site", []) or []:
+                  alerts.extend(site.get("alerts", []) or [])
+              blocking = []
+              for alert in alerts:
+                  try:
+                      risk = int(alert.get("riskcode", 0) or 0)
+                  except (TypeError, ValueError):
+                      risk = 0
+                  if risk >= 2:
+                      blocking.append(alert)
+              if blocking:
+                  names = sorted({
+                      str(a.get("name") or a.get("alert") or "Unknown alert")
+                      for a in blocking
+                  })
+                  failures.append(
+                      f"medium/high alerts: {len(blocking)} (" +
+                      "; ".join(names[:10]) + ")"
+                  )
+
+          if failures:
+              print("Staging validation failed:")
+              for item in failures:
+                  print(" - " + item)
+              sys.exit(1)
+
+          print("Staging validation passed.")
+          PY
+
+      - name: Upload staging reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: academyflow-staging-reports
+          path: staging-reports/
+          if-no-files-found: warn
+          retention-days: 30
