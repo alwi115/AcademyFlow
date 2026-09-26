@@ -565,6 +565,13 @@ async function main() {
       groupId: String(groupB._id),
       status: 'active'
     });
+
+    await expect('branch_manager', 'POST', '/api/academy/enrollments', 403, {
+      studentId: String(branchBStudent._id),
+      courseId: String(course._id),
+      groupId: String(group._id),
+      status: 'active'
+    });
     await expect('branch_manager', 'POST', '/api/academy/attendance', 403, {
       studentId: String(branchBStudent._id),
       courseId: String(courseB._id),
