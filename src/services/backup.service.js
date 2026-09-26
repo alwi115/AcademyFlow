@@ -370,7 +370,7 @@ async function validateBackup(id) {
   let payload;
   try {
     const compressed = decryptBuffer(protectedData, metadata);
-    payload = EJSON.parse((await gunzip(compressed)).toString('utf8'), { relaxed: false });
+    payload = EJSON.parse((await gunzip(compressed)).toString('utf8'), { relaxed: true });
   } catch (err) {
     if (err?.status) throw err;
     const invalid = new Error('Backup file is corrupted or unreadable');
