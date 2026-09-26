@@ -37,43 +37,43 @@ const AF = (() => {
       label: 'الرئيسية',
       items: [
         ['dashboard','لوحة التحكم','⌂'],
-        ['calendar','التقويم','CAL']
+        ['calendar','التقويم','CAL', ['owner','admin']]
       ]
     },
     {
       label: 'التعليم',
       items: [
-        ['courses','الدورات','C'],
-        ['lessons','الدروس والفيديو','▶'],
-        ['groups','المجموعات','G'],
-        ['live','المحاضرات المباشرة','Z'],
-        ['quizzes','الاختبارات','Q', ['owner','admin','instructor','content_manager']],
-        ['assignments','الواجبات','A']
+        ['courses','الدورات','C', ['owner','admin','content_manager']],
+        ['lessons','الدروس والفيديو','▶', ['owner','admin','content_manager']],
+        ['groups','المجموعات','G', ['owner','admin','branch_manager','reception']],
+        ['live','المحاضرات المباشرة','Z', ['owner','admin']],
+        ['quizzes','الاختبارات','Q', ['owner','admin','content_manager']],
+        ['assignments','الواجبات','A', ['owner','admin','content_manager']]
       ]
     },
     {
       label: 'الأشخاص',
       items: [
-        ['students','الطلاب','S'],
-        ['instructors','المدربين','I'],
+        ['students','الطلاب','S', ['owner','admin','branch_manager','reception']],
+        ['instructors','المدربين','I', ['owner','admin','branch_manager','reception','content_manager']],
         ['staff','الموظفين','T', ['owner','admin']],
-        ['enrollments','التسجيلات','E'],
-        ['attendance','الحضور','✓']
+        ['enrollments','التسجيلات','E', ['owner','admin','branch_manager','reception']],
+        ['attendance','الحضور','✓', ['owner','admin','branch_manager','reception']]
       ]
     },
     {
       label: 'الإدارة',
       items: [
-        ['branches','الفروع','B'],
+        ['branches','الفروع','B', ['owner','admin','branch_manager','reception']],
         ['payments','المدفوعات','P', ['owner','admin','accountant']],
-        ['certificates','الشهادات','C'],
+        ['certificates','الشهادات','C', ['owner','admin','content_manager']],
         ['reports','التقارير','R', ['owner','admin','accountant']]
       ]
     },
     {
       label: 'التواصل والنظام',
       items: [
-        ['notifications','الإشعارات','N'],
+        ['notifications','الإشعارات','N', ['owner','admin','support']],
         ['support','الدعم','?'],
         ['settings','الإعدادات','⚙', ['owner','admin']]
       ]
@@ -369,7 +369,7 @@ const AF = (() => {
     },
     branches: {
       endpoint:'/api/academy/branches',
-      createRoles:['owner','admin','branch_manager'],
+      createRoles:['owner','admin'],
       title:'إضافة فرع',
       fields:[
         ['name','اسم الفرع','text',true],['code','كود الفرع','text',true],
@@ -384,7 +384,7 @@ const AF = (() => {
     courses: {
       endpoint:'/api/academy/courses',
       updateEndpoint:'/api/academy/courses/:id',
-      createRoles:['owner','admin','content_manager','instructor'],
+      createRoles:['owner','admin','content_manager'],
       manageRoles:['owner','admin','content_manager'],
       actions:{
         details:true,
@@ -402,14 +402,15 @@ const AF = (() => {
         ['title','اسم الدورة','text',true],['code','كود الدورة','text',false],
         ['category','التصنيف','text',false],['deliveryType','نوع الدورة','select',true,'deliveryType'],
         ['instructorId','المدرب','dynamicSelect',false,'instructors'],
-        ['price','السعر','number',false],['startAt','تاريخ البداية','date',false],
+        ...(allowed(['owner','admin']) ? [['price','السعر','number',false]] : []),
+        ['startAt','تاريخ البداية','date',false],
         ['endAt','تاريخ النهاية','date',false],['status','الحالة','select',true,'courseStatus'],
         ['thumbnailUrl','رابط صورة الغلاف','url',false],['description','الوصف','textarea',false]
       ]
     },
     lessons: {
       endpoint:'/api/academy/lessons',
-      createRoles:['owner','admin','content_manager','instructor'],
+      createRoles:['owner','admin','content_manager'],
       title:'إضافة درس',
       view:'videos',
       modalSubtitle:'ألصق رابط YouTube فقط. الفيديو يبقى مستضافًا على YouTube ويُشغل داخل النظام.',
@@ -463,7 +464,7 @@ const AF = (() => {
     },
     attendance: {
       endpoint:'/api/academy/attendance',
-      createRoles:['owner','admin','instructor','reception','branch_manager'],
+      createRoles:['owner','admin','reception','branch_manager'],
       title:'تسجيل حضور',
       fields:[
         ['studentId','الطالب','dynamicSelect',true,'students'],['courseId','الدورة','dynamicSelect',true,'courses'],
@@ -541,7 +542,7 @@ const AF = (() => {
       endpoint:'/api/academy/assessments?type='+type,
       createEndpoint:'/api/academy/assessments',
       updateEndpoint:'/api/academy/assessments/:id',
-      createRoles:['owner','admin','instructor','content_manager'],
+      createRoles:['owner','admin','content_manager'],
       manageRoles:['owner','admin','content_manager'],
       title:isQuiz ? 'إضافة اختبار' : 'إضافة واجب',
       extra:{ type },
