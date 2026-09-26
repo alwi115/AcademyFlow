@@ -1353,6 +1353,7 @@ const SA = (() => {
                 <h3>بيانات المنشأة</h3>
                 <div class="field"><label>الاسم القانوني للمنشأة</label><input name="legalEntityName" value="${esc(s.legalEntityName || '')}" placeholder="الاسم كما يظهر في السجل التجاري"></div>
                 <div class="field"><label>رقم السجل التجاري</label><input name="commercialRegistrationNumber" value="${esc(s.commercialRegistrationNumber || '')}"></div>
+                <div class="field"><label>رقم ترخيص/تصريح التجارة الإلكترونية (إن كان مطبقًا)</label><input name="ecommerceLicenseNumber" value="${esc(s.ecommerceLicenseNumber || '')}"></div>
                 <div class="field"><label>الرقم الضريبي (إن وجد)</label><input name="taxNumber" value="${esc(s.taxNumber || '')}"></div>
                 <div class="field"><label>عنوان النشاط</label><textarea name="businessAddress">${esc(s.businessAddress || '')}</textarea></div>
               </section>
