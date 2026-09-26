@@ -157,6 +157,7 @@ async function createQuiz(req, res) {
 
 async function quizDetails(req, res) {
   const quiz = await getQuizForAdmin(req, req.params.id);
+  const canReviewAttempts = req.user.role !== 'content_manager';
 
   const [questions, attempts] = await Promise.all([
     QuizQuestion.find({
@@ -165,12 +166,14 @@ async function quizDetails(req, res) {
     })
       .select('+correctBoolean +explanation +options.isCorrect')
       .sort({ order: 1, createdAt: 1 }),
-    QuizAttempt.find({
-      academyId: req.academyId,
-      assessmentId: quiz._id
-    })
-      .populate('studentId', 'name email')
-      .sort({ createdAt: -1 })
+    canReviewAttempts
+      ? QuizAttempt.find({
+          academyId: req.academyId,
+          assessmentId: quiz._id
+        })
+          .populate('studentId', 'name email')
+          .sort({ createdAt: -1 })
+      : []
   ]);
 
   res.json({
