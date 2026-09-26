@@ -23,6 +23,37 @@ function explicitStorageConfigured() {
   return Boolean(String(process.env.BACKUP_DIR || '').trim());
 }
 
+function encryptionConfigured() {
+  return String(process.env.BACKUP_ENCRYPTION_KEY || '').length >= 32;
+}
+
+function productionReady() {
+  if (process.env.NODE_ENV !== 'production') return true;
+  return explicitStorageConfigured() && encryptionConfigured();
+}
+
+function encryptionKey() {
+  const secret = String(process.env.BACKUP_ENCRYPTION_KEY || '');
+  if (secret.length < 32) return null;
+  return crypto.createHash('sha256').update(secret, 'utf8').digest();
+}
+
+function ensureProductionConfig() {
+  if (process.env.NODE_ENV !== 'production') return;
+
+  if (!explicitStorageConfigured()) {
+    const err = new Error('BACKUP_DIR must point to persistent storage in production');
+    err.status = 503;
+    throw err;
+  }
+
+  if (!encryptionConfigured()) {
+    const err = new Error('BACKUP_ENCRYPTION_KEY must be at least 32 characters in production');
+    err.status = 503;
+    throw err;
+  }
+}
+
 function safeBackupId(value) {
   const id = String(value || '').trim();
   return /^[A-Za-z0-9._-]+$/.test(id) ? id : '';
@@ -35,6 +66,71 @@ function timestampId(date = new Date()) {
 
 function sha256(buffer) {
   return crypto.createHash('sha256').update(buffer).digest('hex');
+}
+
+function encryptBuffer(buffer) {
+  const key = encryptionKey();
+
+  if (!key) {
+    if (process.env.NODE_ENV === 'production') {
+      const err = new Error('Backup encryption is not configured');
+      err.status = 503;
+      throw err;
+    }
+
+    return {
+      encrypted: false,
+      cipher: 'none',
+      buffer
+    };
+  }
+
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const ciphertext = Buffer.concat([cipher.update(buffer), cipher.final()]);
+  const tag = cipher.getAuthTag();
+
+  return {
+    encrypted: true,
+    cipher: 'aes-256-gcm',
+    buffer: Buffer.concat([iv, tag, ciphertext])
+  };
+}
+
+function decryptBuffer(buffer, metadata) {
+  if (!metadata.encrypted) return buffer;
+
+  if (metadata.cipher !== 'aes-256-gcm') {
+    const err = new Error('Unsupported backup encryption format');
+    err.status = 409;
+    throw err;
+  }
+
+  const key = encryptionKey();
+  if (!key) {
+    const err = new Error('BACKUP_ENCRYPTION_KEY is required to read this backup');
+    err.status = 503;
+    throw err;
+  }
+
+  if (buffer.length < 29) {
+    const err = new Error('Encrypted backup is too small to be valid');
+    err.status = 409;
+    throw err;
+  }
+
+  try {
+    const iv = buffer.subarray(0, 12);
+    const tag = buffer.subarray(12, 28);
+    const ciphertext = buffer.subarray(28);
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(tag);
+    return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+  } catch {
+    const err = new Error('Backup decryption failed. Check BACKUP_ENCRYPTION_KEY and file integrity.');
+    err.status = 409;
+    throw err;
+  }
 }
 
 async function ensureDir() {
@@ -51,6 +147,14 @@ async function userCollections() {
     .sort();
 }
 
+async function collectionIndexes(collection) {
+  try {
+    return await collection.indexes();
+  } catch {
+    return [];
+  }
+}
+
 async function snapshotPayload(reason = 'manual') {
   const db = mongoose.connection.db;
   const names = await userCollections();
@@ -58,14 +162,23 @@ async function snapshotPayload(reason = 'manual') {
   const collections = [];
 
   for (const name of names) {
-    const docs = await db.collection(name).find({}).toArray();
+    const collection = db.collection(name);
+    const [docs, indexes] = await Promise.all([
+      collection.find({}).toArray(),
+      collectionIndexes(collection)
+    ]);
+
     data[name] = docs;
-    collections.push({ name, count: docs.length });
+    collections.push({
+      name,
+      count: docs.length,
+      indexes
+    });
   }
 
   return {
     format: 'academyflow-logical-backup',
-    version: 1,
+    version: 2,
     createdAt: new Date(),
     database: db.databaseName,
     reason,
@@ -75,6 +188,8 @@ async function snapshotPayload(reason = 'manual') {
 }
 
 async function writeBackup(reason = 'manual') {
+  ensureProductionConfig();
+
   if (mongoose.connection.readyState !== 1) {
     const err = new Error('Database is not connected');
     err.status = 503;
@@ -86,26 +201,34 @@ async function writeBackup(reason = 'manual') {
   const payload = await snapshotPayload(reason);
   const raw = Buffer.from(EJSON.stringify(payload, { relaxed: false }), 'utf8');
   const compressed = await gzip(raw, { level: 9 });
-  const digest = sha256(compressed);
+  const protectedData = encryptBuffer(compressed);
+  const digest = sha256(protectedData.buffer);
 
-  const fileName = id + '.json.gz';
+  const fileName = id + '.backup';
   const metaName = id + '.meta.json';
   const filePath = path.join(dir, fileName);
   const metaPath = path.join(dir, metaName);
 
-  await fs.writeFile(filePath, compressed, { flag: 'wx', mode: 0o600 });
+  await fs.writeFile(filePath, protectedData.buffer, { flag: 'wx', mode: 0o600 });
 
   const metadata = {
     id,
     fileName,
+    formatVersion: payload.version,
     createdAt: payload.createdAt.toISOString(),
     database: payload.database,
     reason,
+    encrypted: protectedData.encrypted,
+    cipher: protectedData.cipher,
     sha256: digest,
-    sizeBytes: compressed.length,
+    sizeBytes: protectedData.buffer.length,
     collectionCount: payload.collections.length,
     documentCount: payload.collections.reduce((sum, row) => sum + row.count, 0),
-    collections: payload.collections
+    collections: payload.collections.map(row => ({
+      name: row.name,
+      count: row.count,
+      indexCount: row.indexes.length
+    }))
   };
 
   await fs.writeFile(
@@ -127,6 +250,7 @@ async function pruneBackups() {
   for (const row of rows.slice(retention)) {
     const dir = backupDir();
     await Promise.allSettled([
+      fs.unlink(path.join(dir, row.id + '.backup')),
       fs.unlink(path.join(dir, row.id + '.json.gz')),
       fs.unlink(path.join(dir, row.id + '.meta.json'))
     ]);
@@ -164,7 +288,15 @@ async function readMetadata(id) {
   const metaPath = path.join(backupDir(), clean + '.meta.json');
 
   try {
-    return JSON.parse(await fs.readFile(metaPath, 'utf8'));
+    const metadata = JSON.parse(await fs.readFile(metaPath, 'utf8'));
+
+    if (metadata.id !== clean) {
+      const err = new Error('Backup metadata id mismatch');
+      err.status = 409;
+      throw err;
+    }
+
+    return metadata;
   } catch (err) {
     if (err.code === 'ENOENT') {
       const notFound = new Error('Backup not found');
@@ -184,20 +316,36 @@ async function listBackups() {
   for (const name of metaNames) {
     try {
       const row = JSON.parse(await fs.readFile(path.join(dir, name), 'utf8'));
-      if (row?.id && row?.sha256) rows.push(row);
+      if (
+        row?.id &&
+        safeBackupId(row.id) &&
+        /^[a-f0-9]{64}$/i.test(String(row.sha256 || ''))
+      ) {
+        rows.push(row);
+      }
     } catch {}
   }
 
   return rows.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 }
 
+function backupDataPath(metadata) {
+  const extension = metadata.formatVersion >= 2 ? '.backup' : '.json.gz';
+  return path.join(backupDir(), metadata.id + extension);
+}
+
 async function validateBackup(id) {
   const metadata = await readMetadata(id);
-  const filePath = path.join(backupDir(), metadata.id + '.json.gz');
 
-  let compressed;
+  if (!/^[a-f0-9]{64}$/i.test(String(metadata.sha256 || ''))) {
+    const err = new Error('Backup checksum metadata is invalid');
+    err.status = 409;
+    throw err;
+  }
+
+  let protectedData;
   try {
-    compressed = await fs.readFile(filePath);
+    protectedData = await fs.readFile(backupDataPath(metadata));
   } catch (err) {
     if (err.code === 'ENOENT') {
       const missing = new Error('Backup data file is missing');
@@ -207,8 +355,13 @@ async function validateBackup(id) {
     throw err;
   }
 
-  const actualHash = sha256(compressed);
-  if (!crypto.timingSafeEqual(Buffer.from(actualHash), Buffer.from(metadata.sha256))) {
+  const actualHash = Buffer.from(sha256(protectedData), 'hex');
+  const expectedHash = Buffer.from(metadata.sha256, 'hex');
+
+  if (
+    actualHash.length !== expectedHash.length ||
+    !crypto.timingSafeEqual(actualHash, expectedHash)
+  ) {
     const err = new Error('Backup integrity check failed');
     err.status = 409;
     throw err;
@@ -216,22 +369,36 @@ async function validateBackup(id) {
 
   let payload;
   try {
+    const compressed = decryptBuffer(protectedData, metadata);
     payload = EJSON.parse((await gunzip(compressed)).toString('utf8'), { relaxed: false });
-  } catch {
-    const err = new Error('Backup file is corrupted or unreadable');
-    err.status = 409;
-    throw err;
+  } catch (err) {
+    if (err?.status) throw err;
+    const invalid = new Error('Backup file is corrupted or unreadable');
+    invalid.status = 409;
+    throw invalid;
   }
 
   if (
     payload?.format !== 'academyflow-logical-backup' ||
-    payload?.version !== 1 ||
+    ![1, 2].includes(payload?.version) ||
     !payload.data ||
     !Array.isArray(payload.collections)
   ) {
     const err = new Error('Unsupported backup format');
     err.status = 409;
     throw err;
+  }
+
+  for (const row of payload.collections) {
+    if (
+      !row?.name ||
+      row.name.startsWith('system.') ||
+      !Array.isArray(payload.data[row.name])
+    ) {
+      const err = new Error('Backup collection manifest is invalid');
+      err.status = 409;
+      throw err;
+    }
   }
 
   return { metadata, payload };
@@ -244,12 +411,51 @@ async function insertInBatches(collection, docs) {
   }
 }
 
+function indexOptions(spec) {
+  const allowed = [
+    'name',
+    'unique',
+    'sparse',
+    'expireAfterSeconds',
+    'partialFilterExpression',
+    'collation',
+    'weights',
+    'default_language',
+    'language_override',
+    'textIndexVersion',
+    '2dsphereIndexVersion',
+    'bits',
+    'min',
+    'max',
+    'bucketSize',
+    'storageEngine',
+    'hidden'
+  ];
+
+  const options = {};
+  for (const key of allowed) {
+    if (spec[key] !== undefined) options[key] = spec[key];
+  }
+  return options;
+}
+
+async function restoreIndexes(collection, specs) {
+  if (!Array.isArray(specs)) return;
+
+  for (const spec of specs) {
+    if (!spec?.key || spec.name === '_id_') continue;
+    await collection.createIndex(spec.key, indexOptions(spec));
+  }
+}
+
 async function restoreBackup(id) {
   if (busy) {
     const err = new Error(`Backup system is busy with ${busyOperation}`);
     err.status = 409;
     throw err;
   }
+
+  ensureProductionConfig();
 
   if (
     process.env.NODE_ENV === 'production' &&
@@ -269,6 +475,7 @@ async function restoreBackup(id) {
     // Always create a rollback point from the current state before destructive writes.
     const safetyBackup = await writeBackup('pre-restore-safety');
     const db = mongoose.connection.db;
+    const manifest = new Map(payload.collections.map(row => [row.name, row]));
     const payloadNames = Object.keys(payload.data).filter(name => !name.startsWith('system.'));
     const currentNames = await userCollections();
     const namesToClear = [...new Set([...currentNames, ...payloadNames])];
@@ -278,10 +485,14 @@ async function restoreBackup(id) {
     }
 
     for (const name of payloadNames) {
+      const collection = db.collection(name);
       const docs = Array.isArray(payload.data[name]) ? payload.data[name] : [];
+
       if (docs.length) {
-        await insertInBatches(db.collection(name), docs);
+        await insertInBatches(collection, docs);
       }
+
+      await restoreIndexes(collection, manifest.get(name)?.indexes || []);
     }
 
     await pruneBackups();
@@ -324,6 +535,8 @@ async function storageStatus() {
   return {
     directory: dir,
     explicitlyConfigured: explicitStorageConfigured(),
+    encryptionConfigured: encryptionConfigured(),
+    productionReady: productionReady(),
     writable,
     freeBytes,
     totalBytes,
@@ -346,6 +559,8 @@ module.exports = {
   listBackups,
   storageStatus,
   explicitStorageConfigured,
+  encryptionConfigured,
+  productionReady,
   isBusy,
   operation
 };
