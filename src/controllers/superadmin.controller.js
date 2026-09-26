@@ -356,7 +356,8 @@ async function health(req, res) {
     recentErrors,
     connectedZoomAcademies,
     brokenZoomAcademies,
-    academyIssues
+    academyIssues,
+    activeAlerts
   ] = await Promise.all([
     Academy.countDocuments(),
     User.countDocuments(),
@@ -396,6 +397,10 @@ async function health(req, res) {
       .select('name code status subscriptionEndsAt zoomIntegration.connected zoomIntegration.accessTokenExpiresAt')
       .sort({ updatedAt: -1 })
       .limit(25)
+      .lean(),
+    SystemAlert.find({ active: true })
+      .sort({ lastSeenAt: -1 })
+      .limit(50)
       .lean()
   ]);
 
