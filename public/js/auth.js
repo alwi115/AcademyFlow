@@ -12,7 +12,6 @@ async function academyFlowLogin(event, kind){
 
   if (message) {
     message.textContent = '';
-    message.style.color = '';
   }
 
   if (button) {
@@ -21,6 +20,31 @@ async function academyFlowLogin(event, kind){
   }
 
   try {
+    let csrfInput = form.querySelector('input[name="_csrf"]');
+
+    if (kind !== 'superadmin' && (!csrfInput || !csrfInput.value)) {
+      const csrfResponse = await fetch('/api/auth/csrf', {
+        method: 'GET',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { 'Accept': 'application/json' }
+      });
+      const csrfData = await csrfResponse.json().catch(() => ({}));
+
+      if (!csrfResponse.ok || !csrfData.csrfToken) {
+        throw new Error('Unable to initialize CSRF protection');
+      }
+
+      if (!csrfInput) {
+        csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = '_csrf';
+        form.appendChild(csrfInput);
+      }
+
+      csrfInput.value = csrfData.csrfToken;
+    }
+
     const body = Object.fromEntries(new FormData(form).entries());
 
     if (kind === 'superadmin') {
