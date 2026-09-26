@@ -4,6 +4,7 @@ const User = require('../models/User');
 const Academy = require('../models/Academy');
 const { COOKIE_NAME } = require('../middleware/auth');
 const { CURRENT_LEGAL_VERSION } = require('../config/legal');
+const auditService = require('../services/audit.service');
 
 const SESSION_MS = 12 * 60 * 60 * 1000;
 const MAX_FAILED_ATTEMPTS = 5;
@@ -240,6 +241,19 @@ async function acceptLegal(req, res) {
   };
 
   await user.save();
+
+  await auditService.record(req, {
+    action: 'legal.accept',
+    targetType: 'legal',
+    targetId: String(user._id),
+    targetLabel: CURRENT_LEGAL_VERSION,
+    details: {
+      termsVersion: CURRENT_LEGAL_VERSION,
+      privacyVersion: CURRENT_LEGAL_VERSION,
+      dpaVersion: CURRENT_LEGAL_VERSION
+    },
+    statusCode: 200
+  });
 
   res.json({
     ok: true,
