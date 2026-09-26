@@ -205,6 +205,49 @@ async function me(req, res) {
   res.json({ user: publicUser(user, academy) });
 }
 
+async function acceptLegal(req, res) {
+  const user = await User.findOne({
+    _id: req.user.sub,
+    active: true,
+    role: 'owner'
+  });
+
+  if (!user) {
+    return res.status(403).json({ message: 'Only academy owners can accept platform terms.' });
+  }
+
+  const accepted = req.body?.accepted === true;
+  const termsVersion = String(req.body?.termsVersion || '');
+  const privacyVersion = String(req.body?.privacyVersion || '');
+  const dpaVersion = String(req.body?.dpaVersion || '');
+
+  if (
+    !accepted ||
+    termsVersion !== CURRENT_LEGAL_VERSION ||
+    privacyVersion !== CURRENT_LEGAL_VERSION ||
+    dpaVersion !== CURRENT_LEGAL_VERSION
+  ) {
+    return res.status(400).json({ message: 'يجب قبول الإصدارات القانونية الحالية كاملة.' });
+  }
+
+  user.legalAcceptance = {
+    termsVersion: CURRENT_LEGAL_VERSION,
+    privacyVersion: CURRENT_LEGAL_VERSION,
+    dpaVersion: CURRENT_LEGAL_VERSION,
+    acceptedAt: new Date(),
+    acceptedIp: String(req.ip || '').replace(/^::ffff:/, '').slice(0, 100),
+    acceptedUserAgent: String(req.get('user-agent') || '').slice(0, 500)
+  };
+
+  await user.save();
+
+  res.json({
+    ok: true,
+    legalVersion: CURRENT_LEGAL_VERSION,
+    acceptedAt: user.legalAcceptance.acceptedAt
+  });
+}
+
 function logout(req, res) {
   res.clearCookie(COOKIE_NAME, {
     httpOnly: true,
@@ -221,4 +264,4 @@ function logout(req, res) {
   res.json({ ok: true });
 }
 
-module.exports = { login, me, logout };
+module.exports = { login, me, acceptLegal, logout };
