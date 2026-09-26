@@ -2,7 +2,7 @@ const router = require('express').Router();
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const { auth } = require('../middleware/auth');
-const { login, me, logout } = require('../controllers/auth.controller');
+const { login, me, acceptLegal, logout } = require('../controllers/auth.controller');
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -102,6 +102,7 @@ router.get('/csrf', (req, res) => {
 
 router.post('/login', requireTrustedOrigin, loginLimiter, requireCsrf, login);
 router.get('/me', auth, me);
+router.post('/legal-acceptance', requireTrustedOrigin, auth, requireCsrf, acceptLegal);
 router.post('/logout', requireTrustedOrigin, logout);
 
 module.exports = router;
