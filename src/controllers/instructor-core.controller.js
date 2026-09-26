@@ -8,7 +8,13 @@ const QuizAttempt = require('../models/QuizAttempt');
 const LiveSession = require('../models/LiveSession');
 const Academy = require('../models/Academy');
 const { safeTimeZone, formatAcademyDisplay } = require('../services/timezone.service');
-const { manageableCourseIds } = require('../services/instructor-scope.service');
+const {
+  instructorScope,
+  manageableCourseIds,
+  enrollmentAccessFilter,
+  groupAccessFilter,
+  studentCourseAccessFilter
+} = require('../services/instructor-scope.service');
 
 async function options(req, res) {
   const courseIds = await manageableCourseIds(req);
@@ -18,16 +24,16 @@ async function options(req, res) {
       academyId: req.academyId,
       _id: { $in: courseIds }
     }).select('title code deliveryType status').sort({ title: 1 }),
-    Group.find({
-      academyId: req.academyId,
-      courseId: { $in: courseIds },
-      status: { $ne: 'cancelled' }
-    }).select('name courseId room schedule').sort({ name: 1 }),
-    Enrollment.find({
-      academyId: req.academyId,
-      courseId: { $in: courseIds },
-      status: { $in: ['active','paused','completed'] }
-    }).populate('studentId', 'name email phone')
+    Group.find(
+      await groupAccessFilter(req, {
+        status: { $ne: 'cancelled' }
+      })
+    ).select('name courseId room schedule').sort({ name: 1 }),
+    Enrollment.find(
+      await enrollmentAccessFilter(req, {
+        status: { $in: ['active','paused','completed'] }
+      })
+    ).populate('studentId', 'name email phone')
   ]);
 
   const students = new Map();
@@ -56,46 +62,49 @@ async function dashboard(req, res) {
   const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
   const now = new Date();
 
+  const enrollments = await Enrollment.find(
+    await enrollmentAccessFilter(req, {
+      status: { $in: ['active','paused','completed'] }
+    })
+  ).select('studentId courseId progress');
+
+  const studentIds = [...new Set(
+    enrollments.map(row => String(row.studentId || '')).filter(Boolean)
+  )];
+
   const [
     coursesCount,
     groupsCount,
-    enrollments,
     pendingAssignments,
     pendingQuizReviews,
     upcomingLive,
     recentSubmissions
   ] = await Promise.all([
     Course.countDocuments({ academyId, _id: { $in: courseIds } }),
-    Group.countDocuments({
-      academyId,
-      courseId: { $in: courseIds },
-      status: { $in: ['planned','active'] }
-    }),
-    Enrollment.find({
-      academyId,
-      courseId: { $in: courseIds },
-      status: { $in: ['active','paused','completed'] }
-    }).select('studentId progress'),
-    AssignmentSubmission.countDocuments({
-      academyId,
-      courseId: { $in: courseIds },
-      status: 'submitted'
-    }),
-    QuizAttempt.countDocuments({
-      academyId,
-      courseId: { $in: courseIds },
-      status: 'pending_review'
-    }),
+    Group.countDocuments(
+      await groupAccessFilter(req, {
+        status: { $in: ['planned','active'] }
+      })
+    ),
+    AssignmentSubmission.countDocuments(
+      await studentCourseAccessFilter(req, {
+        status: 'submitted'
+      })
+    ),
+    QuizAttempt.countDocuments(
+      await studentCourseAccessFilter(req, {
+        status: 'pending_review'
+      })
+    ),
     LiveSession.find({
       academyId,
       instructorId: req.user.sub,
       startAt: { $gte: now },
       status: { $in: ['scheduled','live'] }
     }).populate('courseId', 'title code').sort({ startAt: 1 }).limit(5),
-    AssignmentSubmission.find({
-      academyId,
-      courseId: { $in: courseIds }
-    })
+    AssignmentSubmission.find(
+      await studentCourseAccessFilter(req)
+    )
       .populate('studentId', 'name email')
       .populate('courseId', 'title')
       .populate('assessmentId', 'title totalMarks')
@@ -103,9 +112,7 @@ async function dashboard(req, res) {
       .limit(5)
   ]);
 
-  const uniqueStudents = new Set(
-    enrollments.map(row => String(row.studentId)).filter(Boolean)
-  );
+  const uniqueStudents = new Set(studentIds);
 
   const averageProgress = enrollments.length
     ? Math.round(
@@ -148,16 +155,18 @@ async function courses(req, res) {
   const result = await Promise.all(rows.map(async course => {
     const [lessonCount, studentRows, groupCount] = await Promise.all([
       Lesson.countDocuments({ academyId, courseId: course._id }),
-      Enrollment.find({
-        academyId,
-        courseId: course._id,
-        status: { $in: ['active','paused','completed'] }
-      }).select('progress'),
-      Group.countDocuments({
-        academyId,
-        courseId: course._id,
-        status: { $ne: 'cancelled' }
-      })
+      Enrollment.find(
+        await enrollmentAccessFilter(req, {
+          courseId: course._id,
+          status: { $in: ['active','paused','completed'] }
+        })
+      ).select('progress'),
+      Group.countDocuments(
+        await groupAccessFilter(req, {
+          courseId: course._id,
+          status: { $ne: 'cancelled' }
+        })
+      )
     ]);
 
     const averageProgress = studentRows.length
@@ -180,13 +189,10 @@ async function courses(req, res) {
 }
 
 async function groups(req, res) {
-  const courseIds = await manageableCourseIds(req);
-
   res.json(
-    await Group.find({
-      academyId: req.academyId,
-      courseId: { $in: courseIds }
-    })
+    await Group.find(
+      await groupAccessFilter(req)
+    )
       .populate('courseId', 'title code')
       .populate('branchId', 'name code')
       .sort({ createdAt: -1 })
@@ -194,13 +200,11 @@ async function groups(req, res) {
 }
 
 async function students(req, res) {
-  const courseIds = await manageableCourseIds(req);
-
-  const rows = await Enrollment.find({
-    academyId: req.academyId,
-    courseId: { $in: courseIds },
-    status: { $in: ['active','paused','completed'] }
-  })
+  const rows = await Enrollment.find(
+    await enrollmentAccessFilter(req, {
+      status: { $in: ['active','paused','completed'] }
+    })
+  )
     .populate('studentId', 'name email phone lastLoginAt')
     .populate('courseId', 'title code')
     .populate('groupId', 'name')
@@ -213,30 +217,31 @@ async function gradebook(req, res) {
   const academyId = req.academyId;
   const courseIds = await manageableCourseIds(req);
 
-  const [enrollments, quizAttempts, assignments, submissions] = await Promise.all([
-    Enrollment.find({
-      academyId,
-      courseId: { $in: courseIds },
+  const enrollments = await Enrollment.find(
+    await enrollmentAccessFilter(req, {
       status: { $in: ['active','paused','completed'] }
     })
-      .populate('studentId', 'name email')
-      .populate('courseId', 'title code')
-      .populate('groupId', 'name'),
-    QuizAttempt.find({
-      academyId,
-      courseId: { $in: courseIds },
-      status: { $in: ['graded','pending_review'] }
-    }),
+  )
+    .populate('studentId', 'name email')
+    .populate('courseId', 'title code')
+    .populate('groupId', 'name');
+
+  const [quizAttempts, assignments, submissions] = await Promise.all([
+    QuizAttempt.find(
+      await studentCourseAccessFilter(req, {
+        status: { $in: ['graded','pending_review'] }
+      })
+    ),
     Assessment.find({
       academyId,
       courseId: { $in: courseIds },
       type: 'assignment'
     }).select('_id courseId totalMarks'),
-    AssignmentSubmission.find({
-      academyId,
-      courseId: { $in: courseIds },
-      status: 'graded'
-    }).select('studentId courseId assessmentId score')
+    AssignmentSubmission.find(
+      await studentCourseAccessFilter(req, {
+        status: 'graded'
+      })
+    ).select('studentId courseId assessmentId score')
   ]);
 
   const assignmentMap = new Map(
@@ -303,7 +308,6 @@ async function gradebook(req, res) {
 
   res.json(result);
 }
-
 
 async function updateCourse(req, res) {
   const row = await Course.findOne({
