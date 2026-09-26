@@ -415,11 +415,7 @@ const StudentPortal = (() => {
 
           <section class="student-player-layout student-section">
             <article class="student-player-card">
-              <div class="student-player">
-                ${lesson?.youtubeId
-                  ? '<iframe src="https://www.youtube-nocookie.com/embed/'+encodeURIComponent(lesson.youtubeId)+'" title="'+esc(lesson.title)+'" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>'
-                  : '<div class="student-player-placeholder">'+(lesson ? 'هذا الدرس لا يحتوي على فيديو YouTube.' : 'لا توجد دروس منشورة في هذه الدورة حتى الآن.')+'</div>'}
-              </div>
+              <div class="student-player" id="studentLessonPlayer"></div>
 
               <div class="student-player-info">
                 <h2>${esc(lesson?.title || data.course.title)}</h2>
@@ -450,6 +446,26 @@ const StudentPortal = (() => {
             </aside>
           </section>
         `;
+
+        const player = document.getElementById('studentLessonPlayer');
+        if (player) {
+          if (lesson?.youtubeId) {
+            const iframe = document.createElement('iframe');
+            iframe.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(String(lesson.youtubeId));
+            iframe.title = String(lesson.title || 'YouTube lesson');
+            iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+            iframe.allowFullscreen = true;
+            iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+            player.replaceChildren(iframe);
+          } else {
+            const placeholder = document.createElement('div');
+            placeholder.className = 'student-player-placeholder';
+            placeholder.textContent = lesson
+              ? 'هذا الدرس لا يحتوي على فيديو YouTube.'
+              : 'لا توجد دروس منشورة في هذه الدورة حتى الآن.';
+            player.replaceChildren(placeholder);
+          }
+        }
 
         document.querySelectorAll('.student-lesson').forEach(button => {
           button.onclick = () => {
