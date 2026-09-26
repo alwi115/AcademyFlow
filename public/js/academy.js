@@ -1774,7 +1774,7 @@ const AF = (() => {
       return;
     }
 
-    if (page === 'quiz-builder' && !allowed(['owner','admin','instructor','content_manager'])) {
+    if (page === 'quiz-builder' && !allowed(['owner','admin','content_manager'])) {
       document.getElementById('pageContent').innerHTML = '<div class="academy-card academy-empty">ما عندك صلاحية للوصول إلى هذه الصفحة.</div>';
       return;
     }
