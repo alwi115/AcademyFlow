@@ -46,6 +46,7 @@ async function legalConfig(req, res) {
     supportPhone: settings.supportPhone || '',
     legalEntityName: settings.legalEntityName || '',
     commercialRegistrationNumber: settings.commercialRegistrationNumber || '',
+    ecommerceLicenseNumber: settings.ecommerceLicenseNumber || '',
     taxNumber: settings.taxNumber || '',
     businessAddress: settings.businessAddress || '',
     privacyOfficerEmail: settings.privacyOfficerEmail || '',
