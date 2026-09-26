@@ -75,7 +75,25 @@ async function academyFlowLogin(event, kind){
     localStorage.removeItem('af_token');
     localStorage.setItem('af_user', JSON.stringify(data.user));
 
-    if (data.user.role === 'owner' && data.user.legalAcceptanceRequired) {
+    const verifyResponse = await fetch('/api/auth/me', {
+      method: 'GET',
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: { 'Accept': 'application/json' }
+    });
+    const verified = await verifyResponse.json().catch(() => ({}));
+
+    if (!verifyResponse.ok || !verified.user) {
+      localStorage.removeItem('af_user');
+      throw new Error(
+        verified.message ||
+        'تم قبول بيانات الدخول لكن المتصفح لم يحتفظ بالجلسة. حدّث الصفحة وحاول مرة أخرى.'
+      );
+    }
+
+    localStorage.setItem('af_user', JSON.stringify(verified.user));
+
+    if (verified.user.role === 'owner' && verified.user.legalAcceptanceRequired) {
       location.replace('/academy/legal-acceptance.html');
       return;
     }
@@ -86,7 +104,7 @@ async function academyFlowLogin(event, kind){
       instructor: '/instructor/dashboard.html'
     };
 
-    location.replace(destinations[data.user.role] || '/academy/dashboard.html');
+    location.replace(destinations[verified.user.role] || '/academy/dashboard.html');
   } catch (error) {
     console.error('AcademyFlow login error:', error);
     if (message) {
