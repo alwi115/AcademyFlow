@@ -11,6 +11,7 @@ const AssignmentSubmission = require('../models/AssignmentSubmission');
 const Payment = require('../models/Payment');
 const Certificate = require('../models/Certificate');
 const Notification = require('../models/Notification');
+const { safeTimeZone, formatAcademyDisplay } = require('../services/timezone.service');
 
 function clean(value) {
   return typeof value === 'string' ? value.trim() : value;
@@ -113,6 +114,8 @@ async function recalcProgress(academyId, studentId, courseId) {
 async function dashboard(req, res) {
   const academyId = req.academyId;
   const studentId = req.user.sub;
+  const academy = await Academy.findById(academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
   const now = new Date();
 
   const enrollments = await Enrollment.find({
@@ -237,6 +240,8 @@ async function dashboard(req, res) {
       instructor: row.instructorId?.name || '',
       group: row.groupId?.name || '',
       startAt: row.startAt,
+      startAtDisplay: formatAcademyDisplay(row.startAt, timezone),
+      timezone,
       durationMinutes: row.durationMinutes,
       status: row.status,
       joinAvailable: Boolean(row.zoomJoinUrl)
@@ -554,6 +559,8 @@ async function setLessonProgress(req, res) {
 async function liveSessions(req, res) {
   const academyId = req.academyId;
   const studentId = req.user.sub;
+  const academy = await Academy.findById(academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
 
   const enrollments = await Enrollment.find({
     academyId,
@@ -585,6 +592,8 @@ async function liveSessions(req, res) {
     group: row.groupId,
     instructor: row.instructorId,
     startAt: row.startAt,
+    startAtDisplay: formatAcademyDisplay(row.startAt, timezone),
+    timezone,
     durationMinutes: row.durationMinutes,
     status: row.status,
     zoomMeetingId: row.zoomMeetingId || '',

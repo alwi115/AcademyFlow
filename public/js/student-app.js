@@ -360,7 +360,7 @@ const StudentPortal = (() => {
             <div class="student-list">
               ${d.upcomingLive?.length ? d.upcomingLive.map(x => `
                 <div class="student-list-row">
-                  <div><b>${esc(x.title)}</b><span>${fmtDate(x.startAt,true)} · ${esc(x.course || '')}</span></div>
+                  <div><b>${esc(x.title)}</b><span>${esc(x.startAtDisplay || fmtDate(x.startAt,true))} · ${esc(x.course || '')}</span></div>
                   ${x.joinAvailable ? '<button class="btn primary student-join-live" data-session-id="'+esc(x.id)+'" type="button">انضم عبر AcademyFlow</button>' : status(x.status)}
                 </div>
               `).join('') : '<div class="student-empty">لا توجد محاضرات قادمة.</div>'}
@@ -892,7 +892,7 @@ const StudentPortal = (() => {
               const joinable = x.joinAvailable && !['ended','cancelled'].includes(x.status);
               return `
                 <div class="student-list-row">
-                  <div><b>${esc(x.title)}</b><span>${esc(x.course?.title || '')} · ${fmtDate(x.startAt,true)} · ${esc(x.instructor?.name || '')}</span></div>
+                  <div><b>${esc(x.title)}</b><span>${esc(x.course?.title || '')} · ${esc(x.startAtDisplay || fmtDate(x.startAt,true))} · ${esc(x.instructor?.name || '')}</span></div>
                   <div class="student-actions">
                     ${status(x.status)}
                     ${joinable ? '<button class="btn primary student-join-live" data-session-id="'+esc(x.id)+'" type="button">دخول Zoom</button>' : ''}

@@ -6,6 +6,8 @@ const AssignmentSubmission = require('../models/AssignmentSubmission');
 const Assessment = require('../models/Assessment');
 const QuizAttempt = require('../models/QuizAttempt');
 const LiveSession = require('../models/LiveSession');
+const Academy = require('../models/Academy');
+const { safeTimeZone, formatAcademyDisplay } = require('../services/timezone.service');
 const { manageableCourseIds } = require('../services/instructor-scope.service');
 
 async function options(req, res) {
@@ -50,6 +52,8 @@ async function options(req, res) {
 async function dashboard(req, res) {
   const academyId = req.academyId;
   const courseIds = await manageableCourseIds(req);
+  const academy = await Academy.findById(academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
   const now = new Date();
 
   const [
@@ -122,6 +126,8 @@ async function dashboard(req, res) {
       title: row.title,
       course: row.courseId,
       startAt: row.startAt,
+      startAtDisplay: formatAcademyDisplay(row.startAt, timezone),
+      timezone,
       durationMinutes: row.durationMinutes,
       status: row.status,
       zoomReady: Boolean(row.zoomJoinUrl)

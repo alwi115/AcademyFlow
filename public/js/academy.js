@@ -571,6 +571,15 @@ const AF = (() => {
   function inputValue(value, type) {
     if (value === null || value === undefined) return '';
 
+    if (
+      type === 'datetime-local' &&
+      typeof value === 'string' &&
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value) &&
+      !/[zZ]|[+-]\d{2}:\d{2}$/.test(value)
+    ) {
+      return value.slice(0,16);
+    }
+
     if (type === 'date' || type === 'datetime-local') {
       const d = new Date(value);
       if (Number.isNaN(d.getTime())) return '';
@@ -701,6 +710,7 @@ const AF = (() => {
     const value = val(row,name);
 
     if (value === null || value === undefined || value === '') return '—';
+    if (name === 'startAt' && row.startAtDisplay) return row.startAtDisplay;
     if (type === 'date') return fmtDate(value);
     if (type === 'datetime-local') return fmtDate(value,true);
 
@@ -1214,7 +1224,11 @@ const AF = (() => {
           api('/api/live-sessions'),
           allowed(['owner','admin']) ? api('/api/live-sessions/series') : Promise.resolve([])
         ]);
-        rows = liveRows;
+        rows = liveRows.map(row => ({
+          ...row,
+          startAtUtc: row.startAt,
+          startAt: row.startAtLocal || row.startAt
+        }));
 
         document.getElementById('liveRows').innerHTML = rows.length
           ? '<div class="academy-list">'+rows.map((x,index) => `
@@ -1222,7 +1236,7 @@ const AF = (() => {
                 <div>
                   <b>${esc(x.title)}</b>
                   <span>
-                    ${fmtDate(x.startAt,true)} ·
+                    ${esc(x.startAtDisplay || fmtDate(x.startAtUtc || x.startAt,true))} ·
                     ${esc(x.durationMinutes || 60)} دقيقة ·
                     ${esc(x.courseId?.title || 'بدون دورة')} ·
                     ${esc(x.groupId?.name || 'كل المجموعات')} ·
@@ -1386,7 +1400,7 @@ const AF = (() => {
           <div class="academy-list">
             ${sorted.length ? sorted.map(x => `
               <div class="academy-list-row">
-                <div><b>${esc(x.title)}</b><span>${fmtDate(x.startAt,true)} · ${esc(x.durationMinutes || 60)} دقيقة</span></div>
+                <div><b>${esc(x.title)}</b><span>${esc(x.startAtDisplay || fmtDate(x.startAt,true))} · ${esc(x.durationMinutes || 60)} دقيقة</span></div>
                 ${status(x.status)}
               </div>
             `).join('') : '<div class="academy-empty">ما فيه مواعيد في التقويم حاليًا.</div>'}

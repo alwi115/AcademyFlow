@@ -44,7 +44,7 @@ window.InstructorLive = (() => {
                       <span class="instructor-status ${s.status==='live'?'good':s.status==='scheduled'?'warn':'info'}">${P().esc(s.status==='live'?'مباشر':s.status==='scheduled'?'مجدولة':s.status==='ended'?'منتهية':'ملغاة')}</span>
                       <h3>${P().esc(s.title)}</h3>
                     </div>
-                    <span>${P().fmtDate(s.startAt,true)}</span>
+                    <span>${P().esc(s.startAtDisplay || P().fmtDate(s.startAt,true))}</span>
                   </div>
 
                   <p>${P().esc(s.course?.title||'')} ${s.group?.name?'· '+P().esc(s.group.name):'· كل المجموعات'} · ${P().esc(s.durationMinutes)} دقيقة</p>
@@ -290,7 +290,7 @@ window.InstructorLive = (() => {
         courseId:row.course?._id||row.course,
         groupId:row.group?._id||row.group||'',
         title:row.title,
-        startAt:P().inputDate(row.startAt,true),
+        startAt:row.startAtLocal || P().inputDate(row.startAt,true),
         durationMinutes:row.durationMinutes,
         lateAfterMinutes:row.lateAfterMinutes,
         joinWindowBeforeMinutes:row.joinWindowBeforeMinutes,
@@ -341,7 +341,7 @@ window.InstructorLive = (() => {
       items:[
         ['الدورة',session.course?.title||'—'],
         ['المجموعة',session.group?.name||'كل المجموعات'],
-        ['موعد البداية',P().fmtDate(session.startAt,true)],
+        ['موعد البداية',session.startAtDisplay || P().fmtDate(session.startAt,true)],
         ['المدة',session.durationMinutes+' دقيقة'],
         ['الحالة',session.status],
         ['التحضير',session.attendanceEnabled?'مفعل':'متوقف'],
@@ -417,7 +417,7 @@ window.InstructorLive = (() => {
     const counts=summary(data.rows);
 
     document.getElementById('instructorModalTitle').textContent='سجل حضور المحاضرة';
-    document.getElementById('instructorModalSubtitle').textContent=data.session.title+' · '+P().fmtDate(data.session.startAt,true);
+    document.getElementById('instructorModalSubtitle').textContent=data.session.title+' · '+(data.session.startAtDisplay || P().fmtDate(data.session.startAt,true));
 
     form.innerHTML=`
       <div class="full instructor-attendance-summary">

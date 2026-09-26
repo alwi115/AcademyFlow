@@ -348,7 +348,7 @@ window.InstructorPortal = (() => {
           <article class="instructor-card">
             <div class="instructor-card-head"><div><h2>المحاضرات القادمة</h2><p>أقرب جلسات Zoom.</p></div><a class="btn soft" href="/instructor/live.html">عرض الكل</a></div>
             <div class="instructor-list">
-              ${d.upcomingLive.length?d.upcomingLive.map(x=>'<div class="instructor-list-row"><div><b>'+esc(x.title)+'</b><span>'+esc(x.course?.title||'')+' · '+fmtDate(x.startAt,true)+'</span></div>'+status(x.status)+'</div>').join(''):'<div class="instructor-empty">لا توجد محاضرات قادمة.</div>'}
+              ${d.upcomingLive.length?d.upcomingLive.map(x=>'<div class="instructor-list-row"><div><b>'+esc(x.title)+'</b><span>'+esc(x.course?.title||'')+' · '+esc(x.startAtDisplay || fmtDate(x.startAt,true))+'</span></div>'+status(x.status)+'</div>').join(''):'<div class="instructor-empty">لا توجد محاضرات قادمة.</div>'}
             </div>
           </article>
           <article class="instructor-card">

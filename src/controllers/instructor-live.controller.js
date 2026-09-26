@@ -7,6 +7,12 @@ const Group = require('../models/Group');
 const zoom = require('../services/zoom.service');
 const { createRecurringSeries, cancelFutureSeries } = require('../services/live-series.service');
 const {
+  safeTimeZone,
+  parseAcademyDateTime,
+  formatAcademyInput,
+  formatAcademyDisplay
+} = require('../services/timezone.service');
+const {
   assertCourse,
   assertStudentEnrollment
 } = require('../services/instructor-scope.service');
@@ -16,6 +22,9 @@ function clean(value) {
 }
 
 async function liveSessions(req, res) {
+  const academy = await Academy.findById(req.academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
+
   const rows = await LiveSession.find({
     academyId: req.academyId,
     instructorId: req.user.sub
@@ -34,6 +43,9 @@ async function liveSessions(req, res) {
     series: row.seriesId,
     sequenceNumber: row.sequenceNumber,
     startAt: row.startAt,
+    startAtLocal: formatAcademyInput(row.startAt, timezone),
+    startAtDisplay: formatAcademyDisplay(row.startAt, timezone),
+    timezone,
     durationMinutes: row.durationMinutes,
     attendanceEnabled: row.attendanceEnabled,
     lateAfterMinutes: row.lateAfterMinutes,
@@ -63,6 +75,8 @@ async function createLiveSession(req, res) {
 
   const course = await assertCourse(req, courseId);
   const academy = await Academy.findById(req.academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
+  const normalizedStartAt = parseAcademyDateTime(startAt, timezone);
 
   let group = null;
   if (groupId) {
@@ -88,9 +102,9 @@ async function createLiveSession(req, res) {
   if (zoom.configured()) {
     meeting = await zoom.createMeeting({
       topic: clean(title),
-      startTime: startAt,
+      startTime: normalizedStartAt,
       duration: Math.max(1, Number(durationMinutes || 60)),
-      timezone: academy?.timezone || 'Asia/Muscat'
+      timezone
     });
   }
 
@@ -101,7 +115,7 @@ async function createLiveSession(req, res) {
     title: clean(title),
     description: clean(description),
     instructorId: req.user.sub,
-    startAt,
+    startAt: normalizedStartAt,
     durationMinutes: Math.max(1, Number(durationMinutes || 60)),
     zoomMeetingId: meeting.meetingId,
     zoomJoinUrl: meeting.joinUrl,
@@ -119,6 +133,9 @@ async function createLiveSession(req, res) {
     id: row._id,
     title: row.title,
     startAt: row.startAt,
+    startAtLocal: formatAcademyInput(row.startAt, timezone),
+    startAtDisplay: formatAcademyDisplay(row.startAt, timezone),
+    timezone,
     zoomReady: Boolean(row.zoomJoinUrl),
     group: group ? { _id: group._id, name: group.name } : null
   });
@@ -198,12 +215,18 @@ async function liveAttendance(req, res) {
       };
     });
 
+  const academy = await Academy.findById(req.academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
+
   res.json({
     session: {
       id: session._id,
       title: session.title,
       course: session.courseId,
       startAt: session.startAt,
+      startAtLocal: formatAcademyInput(session.startAt, timezone),
+      startAtDisplay: formatAcademyDisplay(session.startAt, timezone),
+      timezone,
       durationMinutes: session.durationMinutes,
       lateAfterMinutes: session.lateAfterMinutes,
       status: session.status
@@ -283,6 +306,7 @@ async function updateLiveSession(req, res) {
   }
 
   const academy = await Academy.findById(req.academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
 
   let nextCourseId = row.courseId;
   let nextGroupId = row.groupId;
@@ -337,7 +361,7 @@ async function updateLiveSession(req, res) {
     : row.title;
 
   const nextStartAt = req.body.startAt !== undefined
-    ? req.body.startAt
+    ? parseAcademyDateTime(req.body.startAt, timezone)
     : row.startAt;
 
   const nextDuration = req.body.durationMinutes !== undefined
@@ -364,7 +388,7 @@ async function updateLiveSession(req, res) {
         topic: nextTitle,
         startTime: nextStartAt,
         duration: nextDuration,
-        timezone: academy?.timezone || 'Asia/Muscat'
+        timezone
       });
 
       row.zoomMeetingId = meeting.meetingId;
@@ -381,7 +405,7 @@ async function updateLiveSession(req, res) {
       topic: nextTitle,
       startTime: nextStartAt,
       duration: Number(nextDuration),
-      timezone: academy?.timezone || 'Asia/Muscat'
+      timezone
     });
 
     row.zoomMeetingId = meeting.meetingId;
@@ -401,7 +425,7 @@ async function updateLiveSession(req, res) {
       topic: nextTitle,
       startTime: nextStartAt,
       duration: nextDuration,
-      timezone: academy?.timezone || 'Asia/Muscat'
+      timezone
     });
   }
 
@@ -459,6 +483,9 @@ async function updateLiveSession(req, res) {
     course: row.courseId,
     group: row.groupId,
     startAt: row.startAt,
+    startAtLocal: formatAcademyInput(row.startAt, timezone),
+    startAtDisplay: formatAcademyDisplay(row.startAt, timezone),
+    timezone,
     durationMinutes: row.durationMinutes,
     attendanceEnabled: row.attendanceEnabled,
     lateAfterMinutes: row.lateAfterMinutes,
