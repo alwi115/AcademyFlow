@@ -92,13 +92,25 @@ async function listQuizzes(req, res) {
     .populate('courseId', 'title code instructorId')
     .sort({ createdAt: -1 });
 
+  const canReviewAttempts = req.user.role !== 'content_manager';
+
   const result = await Promise.all(rows.map(async quiz => {
-    const [questionCount, attemptCount, gradedCount, pendingReviewCount] = await Promise.all([
-      QuizQuestion.countDocuments({ academyId: req.academyId, assessmentId: quiz._id }),
-      QuizAttempt.countDocuments({ academyId: req.academyId, assessmentId: quiz._id }),
-      QuizAttempt.countDocuments({ academyId: req.academyId, assessmentId: quiz._id, status: 'graded' }),
-      QuizAttempt.countDocuments({ academyId: req.academyId, assessmentId: quiz._id, status: 'pending_review' })
-    ]);
+    const questionCount = await QuizQuestion.countDocuments({
+      academyId: req.academyId,
+      assessmentId: quiz._id
+    });
+
+    let attemptCount = null;
+    let gradedCount = null;
+    let pendingReviewCount = null;
+
+    if (canReviewAttempts) {
+      [attemptCount, gradedCount, pendingReviewCount] = await Promise.all([
+        QuizAttempt.countDocuments({ academyId: req.academyId, assessmentId: quiz._id }),
+        QuizAttempt.countDocuments({ academyId: req.academyId, assessmentId: quiz._id, status: 'graded' }),
+        QuizAttempt.countDocuments({ academyId: req.academyId, assessmentId: quiz._id, status: 'pending_review' })
+      ]);
+    }
 
     return {
       ...quiz.toObject(),
@@ -159,7 +171,7 @@ async function quizDetails(req, res) {
   const quiz = await getQuizForAdmin(req, req.params.id);
   const canReviewAttempts = req.user.role !== 'content_manager';
 
-  const [questions, attempts] = await Promise.all([
+  const [questions, attempts, hasAttempts] = await Promise.all([
     QuizQuestion.find({
       academyId: req.academyId,
       assessmentId: quiz._id
@@ -173,12 +185,17 @@ async function quizDetails(req, res) {
         })
           .populate('studentId', 'name email')
           .sort({ createdAt: -1 })
-      : []
+      : [],
+    QuizAttempt.exists({
+      academyId: req.academyId,
+      assessmentId: quiz._id
+    })
   ]);
 
   res.json({
     quiz,
     questions,
+    hasAttempts: Boolean(hasAttempts),
     attempts: attempts.map(row => ({
       id: row._id,
       student: row.studentId,
