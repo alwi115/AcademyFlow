@@ -12,7 +12,8 @@
     "test:backup-restore": "node scripts/backup-restore-test.js",
     "test:e2e": "node scripts/e2e-test.js",
     "test:monitoring": "node scripts/monitoring-test.js",
-    "test:performance": "node scripts/performance-smoke-test.js"
+    "test:performance": "node scripts/performance-smoke-test.js",
+    "test:legal": "node scripts/legal-readiness-test.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
