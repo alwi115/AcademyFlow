@@ -1680,3 +1680,18 @@ body {
   .auth-side h1 { font-size: 25px; }
   .auth-form h2 { font-size: 22px; }
 }
+
+.legal-inline-links{
+  display:inline-flex;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-inline-start:12px;
+}
+.legal-login-links{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:center;
+  margin-top:14px;
+  font-size:11px;
+}
