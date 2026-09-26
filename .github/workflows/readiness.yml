@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: academyflow-readiness-main
+  cancel-in-progress: true
+
 jobs:
   readiness:
     name: Monitoring, E2E and performance
