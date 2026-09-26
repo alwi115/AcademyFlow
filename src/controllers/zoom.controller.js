@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const Academy = require('../models/Academy');
 const User = require('../models/User');
 const zoom = require('../services/zoom.service');
+const auditService = require('../services/audit.service');
 
 const STATE_COOKIE = 'af_zoom_oauth_state';
 const STATE_TTL_MS = 10 * 60 * 1000;
@@ -84,6 +85,11 @@ async function connect(req, res) {
   const academy = await Academy.findById(req.academyId)
     .select('+zoomIntegration.oauthStateHash +zoomIntegration.oauthStateExpiresAt');
 
+  const beforeConnection = academy ? {
+    connected: Boolean(academy.zoomIntegration?.connected),
+    zoomEmail: academy.zoomIntegration?.zoomEmail || ''
+  } : null;
+
   if (!academy) {
     return res.status(404).json({ message: 'الأكاديمية غير موجودة' });
   }
@@ -95,6 +101,16 @@ async function connect(req, res) {
   academy.zoomIntegration.oauthStateHash = stateHash(nonce);
   academy.zoomIntegration.oauthStateExpiresAt = expiresAt;
   await academy.save();
+
+  await auditService.record(req, {
+    action: 'zoom.connect.start',
+    targetType: 'academy',
+    targetId: academy._id,
+    targetLabel: academy.name || String(academy._id),
+    before: beforeConnection,
+    after: { oauthPending: true },
+    statusCode: 200
+  });
 
   const state = jwt.sign(
     {
@@ -211,6 +227,26 @@ async function callback(req, res) {
       owner._id
     );
 
+    req.user = {
+      sub: String(owner._id),
+      role: 'owner',
+      academyId: String(payload.academyId)
+    };
+    req.academyId = String(payload.academyId);
+
+    await auditService.record(req, {
+      action: 'zoom.connect.complete',
+      targetType: 'academy',
+      targetId: academy._id,
+      targetLabel: academy.name || String(academy._id),
+      after: {
+        connected: true,
+        zoomUserId: zoomUser?.id || '',
+        zoomEmail: zoomUser?.email || ''
+      },
+      statusCode: 302
+    });
+
     return redirectSettings(res, 'connected');
   } catch (err) {
     console.error('[zoom oauth callback]', err.message);
@@ -221,6 +257,12 @@ async function callback(req, res) {
 async function disconnect(req, res) {
   const academy = await Academy.findById(req.academyId)
     .select('+zoomIntegration.tokensEncrypted');
+
+  const beforeDisconnect = academy ? {
+    connected: Boolean(academy.zoomIntegration?.connected),
+    zoomUserId: academy.zoomIntegration?.zoomUserId || '',
+    zoomEmail: academy.zoomIntegration?.zoomEmail || ''
+  } : null;
 
   if (!academy) {
     return res.status(404).json({ message: 'الأكاديمية غير موجودة' });
@@ -246,6 +288,17 @@ async function disconnect(req, res) {
   };
 
   await academy.save();
+
+  await auditService.record(req, {
+    action: 'zoom.disconnect',
+    targetType: 'academy',
+    targetId: academy._id,
+    targetLabel: academy.name || String(academy._id),
+    before: beforeDisconnect,
+    after: { connected: false },
+    statusCode: 200
+  });
+
   res.json({ ok: true });
 }
 
