@@ -1422,123 +1422,182 @@ const AF = (() => {
     const target = document.getElementById('pageContent');
     target.innerHTML = '<div class="academy-empty">جاري تحميل الإعدادات...</div>';
 
+    let s;
+
     try {
-      const [s,emailStatus] = await Promise.all([
-        api('/api/academy/settings'),
-        api('/api/academy/email/status')
-      ]);
-
-      const emailState = emailStatus.connectionOk
-        ? '<span class="academy-status good">البريد جاهز</span>'
-        : emailStatus.configured
-          ? '<span class="academy-status bad">فشل الاتصال</span>'
-          : '<span class="academy-status warn">غير مضبوط</span>';
-
-      const emailReason = emailStatus.connectionOk
-        ? 'تم الاتصال بخادم SMTP بنجاح.'
-        : emailStatus.configured
-          ? (emailStatus.error || 'تعذر الاتصال بخادم البريد.')
-          : 'المتغيرات الناقصة: '+(emailStatus.missing || []).join(', ');
-
-      target.innerHTML = `
-        <form id="settingsForm" class="academy-settings-grid">
-          <section class="academy-settings-section">
-            <h3>بيانات الأكاديمية</h3>
-            ${settingsInput('name','اسم الأكاديمية',s.name)}
-            ${settingsInput('nameEn','الاسم بالإنجليزية',s.nameEn)}
-            ${settingsInput('phone','رقم الهاتف',s.phone)}
-            ${settingsInput('email','البريد الإلكتروني',s.email,'email')}
-            ${settingsInput('city','المدينة',s.city)}
-            ${settingsInput('country','الدولة',s.country)}
-          </section>
-          <section class="academy-settings-section">
-            <h3>الهوية والتفضيلات</h3>
-            ${settingsInput('logoUrl','رابط الشعار',s.logoUrl,'url')}
-            ${settingsInput('currency','العملة',s.currency)}
-            ${settingsInput('timezone','المنطقة الزمنية',s.timezone)}
-            ${settingsInput('branding.primaryColor','اللون الأساسي',s.branding?.primaryColor || '#0f766e','color')}
-            ${settingsInput('branding.secondaryColor','اللون الثانوي',s.branding?.secondaryColor || '#0f172a','color')}
-            ${settingsInput('branding.coverUrl','رابط صورة الغلاف',s.branding?.coverUrl,'url')}
-          </section>
-          <div class="academy-form-message" id="settingsMsg"></div>
-          <div class="academy-form-actions">
-            <button class="btn primary" type="submit">حفظ الإعدادات</button>
-          </div>
-        </form>
-        <section class="academy-card academy-section">
-          <div class="academy-card-head">
-            <div>
-              <h2>البريد الإلكتروني والتنبيهات</h2>
-              <p>اختبر SMTP قبل الاعتماد على تذكيرات المحاضرات.</p>
-            </div>
-            <div>${emailState}</div>
-          </div>
-
-          <div class="academy-details-grid">
-            <div class="academy-detail-item"><small>الحالة</small><div>${esc(emailReason)}</div></div>
-            <div class="academy-detail-item"><small>الخادم</small><div>${esc(emailStatus.host || '—')}:${esc(emailStatus.port || '—')}</div></div>
-            <div class="academy-detail-item"><small>البريد المرسل منه</small><div>${esc(emailStatus.fromEmail || '—')}</div></div>
-            <div class="academy-detail-item"><small>SSL/TLS المباشر</small><div>${emailStatus.secure ? 'مفعل' : 'غير مفعل (STARTTLS/587 عادة)'}</div></div>
-          </div>
-
-          <div class="academy-row-actions" style="margin-top:12px">
-            <button class="btn primary" id="academyTestEmail" type="button">إرسال بريد تجريبي إلى حسابي</button>
-            <span id="academyTestEmailMsg" class="academy-note"></span>
-          </div>
-        </section>
-
-        <section class="academy-card academy-section">
-          <div class="academy-note">كود الأكاديمية: <b>${esc(s.code)}</b> · الحالة: <b>${esc(s.status)}</b>. هذه القيم يديرها مالك منصة AcademyFlow وليست قابلة للتغيير من إعدادات الأكاديمية.</div>
-        </section>
-      `;
-
-      document.getElementById('academyTestEmail').onclick = async e => {
-        const button = e.currentTarget;
-        const msg = document.getElementById('academyTestEmailMsg');
-        const original = button.textContent;
-
-        button.disabled = true;
-        button.textContent = 'جاري الاختبار...';
-        msg.textContent = '';
-
-        try {
-          const result = await api('/api/academy/email/test',{method:'POST'});
-          msg.style.color = 'var(--success)';
-          msg.textContent = 'تم إرسال رسالة اختبار إلى '+result.to+'. افحص الوارد والرسائل غير المرغوب فيها.';
-        } catch (err) {
-          msg.style.color = 'var(--danger)';
-          msg.textContent = err.message + (err.data?.error ? ' · '+err.data.error : '');
-        } finally {
-          button.disabled = false;
-          button.textContent = original;
-        }
-      };
-
-      document.getElementById('settingsForm').onsubmit = async e => {
-        e.preventDefault();
-        const form = e.currentTarget;
-        const fd = new FormData(form);
-        const payload = {
-          branding: {}
-        };
-        for (const [k,v] of fd.entries()) {
-          if (k.startsWith('branding.')) payload.branding[k.split('.')[1]] = v;
-          else payload[k] = v;
-        }
-
-        const msg = document.getElementById('settingsMsg');
-        try {
-          await api('/api/academy/settings',{method:'PATCH',body:JSON.stringify(payload)});
-          msg.style.color = 'var(--success)';
-          msg.textContent = 'تم حفظ الإعدادات بنجاح.';
-        } catch (err) {
-          msg.style.color = 'var(--danger)';
-          msg.textContent = err.message;
-        }
-      };
+      // Settings must never wait for SMTP/network diagnostics.
+      s = await api('/api/academy/settings');
     } catch (err) {
       target.innerHTML = '<div class="academy-card academy-empty">'+esc(err.message)+'</div>';
+      return;
     }
+
+    target.innerHTML = `
+      <form id="settingsForm" class="academy-settings-grid">
+        <section class="academy-settings-section">
+          <h3>بيانات الأكاديمية</h3>
+          ${settingsInput('name','اسم الأكاديمية',s.name)}
+          ${settingsInput('nameEn','الاسم بالإنجليزية',s.nameEn)}
+          ${settingsInput('phone','رقم الهاتف',s.phone)}
+          ${settingsInput('email','البريد الإلكتروني',s.email,'email')}
+          ${settingsInput('city','المدينة',s.city)}
+          ${settingsInput('country','الدولة',s.country)}
+        </section>
+
+        <section class="academy-settings-section">
+          <h3>الهوية والتفضيلات</h3>
+          ${settingsInput('logoUrl','رابط الشعار',s.logoUrl,'url')}
+          ${settingsInput('currency','العملة',s.currency)}
+          ${settingsInput('timezone','المنطقة الزمنية',s.timezone)}
+          ${settingsInput('branding.primaryColor','اللون الأساسي',s.branding?.primaryColor || '#0f766e','color')}
+          ${settingsInput('branding.secondaryColor','اللون الثانوي',s.branding?.secondaryColor || '#0f172a','color')}
+          ${settingsInput('branding.coverUrl','رابط صورة الغلاف',s.branding?.coverUrl,'url')}
+        </section>
+
+        <div class="academy-form-message" id="settingsMsg"></div>
+
+        <div class="academy-form-actions">
+          <button class="btn primary" type="submit">حفظ الإعدادات</button>
+        </div>
+      </form>
+
+      <section class="academy-card academy-section" id="academyEmailSection">
+        <div class="academy-card-head">
+          <div>
+            <h2>البريد الإلكتروني والتنبيهات</h2>
+            <p>هذا القسم منفصل عن تحميل الإعدادات، لذلك أي مشكلة في SMTP لن تعطل الصفحة.</p>
+          </div>
+          <div id="academyEmailState"><span class="academy-status info">جاري فحص الإعداد...</span></div>
+        </div>
+
+        <div class="academy-details-grid" id="academyEmailDetails">
+          <div class="academy-detail-item"><small>الحالة</small><div>جاري قراءة إعدادات البريد...</div></div>
+          <div class="academy-detail-item"><small>الخادم</small><div>—</div></div>
+          <div class="academy-detail-item"><small>البريد المرسل منه</small><div>—</div></div>
+          <div class="academy-detail-item"><small>الحماية</small><div>—</div></div>
+        </div>
+
+        <div class="academy-row-actions" style="margin-top:12px">
+          <button class="btn primary" id="academyTestEmail" type="button">إرسال بريد تجريبي إلى حسابي</button>
+          <button class="btn soft" id="academyRefreshEmailStatus" type="button">تحديث حالة البريد</button>
+          <span id="academyTestEmailMsg" class="academy-note"></span>
+        </div>
+      </section>
+
+      <section class="academy-card academy-section">
+        <div class="academy-note">
+          كود الأكاديمية: <b>${esc(s.code)}</b> · الحالة: <b>${esc(s.status)}</b>.
+          هذه القيم يديرها مالك منصة AcademyFlow وليست قابلة للتغيير من إعدادات الأكاديمية.
+        </div>
+      </section>
+    `;
+
+    const loadEmailStatus = async () => {
+      const state = document.getElementById('academyEmailState');
+      const details = document.getElementById('academyEmailDetails');
+
+      if (!state || !details) return;
+
+      state.innerHTML = '<span class="academy-status info">جاري الفحص...</span>';
+
+      try {
+        const emailStatus = await api('/api/academy/email/status');
+
+        state.innerHTML = emailStatus.configured
+          ? '<span class="academy-status good">الإعدادات موجودة</span>'
+          : '<span class="academy-status warn">غير مضبوط</span>';
+
+        const reason = emailStatus.configured
+          ? 'بيانات SMTP موجودة. استخدم زر البريد التجريبي للتأكد من الاتصال والإرسال.'
+          : 'المتغيرات الناقصة: '+((emailStatus.missing || []).join(', ') || 'غير معروفة');
+
+        details.innerHTML = `
+          <div class="academy-detail-item"><small>الحالة</small><div>${esc(reason)}</div></div>
+          <div class="academy-detail-item"><small>الخادم</small><div>${esc(emailStatus.host || '—')}:${esc(emailStatus.port || '—')}</div></div>
+          <div class="academy-detail-item"><small>البريد المرسل منه</small><div>${esc(emailStatus.fromEmail || '—')}</div></div>
+          <div class="academy-detail-item"><small>الحماية</small><div>${emailStatus.secure ? 'SSL/TLS مباشر' : 'STARTTLS / منفذ 587 غالبًا'}</div></div>
+        `;
+      } catch (err) {
+        state.innerHTML = '<span class="academy-status bad">تعذر قراءة حالة البريد</span>';
+        details.innerHTML = `
+          <div class="academy-detail-item" style="grid-column:1/-1">
+            <small>السبب</small>
+            <div>${esc(err.message)}</div>
+          </div>
+        `;
+      }
+    };
+
+    document.getElementById('academyRefreshEmailStatus').onclick = loadEmailStatus;
+
+    document.getElementById('academyTestEmail').onclick = async e => {
+      const button = e.currentTarget;
+      const msg = document.getElementById('academyTestEmailMsg');
+      const original = button.textContent;
+
+      button.disabled = true;
+      button.textContent = 'جاري الاختبار...';
+      msg.textContent = '';
+
+      try {
+        const result = await api('/api/academy/email/test',{method:'POST'});
+        msg.style.color = 'var(--success)';
+        msg.textContent = 'تم إرسال رسالة اختبار إلى '+result.to+'. افحص الوارد والرسائل غير المرغوب فيها.';
+      } catch (err) {
+        msg.style.color = 'var(--danger)';
+
+        const missing = Array.isArray(err.data?.missing) && err.data.missing.length
+          ? ' · الناقص: '+err.data.missing.join(', ')
+          : '';
+
+        msg.textContent =
+          err.message +
+          missing +
+          (err.data?.error ? ' · '+err.data.error : '');
+      } finally {
+        button.disabled = false;
+        button.textContent = original;
+      }
+    };
+
+    document.getElementById('settingsForm').onsubmit = async e => {
+      e.preventDefault();
+
+      const form = e.currentTarget;
+      const button = form.querySelector('button[type="submit"]');
+      const original = button.textContent;
+      const fd = new FormData(form);
+      const payload = { branding:{} };
+
+      for (const [k,v] of fd.entries()) {
+        if (k.startsWith('branding.')) payload.branding[k.split('.')[1]] = v;
+        else payload[k] = v;
+      }
+
+      const msg = document.getElementById('settingsMsg');
+      button.disabled = true;
+      button.textContent = 'جاري الحفظ...';
+      msg.textContent = '';
+
+      try {
+        await api('/api/academy/settings',{
+          method:'PATCH',
+          body:JSON.stringify(payload)
+        });
+
+        msg.style.color = 'var(--success)';
+        msg.textContent = 'تم حفظ الإعدادات بنجاح.';
+      } catch (err) {
+        msg.style.color = 'var(--danger)';
+        msg.textContent = err.message;
+      } finally {
+        button.disabled = false;
+        button.textContent = original;
+      }
+    };
+
+    // Deliberately not awaited: SMTP can never block the settings page again.
+    loadEmailStatus();
   }
 
   function settingsInput(name,label,value,type='text') {
