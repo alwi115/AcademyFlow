@@ -127,6 +127,20 @@ app.use('/api/instructor', require('./routes/instructor.routes'));
 app.use('/api/live-sessions', require('./routes/live.routes'));
 app.use('/api/zoom', require('./routes/zoom.routes'));
 
+app.use((req, res) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'none'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'none'"
+  );
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
+
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ message: 'Not Found' });
+  }
+
+  return res.status(404).type('text/plain').send('Not Found');
+});
+
 app.use((err, req, res, next) => {
   console.error(err);
   const status = Number(err.status || 500);
