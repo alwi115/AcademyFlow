@@ -7,7 +7,7 @@
   <meta name="color-scheme" content="light dark">
   <title>تسجيل الدخول | AcademyFlow</title>
   <link rel="stylesheet" href="/css/app.css">
-  <link rel="stylesheet" href="/css/academy-login.css?v=3">
+  <link rel="stylesheet" href="/css/academy-login.css?v=4">
   <script src="/js/ui.js"></script>
 </head>
 <body class="academy-login-page">
@@ -34,7 +34,7 @@
           <div class="academy-login-form-head">
             <span class="academy-login-eyebrow">SECURE ACCESS</span>
             <h1>ادخل لمساحة <span>أكاديميتك.</span></h1>
-            <p>ثلاث معلومات فقط. بعدها النظام يعرف دور حسابك ويوجهك تلقائيًا للمكان الصحيح.</p>
+            <p>بوابة الدخول تربط كود الأكاديمية بهوية حسابك ودورك، وبعدها تفتح لك المساحة والصلاحيات المناسبة تلقائيًا.</p>
           </div>
 
           <div class="academy-login-field">
@@ -106,6 +106,19 @@
           <span>الجلسة تستخدم Cookie من نوع HttpOnly وSameSite، وكلمة المرور ما تنحفظ كنص صريح.</span>
         </div>
 
+        <section class="login-portal-guide" aria-label="البوابات التي يمكن الوصول إليها">
+          <header>
+            <span>بعد الدخول</span>
+            <p>نفس البوابة، لكن كل دور ينتقل لمساحته الخاصة.</p>
+          </header>
+          <div class="login-role-circles">
+            <span class="login-role-circle"><b>المالك</b><small>إدارة كاملة</small></span>
+            <span class="login-role-circle"><b>الإدارة</b><small>تشغيل يومي</small></span>
+            <span class="login-role-circle"><b>المدرب</b><small>دورات ومحاضرات</small></span>
+            <span class="login-role-circle"><b>الطالب</b><small>تعلم ومتابعة</small></span>
+          </div>
+        </section>
+
         <div class="legal-login-links">
           <a href="/legal/privacy.html">الخصوصية</a>
           <a href="/legal/terms.html">الشروط</a>
@@ -136,6 +149,10 @@
           <div class="academy-access-point p4"><span><b>المساحة</b><small>ENTER</small></span></div>
         </div>
 
+        <div class="academy-login-system-note">
+          <span>ACADEMYFLOW ACCESS LOGIC</span>
+          <p>كود الأكاديمية يحدد مساحة البيانات، الحساب يثبت الهوية، والدور يحدد وش يقدر المستخدم يشوف ويسوي.</p>
+        </div>
         <span class="academy-login-note">الدخول الصح للمكان الصح</span>
       </aside>
     </section>
