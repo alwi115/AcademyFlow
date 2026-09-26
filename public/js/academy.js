@@ -298,7 +298,8 @@ const AF = (() => {
 
   const staticOptions = {
     userRole: [
-      ['admin','مدير'],['branch_manager','مدير فرع'],['accountant','محاسب'],
+      ...(user.role === 'owner' ? [['admin','مدير']] : []),
+      ['branch_manager','مدير فرع'],['accountant','محاسب'],
       ['reception','استقبال'],['content_manager','إدارة محتوى'],['support','دعم']
     ],
     deliveryType: [['recorded','مسجلة'],['live','مباشرة'],['in_person','حضورية'],['hybrid','هجين']],
@@ -354,17 +355,27 @@ const AF = (() => {
     staff: {
       endpoint:'/api/academy/users?kind=staff',
       createEndpoint:'/api/academy/users',
+      updateEndpoint:'/api/academy/users/:id',
       createRoles:['owner','admin'],
+      manageRoles:['owner','admin'],
+      actions:{ details:true, edit:true },
       title:'إضافة موظف',
+      editTitle:'تعديل الموظف والصلاحية',
       fields:[
         ['name','اسم الموظف','text',true],['email','البريد الإلكتروني','email',true],
         ['phone','رقم الهاتف','text',false],['role','الدور','select',true,'userRole'],
+        ['branchId','الفرع (إجباري لمدير الفرع)','dynamicSelect',false,'branches'],
         ['password','كلمة مرور مؤقتة','password',true]
+      ],
+      editFields:[
+        ['name','اسم الموظف','text',true],['email','البريد الإلكتروني','email',true],
+        ['phone','رقم الهاتف','text',false],['role','الدور','select',true,'userRole'],
+        ['branchId','الفرع (إجباري لمدير الفرع)','dynamicSelect',false,'branches']
       ],
       columns:[
         ['الموظف','name'],['البريد','email'],
-        ['الدور','role',v => esc(roleLabels[v] || v)],['الهاتف','phone'],
-        ['الحالة','active',v => v ? status('active') : status('suspended')]
+        ['الدور','role',v => esc(roleLabels[v] || v)],['الفرع','branchId.name'],
+        ['الهاتف','phone'],['الحالة','active',v => v ? status('active') : status('suspended')]
       ]
     },
     branches: {
@@ -643,8 +654,11 @@ const AF = (() => {
 
     const form = document.getElementById('academyModalForm');
     const fields = [];
+    const formFields = editing && config.editFields
+      ? config.editFields
+      : (config.fields || []);
 
-    for (const field of config.fields || []) {
+    for (const field of formFields) {
       fields.push(await fieldHtml(field, editing ? val(row, field[0]) : ''));
     }
 
