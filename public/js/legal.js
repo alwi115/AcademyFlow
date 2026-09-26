@@ -27,6 +27,7 @@
     setAll('[data-ecommerce-license]', config.ecommerceLicenseNumber, 'غير مطبق / غير مدخل');
     setAll('[data-tax]', config.taxNumber, 'غير مطبق / غير مدخل');
     setAll('[data-address]', config.businessAddress, 'غير مدخل بعد');
+    setAll('[data-privacy-officer-name]', config.privacyOfficerName, 'غير مدخل بعد');
     setAll('[data-support-email]', config.supportEmail, 'استخدم نموذج طلب الخصوصية أو الدعم داخل المنصة');
     setAll('[data-support-phone]', config.supportPhone, 'غير مدخل بعد');
     setAll('[data-privacy-email]', config.privacyOfficerEmail || config.supportEmail, 'استخدم نموذج طلب الخصوصية');
