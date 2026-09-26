@@ -1121,6 +1121,7 @@ module.exports = {
   options,
   listUsers,
   createUser,
+  updateUser,
   listBranches,
   createBranch,
   listCourses,
