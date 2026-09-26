@@ -74,7 +74,7 @@ const HARDENED_PUBLIC_PATHS = new Set([
 app.use((req, res, next) => {
   if (HARDENED_PUBLIC_PATHS.has(req.path)) {
     res.setHeader('Content-Security-Policy', STRICT_PUBLIC_CSP);
-    res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
+    res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
   }
   next();
 });
