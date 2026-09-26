@@ -1,0 +1,510 @@
+/* AcademyFlow Academy Login */
+body.academy-login-page {
+  min-width: 320px;
+  min-height: 100dvh;
+  margin: 0;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 10% 12%, color-mix(in srgb,var(--primary) 12%,transparent), transparent 34%),
+    radial-gradient(circle at 88% 88%, color-mix(in srgb,var(--accent) 10%,transparent), transparent 34%),
+    var(--bg);
+}
+
+.academy-login-shell {
+  min-height: 100dvh;
+  width: 100%;
+  padding:
+    max(20px,env(safe-area-inset-top))
+    max(20px,env(safe-area-inset-right))
+    max(20px,env(safe-area-inset-bottom))
+    max(20px,env(safe-area-inset-left));
+  display: grid;
+  place-items: center;
+}
+
+.academy-login-card {
+  width: min(1040px,100%);
+  min-height: 625px;
+  display: grid;
+  grid-template-columns: minmax(0,1.08fr) minmax(360px,.92fr);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: var(--surface-strong);
+  box-shadow: var(--shadow-heavy);
+}
+
+.academy-login-showcase {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  padding: 38px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-left: 1px solid var(--line);
+  background:
+    linear-gradient(145deg,color-mix(in srgb,var(--primary) 10%,var(--surface-strong)),var(--surface-strong) 58%);
+}
+
+.academy-login-showcase::before {
+  content: "";
+  position: absolute;
+  width: 350px;
+  height: 350px;
+  left: -175px;
+  bottom: -175px;
+  border-radius: 50%;
+  background: color-mix(in srgb,var(--primary) 10%,transparent);
+  z-index: -1;
+}
+
+.academy-login-brand {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.academy-login-brand-mark {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 15px;
+  background: var(--primary);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: 0 10px 26px color-mix(in srgb,var(--primary) 20%,transparent);
+}
+
+.academy-login-brand-copy b {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 16px;
+}
+
+.academy-login-brand-copy span {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-mute);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+
+.academy-login-intro {
+  max-width: 540px;
+  margin: 50px 0 32px;
+}
+
+.academy-login-chip {
+  min-height: 30px;
+  width: fit-content;
+  padding: 0 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid color-mix(in srgb,var(--primary) 22%,var(--line));
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.academy-login-chip::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 4px color-mix(in srgb,var(--primary) 10%,transparent);
+}
+
+.academy-login-intro h1 {
+  margin: 16px 0 12px;
+  font-family: var(--font-display);
+  font-size: clamp(33px,3.6vw,49px);
+  line-height: 1.2;
+  letter-spacing: -.025em;
+  text-wrap: balance;
+}
+
+.academy-login-intro p {
+  max-width: 500px;
+  margin: 0;
+  color: var(--text-mute);
+  font-size: 13.5px;
+  line-height: 1.9;
+}
+
+.academy-login-features {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 9px;
+}
+
+.academy-login-feature {
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: color-mix(in srgb,var(--surface-muted) 88%,transparent);
+}
+
+.academy-login-feature i {
+  width: 31px;
+  height: 31px;
+  margin-bottom: 9px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.academy-login-feature b {
+  display: block;
+  font-size: 11px;
+}
+
+.academy-login-feature span {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-mute);
+  font-size: 9px;
+  line-height: 1.65;
+}
+
+.academy-login-panel {
+  min-width: 0;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.academy-login-tools {
+  min-height: 40px;
+  margin-bottom: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+}
+
+.academy-login-back {
+  color: var(--text-mute);
+  font-size: 10px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.academy-login-back:hover {
+  color: var(--primary);
+}
+
+.academy-login-theme {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-muted);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.academy-login-form-head {
+  margin-bottom: 21px;
+}
+
+.academy-login-eyebrow {
+  color: var(--primary);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .07em;
+}
+
+.academy-login-form-head h2 {
+  margin: 8px 0 6px;
+  font-family: var(--font-display);
+  font-size: 27px;
+  line-height: 1.3;
+}
+
+.academy-login-form-head p {
+  margin: 0;
+  color: var(--text-mute);
+  font-size: 12px;
+  line-height: 1.75;
+}
+
+.academy-login-field {
+  margin-bottom: 13px;
+}
+
+.academy-login-field label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.academy-login-field label small {
+  color: var(--text-mute);
+  font-size: 8.5px;
+  font-weight: 500;
+}
+
+.academy-login-input-wrap {
+  position: relative;
+}
+
+.academy-login-input-wrap input {
+  width: 100%;
+  height: 48px;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  outline: none;
+  background: var(--surface-muted);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  transition: .16s ease;
+}
+
+.academy-login-input-wrap input:focus {
+  border-color: var(--primary);
+  background: var(--surface-strong);
+  box-shadow: 0 0 0 4px var(--primary-soft);
+}
+
+.academy-login-input-wrap input::placeholder {
+  color: color-mix(in srgb,var(--text-mute) 75%,transparent);
+}
+
+.academy-login-ltr {
+  direction: ltr;
+  text-align: left;
+}
+
+.academy-login-code {
+  text-transform: uppercase;
+  letter-spacing: .055em;
+  font-weight: 700;
+}
+
+.academy-login-password {
+  padding-left: 76px !important;
+}
+
+.academy-password-toggle {
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  min-width: 62px;
+  height: 36px;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 9px;
+  background: var(--bg-soft);
+  color: var(--text-soft);
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.academy-login-submit {
+  width: 100%;
+  height: 47px;
+  margin-top: 5px;
+  border: 0;
+  border-radius: 13px;
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  box-shadow: 0 10px 24px color-mix(in srgb,var(--primary) 20%,transparent);
+  transition: .16s ease;
+}
+
+.academy-login-submit:hover {
+  transform: translateY(-1px);
+}
+
+.academy-login-submit:disabled {
+  opacity: .68;
+  transform: none;
+  cursor: wait;
+}
+
+.academy-login-message {
+  min-height: 18px;
+  margin: 9px 0 0;
+  color: var(--danger);
+  font-size: 10.5px;
+  line-height: 1.6;
+}
+
+.academy-login-security {
+  margin-top: 18px;
+  padding: 11px 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-muted);
+  color: var(--text-mute);
+  font-size: 9.5px;
+  line-height: 1.7;
+}
+
+.academy-login-security i {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 7px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+@media (max-width: 900px) {
+  .academy-login-shell {
+    align-items: start;
+    padding: 14px;
+  }
+
+  .academy-login-card {
+    width: min(690px,100%);
+    min-height: auto;
+    grid-template-columns: 1fr;
+    border-radius: 24px;
+  }
+
+  .academy-login-showcase {
+    padding: 25px;
+    border-left: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .academy-login-intro {
+    margin: 32px 0 22px;
+  }
+
+  .academy-login-panel {
+    padding: 25px;
+  }
+}
+
+@media (max-width: 620px) {
+  .academy-login-shell {
+    padding:
+      max(8px,env(safe-area-inset-top))
+      max(8px,env(safe-area-inset-right))
+      max(8px,env(safe-area-inset-bottom))
+      max(8px,env(safe-area-inset-left));
+  }
+
+  .academy-login-card {
+    border-radius: 20px;
+  }
+
+  .academy-login-showcase {
+    padding: 18px;
+  }
+
+  .academy-login-brand-mark {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+  }
+
+  .academy-login-brand-copy b {
+    font-size: 14px;
+  }
+
+  .academy-login-intro {
+    margin: 24px 0 0;
+  }
+
+  .academy-login-intro h1 {
+    margin: 13px 0 9px;
+    font-size: 29px;
+  }
+
+  .academy-login-intro p {
+    font-size: 12.5px;
+    line-height: 1.8;
+  }
+
+  .academy-login-features {
+    display: none;
+  }
+
+  .academy-login-panel {
+    padding: 18px;
+  }
+
+  .academy-login-tools {
+    margin-bottom: 20px;
+  }
+
+  .academy-login-form-head h2 {
+    font-size: 24px;
+  }
+
+  .academy-login-input-wrap input {
+    height: 49px;
+    font-size: 16px;
+  }
+
+  .academy-login-submit {
+    height: 48px;
+  }
+}
+
+@media (max-width: 380px) {
+  .academy-login-showcase,
+  .academy-login-panel {
+    padding: 15px;
+  }
+
+  .academy-login-intro h1 {
+    font-size: 26px;
+  }
+
+  .academy-login-form-head h2 {
+    font-size: 22px;
+  }
+}
+
+@media (hover:none) {
+  .academy-login-submit:hover {
+    transform: none;
+  }
+}

@@ -30,6 +30,8 @@ const UserSchema = new mongoose.Schema({
     required: true
   },
   active: { type: Boolean, default: true },
+  failedLoginAttempts: { type: Number, default: 0, select: false, min: 0 },
+  lockUntil: { type: Date, default: null, select: false },
   lastLoginAt: Date
 }, { timestamps: true });
 

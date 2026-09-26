@@ -1,9 +1,8 @@
 const AF = (() => {
-  const token = localStorage.getItem('af_token');
   let user = null;
   try { user = JSON.parse(localStorage.getItem('af_user') || 'null'); } catch {}
 
-  if (!token || !user || user.role === 'superadmin') {
+  if (!user || user.role === 'superadmin') {
     location.href = '/academy/login.html';
     return {};
   }
@@ -151,12 +150,11 @@ const AF = (() => {
 
   async function api(url, options = {}) {
     const headers = {
-      Authorization: 'Bearer ' + token,
       ...(options.body ? {'Content-Type':'application/json'} : {}),
       ...(options.headers || {})
     };
 
-    const response = await fetch(url, { ...options, headers });
+    const response = await fetch(url, { ...options, credentials: 'same-origin', headers });
 
     if (response.status === 401 || response.status === 403) {
       if (response.status === 401) {
@@ -270,10 +268,13 @@ const AF = (() => {
     overlay.onclick = closeSidebar;
     document.querySelectorAll('.academy-nav a').forEach(a => a.addEventListener('click', closeSidebar));
 
-    document.getElementById('academyLogout').onclick = () => {
+    document.getElementById('academyLogout').onclick = async () => {
+      try {
+        await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+      } catch {}
       localStorage.removeItem('af_token');
       localStorage.removeItem('af_user');
-      location.href = '/academy/login.html';
+      location.replace('/academy/login.html');
     };
 
     const modal = document.getElementById('academyModal');

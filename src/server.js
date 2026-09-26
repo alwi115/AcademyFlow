@@ -13,14 +13,46 @@ if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 64) {
 
 const app = express();
 
-app.use(helmet({ contentSecurityPolicy: false }));
+app.set('trust proxy', 1);
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      baseUri: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'"],
+      frameSrc: ["'self'", 'https://www.youtube-nocookie.com', 'https://www.youtube.com'],
+      formAction: ["'self'"]
+    }
+  },
+  crossOriginEmbedderPolicy: false,
+  referrerPolicy: { policy: 'same-origin' }
+}));
+
 app.use(cors({
   origin: (process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean),
-  credentials: false
+  credentials: true
 }));
+
 app.use(express.json({ limit: '1mb' }));
-app.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 400 }));
-app.use(express.static(path.join(__dirname, '..', 'public')));
+
+app.use(rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 400,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false
+}));
+
+app.use(express.static(path.join(__dirname, '..', 'public'), {
+  etag: true,
+  maxAge: '5m'
+}));
 
 app.get('/api/health', (req, res) => {
   res.json({
@@ -39,6 +71,7 @@ app.use('/api/live-sessions', require('./routes/live.routes'));
 app.use((err, req, res, next) => {
   console.error(err);
   const status = Number(err.status || 500);
+
   res.status(status).json({
     message: status >= 500 ? 'Internal server error' : err.message
   });

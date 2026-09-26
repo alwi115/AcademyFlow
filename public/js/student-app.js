@@ -1,12 +1,11 @@
 const StudentPortal = (() => {
-  const token = localStorage.getItem('af_token');
   let user = null;
 
   try {
     user = JSON.parse(localStorage.getItem('af_user') || 'null');
   } catch {}
 
-  if (!token || !user || user.role !== 'student') {
+  if (!user || user.role !== 'student') {
     location.href = '/academy/login.html';
     return {};
   }
@@ -93,8 +92,8 @@ const StudentPortal = (() => {
   async function api(url, options={}) {
     const response = await fetch(url,{
       ...options,
+      credentials:'same-origin',
       headers:{
-        Authorization:'Bearer '+token,
         ...(options.body ? {'Content-Type':'application/json'} : {}),
         ...(options.headers || {})
       }
@@ -208,10 +207,13 @@ const StudentPortal = (() => {
     overlay.onclick = close;
     document.querySelectorAll('.student-nav a').forEach(a => a.addEventListener('click',close));
 
-    document.getElementById('studentLogout').onclick = () => {
+    document.getElementById('studentLogout').onclick = async () => {
+      try {
+        await fetch('/api/auth/logout', { method:'POST', credentials:'same-origin' });
+      } catch {}
       localStorage.removeItem('af_token');
       localStorage.removeItem('af_user');
-      location.href = '/academy/login.html';
+      location.replace('/academy/login.html');
     };
 
     const modal = document.getElementById('studentModal');

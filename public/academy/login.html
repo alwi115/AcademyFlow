@@ -5,63 +5,134 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
   <meta name="color-scheme" content="light dark">
-  <title>دخول الأكاديمية والطلاب | AcademyFlow</title>
+  <title>تسجيل الدخول | AcademyFlow</title>
   <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/academy-login.css">
   <script src="/js/ui.js"></script>
 </head>
-<body>
-  <main class="auth-shell">
-    <section class="auth-card">
-      <aside class="auth-side">
-        <a class="brand" href="/">
-          <span class="brand-badge">AF</span>
-          <span class="brand-text"><b>AcademyFlow</b><small>ACADEMY & STUDENT PORTAL</small></span>
-        </a>
+<body class="academy-login-page">
+  <main class="academy-login-shell">
+    <section class="academy-login-card" aria-label="تسجيل الدخول إلى AcademyFlow">
+      <aside class="academy-login-showcase">
+        <div>
+          <a class="academy-login-brand" href="/">
+            <span class="academy-login-brand-mark">AF</span>
+            <span class="academy-login-brand-copy">
+              <b>AcademyFlow</b>
+              <span>ACADEMY & STUDENT PORTAL</span>
+            </span>
+          </a>
 
-        <span class="kicker auth-kicker">بوابة الأكاديمية والطلاب</span>
-        <h1>حساب واحد، والوجهة المناسبة تظهر تلقائيًا.</h1>
-        <p>استخدم كود الأكاديمية والبريد وكلمة المرور. AcademyFlow يتعرف على دور الحساب ويرسل الطالب إلى بوابة التعلم، والموظف إلى مساحة إدارة الأكاديمية.</p>
+          <div class="academy-login-intro">
+            <span class="academy-login-chip">بوابة الأكاديمية والطلاب</span>
+            <h1>ادخل إلى مساحتك بأمان.</h1>
+            <p>استخدم كود الأكاديمية والبريد وكلمة المرور. النظام يتعرف على دور حسابك ويوجهك تلقائيًا إلى لوحة الإدارة أو بوابة الطالب.</p>
+          </div>
+        </div>
 
-        <div class="auth-points">
-          <article><strong>بوابة الطالب</strong><span>الدورات والدروس والتقدم والمحاضرات والواجبات والشهادات.</span></article>
-          <article><strong>بوابة الإدارة</strong><span>إدارة الطلاب والدورات والمدفوعات وباقي عمليات الأكاديمية.</span></article>
-          <article><strong>بيانات معزولة</strong><span>كود الأكاديمية يحدد مساحة البيانات الخاصة بحسابك.</span></article>
+        <div class="academy-login-features">
+          <article class="academy-login-feature">
+            <i>AF</i>
+            <b>عزل بيانات الأكاديمية</b>
+            <span>كود الأكاديمية يحدد مساحة البيانات الخاصة بالحساب.</span>
+          </article>
+          <article class="academy-login-feature">
+            <i>12H</i>
+            <b>جلسة محمية</b>
+            <span>جلسة الدخول تحفظ في Cookie آمنة لا يقرأها JavaScript.</span>
+          </article>
+          <article class="academy-login-feature">
+            <i>5X</i>
+            <b>حماية المحاولات</b>
+            <span>المحاولات الفاشلة المتكررة تؤدي إلى إيقاف مؤقت.</span>
+          </article>
         </div>
       </aside>
 
-      <div class="auth-form-wrap">
-        <div class="auth-toolbar">
-          <a class="note-link" href="/">العودة للرئيسية</a>
-          <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="تبديل المظهر">◐</button>
+      <section class="academy-login-panel">
+        <div class="academy-login-tools">
+          <a class="academy-login-back" href="/">العودة للرئيسية</a>
+          <button class="academy-login-theme theme-toggle" type="button" onclick="toggleTheme()" aria-label="تبديل الوضع">◐</button>
         </div>
 
-        <form class="auth-form" onsubmit="login(event,'academy')">
-          <span class="kicker">Academy Sign In</span>
-          <h2>تسجيل الدخول</h2>
-          <p class="lead">أدخل بيانات حسابك، وسيتم توجيهك تلقائيًا حسب صلاحيتك.</p>
-
-          <div class="field">
-            <label>كود الأكاديمية</label>
-            <input name="academyCode" placeholder="AF-0001" autocomplete="organization" autocapitalize="characters" required>
+        <form onsubmit="login(event,'academy')" autocomplete="on">
+          <div class="academy-login-form-head">
+            <span class="academy-login-eyebrow">SECURE SIGN IN</span>
+            <h2>تسجيل الدخول</h2>
+            <p>أدخل بيانات حسابك كما وفرتها لك الأكاديمية.</p>
           </div>
 
-          <div class="field">
-            <label>البريد الإلكتروني</label>
-            <input name="email" type="email" placeholder="name@academy.com" autocomplete="email" required>
+          <div class="academy-login-field">
+            <label for="academyCode">كود الأكاديمية <small>مثال AF-0001</small></label>
+            <div class="academy-login-input-wrap">
+              <input
+                class="academy-login-ltr academy-login-code"
+                id="academyCode"
+                name="academyCode"
+                type="text"
+                autocomplete="organization"
+                autocapitalize="characters"
+                spellcheck="false"
+                maxlength="32"
+                placeholder="AF-0001"
+                required
+              >
+            </div>
           </div>
 
-          <div class="field">
-            <label>كلمة المرور</label>
-            <input name="password" type="password" placeholder="••••••••••" autocomplete="current-password" required>
+          <div class="academy-login-field">
+            <label for="academyEmail">البريد الإلكتروني</label>
+            <div class="academy-login-input-wrap">
+              <input
+                class="academy-login-ltr"
+                id="academyEmail"
+                name="email"
+                type="email"
+                inputmode="email"
+                autocomplete="email"
+                maxlength="254"
+                placeholder="name@academy.com"
+                required
+              >
+            </div>
           </div>
 
-          <button class="btn primary wide" type="submit">تسجيل الدخول</button>
-          <p id="msg" class="form-msg" aria-live="polite"></p>
+          <div class="academy-login-field">
+            <label for="academyPassword">كلمة المرور</label>
+            <div class="academy-login-input-wrap">
+              <input
+                class="academy-login-ltr academy-login-password"
+                id="academyPassword"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                maxlength="128"
+                placeholder="••••••••••••"
+                required
+              >
+              <button
+                class="academy-password-toggle"
+                id="academyPasswordToggle"
+                type="button"
+                aria-controls="academyPassword"
+                aria-pressed="false"
+              >إظهار</button>
+            </div>
+          </div>
+
+          <button class="academy-login-submit" type="submit">دخول إلى AcademyFlow</button>
+          <p class="academy-login-message" id="msg" aria-live="polite"></p>
         </form>
-      </div>
+
+        <div class="academy-login-security">
+          <i>✓</i>
+          <span>كلمة المرور لا تُخزن كنص صريح، والجلسة الجديدة تستخدم Cookie من نوع HttpOnly وSameSite لحماية التوكن من الوصول عبر JavaScript.</span>
+        </div>
+      </section>
     </section>
   </main>
 
+  <script src="/js/academy-login.js"></script>
   <script src="/js/auth.js"></script>
 </body>
 </html>

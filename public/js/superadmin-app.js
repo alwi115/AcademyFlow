@@ -1,12 +1,11 @@
 const SA = (() => {
-  const token = localStorage.getItem('af_token');
   let user = null;
 
   try {
     user = JSON.parse(localStorage.getItem('af_user') || 'null');
   } catch {}
 
-  if (!token || !user || user.role !== 'superadmin') {
+  if (!user || user.role !== 'superadmin') {
     location.href = '/owner/login.html';
     return {};
   }
@@ -87,8 +86,8 @@ const SA = (() => {
   async function api(url, options = {}) {
     const response = await fetch(url,{
       ...options,
+      credentials:'same-origin',
       headers:{
-        Authorization:'Bearer '+token,
         ...(options.body ? {'Content-Type':'application/json'} : {}),
         ...(options.headers || {})
       }
@@ -214,10 +213,13 @@ const SA = (() => {
     overlay.onclick = closeMenu;
     document.querySelectorAll('.sa-nav a').forEach(a => a.addEventListener('click',closeMenu));
 
-    document.getElementById('saLogout').onclick = () => {
+    document.getElementById('saLogout').onclick = async () => {
+      try {
+        await fetch('/api/auth/logout', { method:'POST', credentials:'same-origin' });
+      } catch {}
       localStorage.removeItem('af_token');
       localStorage.removeItem('af_user');
-      location.href = '/owner/login.html';
+      location.replace('/owner/login.html');
     };
 
     const modal = document.getElementById('saModal');
