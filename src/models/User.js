@@ -33,7 +33,15 @@ const UserSchema = new mongoose.Schema({
   active: { type: Boolean, default: true },
   failedLoginAttempts: { type: Number, default: 0, select: false, min: 0 },
   lockUntil: { type: Date, default: null, select: false },
-  lastLoginAt: Date
+  lastLoginAt: Date,
+  legalAcceptance: {
+    termsVersion: { type: String, default: '' },
+    privacyVersion: { type: String, default: '' },
+    dpaVersion: { type: String, default: '' },
+    acceptedAt: { type: Date, default: null },
+    acceptedIp: { type: String, default: '', maxlength: 100 },
+    acceptedUserAgent: { type: String, default: '', maxlength: 500 }
+  }
 }, { timestamps: true });
 
 UserSchema.index({ academyId: 1, email: 1 }, { unique: true });
