@@ -171,6 +171,11 @@ const AF = (() => {
       }
     }
 
+    if (response.status === 428 && user?.role === 'owner') {
+      location.href = '/academy/legal-acceptance.html';
+      throw new Error('Legal acceptance required');
+    }
+
     const text = await response.text();
     let data = null;
     try { data = text ? JSON.parse(text) : null; } catch { data = text; }
