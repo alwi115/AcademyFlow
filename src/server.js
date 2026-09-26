@@ -22,7 +22,8 @@ app.use(helmet({
       baseUri: ["'self'"],
       objectSrc: ["'none'"],
       frameAncestors: ["'none'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      scriptSrcAttr: ["'none'"],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
       imgSrc: ["'self'", 'data:', 'https:'],
@@ -53,7 +54,14 @@ app.use(rateLimit({
 
 app.use(express.static(path.join(__dirname, '..', 'public'), {
   etag: true,
-  maxAge: '5m'
+  maxAge: '5m',
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-store, max-age=0');
+    } else if (filePath.endsWith('.js')) {
+      res.setHeader('Cache-Control', 'no-cache, max-age=0, must-revalidate');
+    }
+  }
 }));
 
 app.get('/api/health', (req, res) => {

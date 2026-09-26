@@ -1,14 +1,24 @@
-async function login(e, kind){
-  e.preventDefault();
+async function academyFlowLogin(event, kind){
+  event.preventDefault();
 
-  const form = e.currentTarget;
-  const btn = form.querySelector('button[type="submit"]');
-  const msg = document.getElementById('msg');
-  const original = btn.textContent;
+  const form = event.currentTarget || event.target;
+  if (!form || form.dataset.submitting === '1') return;
 
-  msg.textContent = '';
-  btn.disabled = true;
-  btn.textContent = 'جاري التحقق...';
+  const button = form.querySelector('button[type="submit"]');
+  const message = form.querySelector('#msg') || document.getElementById('msg');
+  const originalText = button ? button.textContent : '';
+
+  form.dataset.submitting = '1';
+
+  if (message) {
+    message.textContent = '';
+    message.style.color = '';
+  }
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'جاري التحقق...';
+  }
 
   try {
     const body = Object.fromEntries(new FormData(form).entries());
@@ -21,6 +31,7 @@ async function login(e, kind){
     const response = await fetch('/api/auth/login', {
       method: 'POST',
       credentials: 'same-origin',
+      cache: 'no-store',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
@@ -31,36 +42,59 @@ async function login(e, kind){
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      msg.textContent = data.message || 'تعذر تسجيل الدخول';
+      if (message) {
+        message.textContent = data.message || 'تعذر تسجيل الدخول';
+      }
       return;
     }
 
     localStorage.removeItem('af_token');
     localStorage.setItem('af_user', JSON.stringify(data.user));
 
-    if (data.user.role === 'superadmin') {
-      location.replace('/superadmin/dashboard.html');
-    } else if (data.user.role === 'student') {
-      location.replace('/student/dashboard.html');
-    } else if (data.user.role === 'instructor') {
-      location.replace('/instructor/dashboard.html');
-    } else {
-      location.replace('/academy/dashboard.html');
+    const destinations = {
+      superadmin: '/superadmin/dashboard.html',
+      student: '/student/dashboard.html',
+      instructor: '/instructor/dashboard.html'
+    };
+
+    location.replace(destinations[data.user.role] || '/academy/dashboard.html');
+  } catch (error) {
+    console.error('AcademyFlow login error:', error);
+    if (message) {
+      message.textContent = 'تعذر الاتصال بالخادم، حاول مرة أخرى.';
     }
-  } catch {
-    msg.textContent = 'تعذر الاتصال بالخادم، حاول مرة أخرى.';
   } finally {
-    btn.disabled = false;
-    btn.textContent = original;
+    form.dataset.submitting = '0';
+
+    if (button) {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
   }
 }
+
+window.login = academyFlowLogin;
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('form[data-login-kind]').forEach(form => {
+    if (form.dataset.loginBound === '1') return;
+
+    form.dataset.loginBound = '1';
+    form.addEventListener('submit', event => {
+      academyFlowLogin(event, form.dataset.loginKind || 'academy');
+    });
+  });
+});
 
 async function logoutSession(destination){
   try {
     await fetch('/api/auth/logout', {
       method: 'POST',
       credentials: 'same-origin',
-      headers: { 'Accept': 'application/json' }
+      cache: 'no-store',
+      headers: {
+        'Accept': 'application/json'
+      }
     });
   } catch {}
 
