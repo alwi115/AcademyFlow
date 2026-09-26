@@ -2,6 +2,18 @@ const router = require('express').Router();
 const rateLimit = require('express-rate-limit');
 const c = require('../controllers/public.controller');
 
+function requireSameOrigin(req, res, next) {
+  const origin = String(req.get('origin') || '').trim();
+  if (!origin) return next();
+
+  const requestOrigin = `${req.protocol}://${req.get('host')}`;
+  if (origin !== requestOrigin) {
+    return res.status(403).json({ message: 'Cross-site request blocked' });
+  }
+
+  next();
+}
+
 const privacyLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   limit: 5,
@@ -13,6 +25,6 @@ const privacyLimiter = rateLimit({
 });
 
 router.get('/legal-config', c.legalConfig);
-router.post('/privacy-requests', privacyLimiter, c.createPrivacyRequest);
+router.post('/privacy-requests', requireSameOrigin, privacyLimiter, c.createPrivacyRequest);
 
 module.exports = router;
