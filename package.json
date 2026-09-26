@@ -6,7 +6,8 @@
   "main": "src/server.js",
   "scripts": {
     "dev": "nodemon src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "test:tenant-isolation": "node scripts/tenant-isolation-test.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
