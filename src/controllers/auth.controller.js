@@ -28,7 +28,8 @@ function sign(user) {
     {
       sub: user._id.toString(),
       role: user.role,
-      academyId: user.academyId ? user.academyId.toString() : null
+      academyId: user.academyId ? user.academyId.toString() : null,
+      branchId: user.branchId ? user.branchId.toString() : null
     },
     process.env.JWT_SECRET,
     {
@@ -46,6 +47,7 @@ function publicUser(user, academy = null) {
     username: user.username || null,
     role: user.role,
     academyId: user.academyId,
+    branchId: user.branchId || null,
     academyCode: academy?.code || null,
     academyName: academy?.name || null
   };
