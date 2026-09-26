@@ -36,7 +36,14 @@ function mockResponse() {
 
 async function callController(fn, req) {
   const res = mockResponse();
-  await fn(req, res);
+
+  try {
+    await fn(req, res);
+  } catch (err) {
+    if (!err?.status) throw err;
+    res.status(err.status).json({ message: err.message });
+  }
+
   return res;
 }
 
