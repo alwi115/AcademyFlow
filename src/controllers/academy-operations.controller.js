@@ -121,13 +121,22 @@ async function updateCourse(req, res) {
 }
 
 async function updateGroup(req, res) {
-  const row = await Group.findOne({
+  const query = {
     _id: req.params.id,
     academyId: req.academyId
-  });
+  };
+
+  if (req.user.role === 'branch_manager') {
+    if (!req.user.branchId) {
+      return res.status(403).json({ message: 'مدير الفرع غير مرتبط بفرع' });
+    }
+    query.branchId = req.user.branchId;
+  }
+
+  const row = await Group.findOne(query);
 
   if (!row) {
-    return res.status(404).json({ message: 'المجموعة غير موجودة' });
+    return res.status(404).json({ message: 'المجموعة غير موجودة أو خارج نطاق فرعك' });
   }
 
   if (req.body.courseId !== undefined) {
@@ -144,7 +153,14 @@ async function updateGroup(req, res) {
   }
 
   if (req.body.branchId !== undefined) {
-    if (req.body.branchId) {
+    if (req.user.role === 'branch_manager') {
+      if (String(req.body.branchId || '') !== String(req.user.branchId || '')) {
+        return res.status(403).json({
+          message: 'مدير الفرع لا يستطيع نقل المجموعة إلى فرع آخر'
+        });
+      }
+      row.branchId = req.user.branchId;
+    } else if (req.body.branchId) {
       const branch = await Branch.findOne({
         _id: req.body.branchId,
         academyId: req.academyId
