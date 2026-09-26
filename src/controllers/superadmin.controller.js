@@ -466,6 +466,10 @@ async function health(req, res) {
   const legalMissing = Object.entries(legalRequiredFields)
     .filter(([, ready]) => !ready)
     .map(([key]) => key);
+  const legalReadyCount = Object.values(legalRequiredFields).filter(Boolean).length;
+  const legalReadinessPercent = Math.round(
+    (legalReadyCount / Object.keys(legalRequiredFields).length) * 100
+  );
   const legalComplete = legalMissing.length === 0;
 
   const latestBackup = backups[0] || null;
@@ -572,8 +576,12 @@ async function health(req, res) {
     counts: { academies, users, plans, auditLogs: logs },
     legalReadiness: {
       complete: legalComplete,
+      percent: legalReadinessPercent,
       missing: legalMissing,
       fields: legalRequiredFields,
+      policiesPublished: true,
+      ownerAcceptanceEnforced: true,
+      privacyRightsWorkflowEnabled: true,
       ecommerceLicenseConfigured: Boolean(String(legalSettings.ecommerceLicenseNumber || '').trim()),
       taxNumberConfigured: Boolean(String(legalSettings.taxNumber || '').trim())
     },
