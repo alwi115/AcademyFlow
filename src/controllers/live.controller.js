@@ -2,7 +2,10 @@ const LiveSession = require('../models/LiveSession');
 const Academy = require('../models/Academy');
 const Course = require('../models/Course');
 const User = require('../models/User');
+const Group = require('../models/Group');
+const LiveSeries = require('../models/LiveSeries');
 const zoom = require('../services/zoom.service');
+const { createRecurringSeries, cancelFutureSeries } = require('../services/live-series.service');
 
 function clean(value) {
   return typeof value === 'string' ? value.trim() : value;
@@ -33,7 +36,11 @@ async function createLiveSession(req, res) {
     courseId,
     attendanceEnabled = true,
     lateAfterMinutes = 10,
-    joinWindowBeforeMinutes = 15
+    joinWindowBeforeMinutes = 15,
+    groupId,
+    reminderMinutes = 5,
+    notifyInApp = true,
+    notifyEmail = true
   } = req.body;
 
   if (req.user.role === 'instructor') {
@@ -52,9 +59,20 @@ async function createLiveSession(req, res) {
     ownedCourse(academyId, courseId)
   ]);
 
+  let group = null;
+  if (groupId) {
+    group = await Group.findOne({
+      _id: groupId,
+      academyId,
+      courseId: courseId || null,
+      status: { $ne: 'cancelled' }
+    });
+  }
+
   if (!academy) return res.status(404).json({ message: 'الأكاديمية غير موجودة' });
   if (!instructor) return res.status(400).json({ message: 'المدرب المحدد غير صحيح' });
   if (courseId && !course) return res.status(400).json({ message: 'الدورة المحددة غير صحيحة' });
+  if (groupId && !group) return res.status(400).json({ message: 'المجموعة المحددة لا تتبع هذه الدورة' });
 
   if (
     req.user.role === 'instructor' &&
@@ -86,6 +104,7 @@ async function createLiveSession(req, res) {
   const session = await LiveSession.create({
     academyId,
     courseId: courseId || null,
+    groupId: group?._id || null,
     title: clean(title),
     description: clean(description),
     instructorId,
@@ -97,7 +116,10 @@ async function createLiveSession(req, res) {
     zoomPassword: meeting.password,
     attendanceEnabled: attendanceEnabled !== false,
     lateAfterMinutes: Math.max(0, Number(lateAfterMinutes ?? 10)),
-    joinWindowBeforeMinutes: Math.max(0, Number(joinWindowBeforeMinutes ?? 15))
+    joinWindowBeforeMinutes: Math.max(0, Number(joinWindowBeforeMinutes ?? 15)),
+    reminderMinutes: Math.max(0, Math.min(1440, Number(reminderMinutes ?? 5))),
+    notifyInApp: notifyInApp !== false,
+    notifyEmail: notifyEmail !== false
   });
 
   res.status(201).json({
@@ -119,6 +141,8 @@ async function listLiveSessions(req, res) {
 
   const rows = await LiveSession.find(query)
     .populate('courseId', 'title code')
+    .populate('groupId', 'name')
+    .populate('seriesId', 'title startDate endDate weekdays time')
     .populate('instructorId', 'name email')
     .sort({ startAt: 1 });
 
@@ -127,6 +151,9 @@ async function listLiveSessions(req, res) {
     title: x.title,
     description: x.description,
     courseId: x.courseId,
+    groupId: x.groupId,
+    seriesId: x.seriesId,
+    sequenceNumber: x.sequenceNumber,
     instructorId: x.instructorId,
     startAt: x.startAt,
     durationMinutes: x.durationMinutes,
@@ -136,6 +163,11 @@ async function listLiveSessions(req, res) {
     provider: x.provider,
     zoomMeetingId: x.zoomMeetingId,
     zoomJoinUrl: x.zoomJoinUrl,
+    reminderMinutes: x.reminderMinutes,
+    notifyInApp: x.notifyInApp,
+    notifyEmail: x.notifyEmail,
+    reminderCompletedAt: x.reminderCompletedAt,
+    reminderStats: x.reminderStats,
     status: x.status,
     createdAt: x.createdAt
   })));
@@ -160,6 +192,7 @@ async function updateLiveSession(req, res) {
   const academy = await Academy.findById(req.academyId).select('timezone');
 
   let nextInstructorId = row.instructorId;
+  let nextGroupId = row.groupId;
   if (req.body.instructorId !== undefined && req.user.role !== 'instructor') {
     if (!req.body.instructorId) {
       return res.status(400).json({ message: 'يجب تحديد مدرب للمحاضرة' });
@@ -188,8 +221,36 @@ async function updateLiveSession(req, res) {
       }
 
       nextCourseId = course._id;
+
+      if (nextGroupId) {
+        const stillValid = await Group.exists({
+          _id: nextGroupId,
+          academyId: req.academyId,
+          courseId: nextCourseId
+        });
+        if (!stillValid) nextGroupId = null;
+      }
     } else {
       nextCourseId = null;
+      nextGroupId = null;
+    }
+  }
+
+  if (req.body.groupId !== undefined) {
+    if (req.body.groupId) {
+      const group = await Group.findOne({
+        _id: req.body.groupId,
+        academyId: req.academyId,
+        courseId: nextCourseId,
+        status: { $ne: 'cancelled' }
+      });
+
+      if (!group) {
+        return res.status(400).json({ message: 'المجموعة المحددة لا تتبع هذه الدورة' });
+      }
+      nextGroupId = group._id;
+    } else {
+      nextGroupId = null;
     }
   }
 
@@ -237,6 +298,23 @@ async function updateLiveSession(req, res) {
       row.zoomPassword = meeting.password;
     }
   } else if (
+    !row.zoomMeetingId &&
+    nextStatus === 'scheduled' &&
+    zoom.configured()
+  ) {
+    const meeting = await zoom.createMeeting({
+      topic: nextTitle,
+      startTime: nextStartAt,
+      duration: Number(nextDuration),
+      timezone: academy?.timezone || 'Asia/Muscat'
+    });
+
+    row.zoomMeetingId = meeting.meetingId;
+    row.zoomJoinUrl = meeting.joinUrl;
+    row.zoomStartUrl = meeting.startUrl;
+    row.zoomPassword = meeting.password;
+    row.zoomProvisionError = '';
+  } else if (
     row.zoomMeetingId &&
     (
       req.body.title !== undefined ||
@@ -257,6 +335,7 @@ async function updateLiveSession(req, res) {
   row.durationMinutes = Number(nextDuration);
   row.status = nextStatus;
   row.courseId = nextCourseId;
+  row.groupId = nextGroupId;
   row.instructorId = nextInstructorId;
 
   if (req.body.description !== undefined) row.description = clean(req.body.description);
@@ -268,9 +347,28 @@ async function updateLiveSession(req, res) {
     row.joinWindowBeforeMinutes = Math.max(0, Number(req.body.joinWindowBeforeMinutes || 0));
   }
 
+  if (req.body.reminderMinutes !== undefined) {
+    row.reminderMinutes = Math.max(0, Math.min(1440, Number(req.body.reminderMinutes || 0)));
+    row.reminderCompletedAt = null;
+    row.reminderClaimedAt = null;
+  }
+
+  if (req.body.notifyInApp !== undefined) {
+    row.notifyInApp = Boolean(req.body.notifyInApp);
+    row.reminderCompletedAt = null;
+    row.reminderClaimedAt = null;
+  }
+
+  if (req.body.notifyEmail !== undefined) {
+    row.notifyEmail = Boolean(req.body.notifyEmail);
+    row.reminderCompletedAt = null;
+    row.reminderClaimedAt = null;
+  }
+
   await row.save();
   await row.populate([
     { path:'courseId', select:'title code' },
+    { path:'groupId', select:'name' },
     { path:'instructorId', select:'name email' }
   ]);
 
@@ -279,20 +377,110 @@ async function updateLiveSession(req, res) {
     title: row.title,
     description: row.description,
     courseId: row.courseId,
+    groupId: row.groupId,
     instructorId: row.instructorId,
     startAt: row.startAt,
     durationMinutes: row.durationMinutes,
     attendanceEnabled: row.attendanceEnabled,
     lateAfterMinutes: row.lateAfterMinutes,
     joinWindowBeforeMinutes: row.joinWindowBeforeMinutes,
+    reminderMinutes: row.reminderMinutes,
+    notifyInApp: row.notifyInApp,
+    notifyEmail: row.notifyEmail,
     zoomMeetingId: row.zoomMeetingId,
     zoomJoinUrl: row.zoomJoinUrl,
     status: row.status
   });
 }
 
+
+async function createLiveSeries(req, res) {
+  const {
+    courseId, groupId, title, startDate, endDate, weekdays, time
+  } = req.body;
+
+  if (!courseId || !clean(title) || !startDate || !endDate || !time) {
+    return res.status(400).json({
+      message: 'الدورة والعنوان وتاريخ البداية والنهاية والوقت مطلوبة'
+    });
+  }
+
+  const [academy, course] = await Promise.all([
+    Academy.findById(req.academyId),
+    ownedCourse(req.academyId, courseId)
+  ]);
+
+  if (!academy || !course) {
+    return res.status(400).json({ message: 'الأكاديمية أو الدورة غير صحيحة' });
+  }
+
+  const instructorId = req.body.instructorId || course.instructorId;
+  const instructor = await ownedInstructor(req.academyId, instructorId);
+
+  if (!instructor) {
+    return res.status(400).json({ message: 'حدد مدربًا صحيحًا للجدول' });
+  }
+
+  let group = null;
+  if (groupId) {
+    group = await Group.findOne({
+      _id: groupId,
+      academyId: req.academyId,
+      courseId: course._id,
+      status: { $ne: 'cancelled' }
+    });
+
+    if (!group) {
+      return res.status(400).json({ message: 'المجموعة المحددة لا تتبع هذه الدورة' });
+    }
+  }
+
+  const result = await createRecurringSeries({
+    academy,
+    course,
+    group,
+    instructorId: instructor._id,
+    body: req.body
+  });
+
+  res.status(201).json({
+    series: result.series,
+    createdSessions: result.sessions.length,
+    zoomFailures: result.zoomFailures
+  });
+}
+
+async function listLiveSeries(req, res) {
+  const rows = await LiveSeries.find({
+    academyId: req.academyId
+  })
+    .populate('courseId', 'title code')
+    .populate('groupId', 'name')
+    .populate('instructorId', 'name email')
+    .sort({ createdAt: -1 });
+
+  res.json(rows);
+}
+
+async function cancelLiveSeriesFuture(req, res) {
+  const series = await LiveSeries.findOne({
+    _id: req.params.seriesId,
+    academyId: req.academyId
+  });
+
+  if (!series) {
+    return res.status(404).json({ message: 'الجدول المتكرر غير موجود' });
+  }
+
+  const cancelled = await cancelFutureSeries({ series });
+  res.json({ ok:true, cancelled });
+}
+
 module.exports = {
   createLiveSession,
+  createLiveSeries,
+  listLiveSeries,
+  cancelLiveSeriesFuture,
   listLiveSessions,
   updateLiveSession
 };

@@ -34,6 +34,15 @@ async function joinSession(req, res) {
     return res.status(403).json({ message: 'هذه المحاضرة ليست ضمن دوراتك' });
   }
 
+  if (
+    session.groupId &&
+    String(enrollment.groupId || '') !== String(session.groupId)
+  ) {
+    return res.status(403).json({
+      message: 'هذه المحاضرة مخصصة لمجموعة أخرى'
+    });
+  }
+
   const now = new Date();
   const start = new Date(session.startAt);
   const openAt = new Date(

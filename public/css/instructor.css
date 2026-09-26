@@ -49,3 +49,11 @@ body.instructor-app{min-width:320px;overflow-x:hidden;font-size:14px}
   .instructor-actions{width:100%;grid-template-columns:repeat(2,minmax(0,1fr))}
   .instructor-actions .btn{width:100%;min-height:38px}
 }
+
+/* Recurring live schedule */
+.instructor-weekdays{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:9px}
+.instructor-weekdays label{position:relative;cursor:pointer}
+.instructor-weekdays input{position:absolute;opacity:0;pointer-events:none}
+.instructor-weekdays span{min-height:38px;padding:6px;display:grid;place-items:center;text-align:center;border:1px solid var(--line);border-radius:10px;background:var(--surface-strong);font-size:8.5px;transition:.18s}
+.instructor-weekdays input:checked+span{border-color:var(--primary);background:var(--primary-soft);color:var(--primary);font-weight:800}
+@media(max-width:640px){.instructor-weekdays{grid-template-columns:repeat(4,minmax(0,1fr))}.instructor-weekdays span{font-size:10px}}

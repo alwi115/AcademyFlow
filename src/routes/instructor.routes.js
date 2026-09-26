@@ -34,6 +34,9 @@ router.get('/notifications', teaching.notifications);
 router.post('/notifications', teaching.createNotification);
 
 router.get('/live', live.liveSessions);
+router.get('/live-series', live.listLiveSeries);
+router.post('/live-series', live.createLiveSeries);
+router.patch('/live-series/:seriesId/cancel-future', live.cancelLiveSeriesFuture);
 router.post('/live', live.createLiveSession);
 router.patch('/live/:id', live.updateLiveSession);
 router.get('/live/:id/start', live.liveStart);

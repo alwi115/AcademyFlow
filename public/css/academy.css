@@ -1484,3 +1484,11 @@ body.academy-app {
   .academy-row-actions .btn,.academy-row-actions a.btn{width:100%;min-height:38px}
   .academy-details-grid{grid-template-columns:1fr}
 }
+
+/* Recurring live schedule */
+.academy-weekdays{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:9px}
+.academy-weekdays label{position:relative;cursor:pointer}
+.academy-weekdays input{position:absolute;opacity:0;pointer-events:none}
+.academy-weekdays span{min-height:38px;padding:6px;display:grid;place-items:center;text-align:center;border:1px solid var(--line);border-radius:10px;background:var(--surface-strong);font-size:8.5px;transition:.18s}
+.academy-weekdays input:checked+span{border-color:var(--primary);background:var(--primary-soft);color:var(--primary);font-weight:800}
+@media(max-width:640px){.academy-weekdays{grid-template-columns:repeat(4,minmax(0,1fr))}.academy-weekdays span{font-size:10px}}

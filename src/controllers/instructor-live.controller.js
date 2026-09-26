@@ -2,7 +2,10 @@ const Academy = require('../models/Academy');
 const Enrollment = require('../models/Enrollment');
 const LiveSession = require('../models/LiveSession');
 const LiveAttendance = require('../models/LiveAttendance');
+const LiveSeries = require('../models/LiveSeries');
+const Group = require('../models/Group');
 const zoom = require('../services/zoom.service');
+const { createRecurringSeries, cancelFutureSeries } = require('../services/live-series.service');
 const {
   assertCourse,
   assertStudentEnrollment
@@ -18,6 +21,8 @@ async function liveSessions(req, res) {
     instructorId: req.user.sub
   })
     .populate('courseId', 'title code')
+    .populate('groupId', 'name')
+    .populate('seriesId', 'title startDate endDate weekdays time')
     .sort({ startAt: -1 });
 
   res.json(rows.map(row => ({
@@ -25,11 +30,19 @@ async function liveSessions(req, res) {
     title: row.title,
     description: row.description,
     course: row.courseId,
+    group: row.groupId,
+    series: row.seriesId,
+    sequenceNumber: row.sequenceNumber,
     startAt: row.startAt,
     durationMinutes: row.durationMinutes,
     attendanceEnabled: row.attendanceEnabled,
     lateAfterMinutes: row.lateAfterMinutes,
     joinWindowBeforeMinutes: row.joinWindowBeforeMinutes,
+    reminderMinutes: row.reminderMinutes,
+    notifyInApp: row.notifyInApp,
+    notifyEmail: row.notifyEmail,
+    reminderCompletedAt: row.reminderCompletedAt,
+    reminderStats: row.reminderStats,
     zoomMeetingId: row.zoomMeetingId,
     zoomReady: Boolean(row.zoomJoinUrl),
     hostReady: Boolean(row.zoomStartUrl),
@@ -39,8 +52,9 @@ async function liveSessions(req, res) {
 
 async function createLiveSession(req, res) {
   const {
-    courseId, title, description, startAt, durationMinutes,
-    attendanceEnabled, lateAfterMinutes, joinWindowBeforeMinutes
+    courseId, groupId, title, description, startAt, durationMinutes,
+    attendanceEnabled, lateAfterMinutes, joinWindowBeforeMinutes,
+    reminderMinutes, notifyInApp, notifyEmail
   } = req.body;
 
   if (!courseId || !clean(title) || !startAt) {
@@ -49,6 +63,20 @@ async function createLiveSession(req, res) {
 
   const course = await assertCourse(req, courseId);
   const academy = await Academy.findById(req.academyId).select('timezone');
+
+  let group = null;
+  if (groupId) {
+    group = await Group.findOne({
+      _id: groupId,
+      academyId: req.academyId,
+      courseId: course._id,
+      status: { $ne: 'cancelled' }
+    });
+
+    if (!group) {
+      return res.status(400).json({ message: 'المجموعة المحددة لا تتبع هذه الدورة' });
+    }
+  }
 
   let meeting = {
     meetingId: '',
@@ -69,6 +97,7 @@ async function createLiveSession(req, res) {
   const row = await LiveSession.create({
     academyId: req.academyId,
     courseId: course._id,
+    groupId: group?._id || null,
     title: clean(title),
     description: clean(description),
     instructorId: req.user.sub,
@@ -80,14 +109,18 @@ async function createLiveSession(req, res) {
     zoomPassword: meeting.password,
     attendanceEnabled: attendanceEnabled !== false,
     lateAfterMinutes: Math.max(0, Number(lateAfterMinutes ?? 10)),
-    joinWindowBeforeMinutes: Math.max(0, Number(joinWindowBeforeMinutes ?? 15))
+    joinWindowBeforeMinutes: Math.max(0, Number(joinWindowBeforeMinutes ?? 15)),
+    reminderMinutes: Math.max(0, Math.min(1440, Number(reminderMinutes ?? 5))),
+    notifyInApp: notifyInApp !== false,
+    notifyEmail: notifyEmail !== false
   });
 
   res.status(201).json({
     id: row._id,
     title: row.title,
     startAt: row.startAt,
-    zoomReady: Boolean(row.zoomJoinUrl)
+    zoomReady: Boolean(row.zoomJoinUrl),
+    group: group ? { _id: group._id, name: group.name } : null
   });
 }
 
@@ -121,12 +154,15 @@ async function liveAttendance(req, res) {
     return res.status(404).json({ message: 'المحاضرة غير موجودة' });
   }
 
+  const enrollmentFilter = {
+    academyId: req.academyId,
+    courseId: session.courseId._id,
+    status: { $in: ['active','paused','completed'] }
+  };
+  if (session.groupId) enrollmentFilter.groupId = session.groupId;
+
   const [enrollments, attendanceRows] = await Promise.all([
-    Enrollment.find({
-      academyId: req.academyId,
-      courseId: session.courseId._id,
-      status: { $in: ['active','paused','completed'] }
-    })
+    Enrollment.find(enrollmentFilter)
       .populate('studentId', 'name email')
       .populate('groupId', 'name'),
     LiveAttendance.find({
@@ -193,6 +229,15 @@ async function updateLiveAttendance(req, res) {
     session.courseId
   );
 
+  if (
+    session.groupId &&
+    String(enrollment.groupId || '') !== String(session.groupId)
+  ) {
+    return res.status(400).json({
+      message: 'الطالب ليس ضمن مجموعة هذه المحاضرة'
+    });
+  }
+
   const attendanceStatus = req.body.attendanceStatus;
 
   if (!['present','late','absent','excused'].includes(attendanceStatus)) {
@@ -240,6 +285,7 @@ async function updateLiveSession(req, res) {
   const academy = await Academy.findById(req.academyId).select('timezone');
 
   let nextCourseId = row.courseId;
+  let nextGroupId = row.groupId;
 
   if (req.body.courseId !== undefined) {
     if (!req.body.courseId) {
@@ -248,6 +294,33 @@ async function updateLiveSession(req, res) {
 
     const course = await assertCourse(req, req.body.courseId);
     nextCourseId = course._id;
+
+    if (nextGroupId) {
+      const stillValid = await Group.exists({
+        _id: nextGroupId,
+        academyId: req.academyId,
+        courseId: nextCourseId
+      });
+      if (!stillValid) nextGroupId = null;
+    }
+  }
+
+  if (req.body.groupId !== undefined) {
+    if (req.body.groupId) {
+      const group = await Group.findOne({
+        _id: req.body.groupId,
+        academyId: req.academyId,
+        courseId: nextCourseId,
+        status: { $ne: 'cancelled' }
+      });
+
+      if (!group) {
+        return res.status(400).json({ message: 'المجموعة المحددة لا تتبع هذه الدورة' });
+      }
+      nextGroupId = group._id;
+    } else {
+      nextGroupId = null;
+    }
   }
 
   const previousStatus = row.status;
@@ -300,6 +373,23 @@ async function updateLiveSession(req, res) {
       row.zoomPassword = meeting.password;
     }
   } else if (
+    !row.zoomMeetingId &&
+    nextStatus === 'scheduled' &&
+    zoom.configured()
+  ) {
+    const meeting = await zoom.createMeeting({
+      topic: nextTitle,
+      startTime: nextStartAt,
+      duration: Number(nextDuration),
+      timezone: academy?.timezone || 'Asia/Muscat'
+    });
+
+    row.zoomMeetingId = meeting.meetingId;
+    row.zoomJoinUrl = meeting.joinUrl;
+    row.zoomStartUrl = meeting.startUrl;
+    row.zoomPassword = meeting.password;
+    row.zoomProvisionError = '';
+  } else if (
     row.zoomMeetingId &&
     (
       req.body.title !== undefined ||
@@ -319,6 +409,7 @@ async function updateLiveSession(req, res) {
   row.startAt = nextStartAt;
   row.durationMinutes = nextDuration;
   row.courseId = nextCourseId;
+  row.groupId = nextGroupId;
   row.status = nextStatus;
 
   if (req.body.description !== undefined) {
@@ -340,19 +431,41 @@ async function updateLiveSession(req, res) {
     );
   }
 
+  if (req.body.reminderMinutes !== undefined) {
+    row.reminderMinutes = Math.max(0, Math.min(1440, Number(req.body.reminderMinutes || 0)));
+    row.reminderCompletedAt = null;
+    row.reminderClaimedAt = null;
+  }
+
+  if (req.body.notifyInApp !== undefined) {
+    row.notifyInApp = Boolean(req.body.notifyInApp);
+    row.reminderCompletedAt = null;
+    row.reminderClaimedAt = null;
+  }
+
+  if (req.body.notifyEmail !== undefined) {
+    row.notifyEmail = Boolean(req.body.notifyEmail);
+    row.reminderCompletedAt = null;
+    row.reminderClaimedAt = null;
+  }
+
   await row.save();
-  await row.populate('courseId', 'title code');
+  await row.populate([{ path:'courseId', select:'title code' }, { path:'groupId', select:'name' }]);
 
   res.json({
     id: row._id,
     title: row.title,
     description: row.description,
     course: row.courseId,
+    group: row.groupId,
     startAt: row.startAt,
     durationMinutes: row.durationMinutes,
     attendanceEnabled: row.attendanceEnabled,
     lateAfterMinutes: row.lateAfterMinutes,
     joinWindowBeforeMinutes: row.joinWindowBeforeMinutes,
+    reminderMinutes: row.reminderMinutes,
+    notifyInApp: row.notifyInApp,
+    notifyEmail: row.notifyEmail,
     zoomMeetingId: row.zoomMeetingId,
     zoomReady: Boolean(row.zoomJoinUrl),
     hostReady: Boolean(row.zoomStartUrl),
@@ -360,8 +473,90 @@ async function updateLiveSession(req, res) {
   });
 }
 
+
+async function createLiveSeries(req, res) {
+  const {
+    courseId, groupId, title, startDate, endDate, weekdays, time
+  } = req.body;
+
+  if (!courseId || !clean(title) || !startDate || !endDate || !time) {
+    return res.status(400).json({
+      message: 'الدورة والعنوان وتاريخ البداية والنهاية والوقت مطلوبة'
+    });
+  }
+
+  const [course, academy] = await Promise.all([
+    assertCourse(req, courseId),
+    Academy.findById(req.academyId)
+  ]);
+
+  let group = null;
+  if (groupId) {
+    group = await Group.findOne({
+      _id: groupId,
+      academyId: req.academyId,
+      courseId: course._id,
+      status: { $ne: 'cancelled' }
+    });
+
+    if (!group) {
+      return res.status(400).json({ message: 'المجموعة المحددة لا تتبع هذه الدورة' });
+    }
+  }
+
+  const result = await createRecurringSeries({
+    academy,
+    course,
+    group,
+    instructorId: req.user.sub,
+    body: req.body
+  });
+
+  res.status(201).json({
+    series: result.series,
+    createdSessions: result.sessions.length,
+    zoomFailures: result.zoomFailures,
+    sessions: result.sessions.map(row => ({
+      id: row._id,
+      title: row.title,
+      startAt: row.startAt,
+      zoomReady: Boolean(row.zoomJoinUrl)
+    }))
+  });
+}
+
+async function listLiveSeries(req, res) {
+  const rows = await LiveSeries.find({
+    academyId: req.academyId,
+    instructorId: req.user.sub
+  })
+    .populate('courseId', 'title code')
+    .populate('groupId', 'name')
+    .sort({ createdAt: -1 });
+
+  res.json(rows);
+}
+
+async function cancelLiveSeriesFuture(req, res) {
+  const series = await LiveSeries.findOne({
+    _id: req.params.seriesId,
+    academyId: req.academyId,
+    instructorId: req.user.sub
+  });
+
+  if (!series) {
+    return res.status(404).json({ message: 'الجدول المتكرر غير موجود' });
+  }
+
+  const cancelled = await cancelFutureSeries({ series });
+  res.json({ ok:true, cancelled });
+}
+
 module.exports = {
   liveSessions,
+  createLiveSeries,
+  listLiveSeries,
+  cancelLiveSeriesFuture,
   createLiveSession,
   updateLiveSession,
   liveStart,

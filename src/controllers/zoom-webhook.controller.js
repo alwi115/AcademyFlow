@@ -69,6 +69,13 @@ async function studentFromParticipant(session, participant) {
 
   if (!enrollment) return null;
 
+  if (
+    session.groupId &&
+    String(enrollment.groupId || '') !== String(session.groupId)
+  ) {
+    return null;
+  }
+
   return { student, enrollment };
 }
 

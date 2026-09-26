@@ -6,6 +6,7 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const connectDB = require('./config/db');
 const bootstrapSuperAdmin = require('./services/superadmin-bootstrap.service');
+const liveReminderWorker = require('./services/live-reminder.service');
 
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 64) {
   throw new Error('JWT_SECRET must be at least 64 characters');
@@ -93,6 +94,7 @@ const port = Number(process.env.PORT || 3000);
 async function start() {
   await connectDB();
   await bootstrapSuperAdmin();
+  liveReminderWorker.start();
 
   app.listen(port, () => {
     console.log(`AcademyFlow running on http://localhost:${port}`);

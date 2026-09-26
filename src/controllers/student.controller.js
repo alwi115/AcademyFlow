@@ -85,14 +85,30 @@ async function dashboard(req, res) {
     .filter(x => x.courseId)
     .map(x => x.courseId._id);
 
+  const liveScope = enrollments
+    .filter(x => x.courseId)
+    .map(x => ({
+      courseId: x.courseId._id,
+      groupId: x.groupId?._id || x.groupId || null
+    }));
+
+  const liveOr = liveScope.map(scope => (
+    scope.groupId
+      ? { courseId: scope.courseId, $or: [{ groupId: null }, { groupId: scope.groupId }] }
+      : { courseId: scope.courseId, groupId: null }
+  ));
+
+  const groupIds = liveScope.map(x => x.groupId).filter(Boolean);
+
   const [upcomingLive, publishedAssignments, issuedCertificates, unreadNotifications] = await Promise.all([
     LiveSession.find({
       academyId,
-      courseId: { $in: courseIds },
+      ...(liveOr.length ? { $or: liveOr } : { _id: null }),
       startAt: { $gte: now },
       status: { $in: ['scheduled','live'] }
     })
       .populate('courseId', 'title')
+      .populate('groupId', 'name')
       .populate('instructorId', 'name')
       .sort({ startAt: 1 })
       .limit(5),
@@ -114,8 +130,15 @@ async function dashboard(req, res) {
       status: 'sent',
       channel: 'in_app',
       $or: [
-        { courseId: null },
-        { courseId: { $in: courseIds } }
+        { recipientId: studentId },
+        {
+          recipientId: null,
+          $or: [
+            { courseId: null, groupId: null },
+            { courseId: { $in: courseIds }, groupId: null },
+            ...(groupIds.length ? [{ groupId: { $in: groupIds } }] : [])
+          ]
+        }
       ]
     })
   ]);
@@ -165,6 +188,7 @@ async function dashboard(req, res) {
       title: row.title,
       course: row.courseId?.title || '',
       instructor: row.instructorId?.name || '',
+      group: row.groupId?.name || '',
       startAt: row.startAt,
       durationMinutes: row.durationMinutes,
       status: row.status,
@@ -309,14 +333,26 @@ async function setLessonProgress(req, res) {
 async function liveSessions(req, res) {
   const academyId = req.academyId;
   const studentId = req.user.sub;
-  const courseIds = await enrolledCourseIds(academyId, studentId);
+
+  const enrollments = await Enrollment.find({
+    academyId,
+    studentId,
+    status: { $in: ['active','paused','completed'] }
+  }).select('courseId groupId');
+
+  const liveOr = enrollments.map(row => (
+    row.groupId
+      ? { courseId: row.courseId, $or: [{ groupId: null }, { groupId: row.groupId }] }
+      : { courseId: row.courseId, groupId: null }
+  ));
 
   const rows = await LiveSession.find({
     academyId,
-    courseId: { $in: courseIds },
+    ...(liveOr.length ? { $or: liveOr } : { _id: null }),
     status: { $in: ['scheduled','live','ended'] }
   })
     .populate('courseId', 'title code')
+    .populate('groupId', 'name')
     .populate('instructorId', 'name')
     .sort({ startAt: 1 });
 
@@ -325,6 +361,7 @@ async function liveSessions(req, res) {
     title: row.title,
     description: row.description,
     course: row.courseId,
+    group: row.groupId,
     instructor: row.instructorId,
     startAt: row.startAt,
     durationMinutes: row.durationMinutes,
@@ -333,7 +370,8 @@ async function liveSessions(req, res) {
     joinAvailable: Boolean(row.zoomJoinUrl),
     attendanceEnabled: row.attendanceEnabled,
     lateAfterMinutes: row.lateAfterMinutes,
-    joinWindowBeforeMinutes: row.joinWindowBeforeMinutes
+    joinWindowBeforeMinutes: row.joinWindowBeforeMinutes,
+    reminderMinutes: row.reminderMinutes
   })));
 }
 
@@ -482,7 +520,14 @@ async function certificates(req, res) {
 }
 
 async function notifications(req, res) {
-  const courseIds = await enrolledCourseIds(req.academyId, req.user.sub);
+  const enrollments = await Enrollment.find({
+    academyId: req.academyId,
+    studentId: req.user.sub,
+    status: { $in: ['active','paused','completed'] }
+  }).select('courseId groupId');
+
+  const courseIds = enrollments.map(row => row.courseId);
+  const groupIds = enrollments.map(row => row.groupId).filter(Boolean);
 
   const rows = await Notification.find({
     academyId: req.academyId,
@@ -490,11 +535,20 @@ async function notifications(req, res) {
     status: 'sent',
     channel: 'in_app',
     $or: [
-      { courseId: null },
-      { courseId: { $in: courseIds } }
+      { recipientId: req.user.sub },
+      {
+        recipientId: null,
+        $or: [
+          { courseId: null, groupId: null },
+          { courseId: { $in: courseIds }, groupId: null },
+          ...(groupIds.length ? [{ groupId: { $in: groupIds } }] : [])
+        ]
+      }
     ]
   })
     .populate('courseId', 'title code')
+    .populate('groupId', 'name')
+    .populate('liveSessionId', 'title startAt')
     .sort({ sentAt: -1, createdAt: -1 })
     .limit(200);
 

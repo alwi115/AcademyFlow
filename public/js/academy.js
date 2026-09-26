@@ -608,10 +608,12 @@ const AF = (() => {
     if (type === 'dynamicSelect') {
       const opts = await getOptions();
       const rows = opts[source] || [];
+      const courseMap = new Map((opts.courses || []).map(course => [String(course._id), course.title]));
       return '<div class="field"><label>'+esc(label)+'</label><select name="'+esc(name)+'" '+req+'><option value="">اختر...</option>'+
         rows.map(x => {
           const labelText = x.name || x.title || x.code || x.email || 'Item';
-          const extra = x.code ? ' · '+x.code : x.email ? ' · '+x.email : '';
+          const courseExtra = source === 'groups' && x.courseId ? ' · '+(courseMap.get(String(x.courseId)) || 'دورة') : '';
+          const extra = courseExtra || (x.code ? ' · '+x.code : x.email ? ' · '+x.email : '');
           return '<option value="'+esc(x._id)+'" '+(String(x._id)===String(current)?'selected':'')+'>'+esc(labelText+extra)+'</option>';
         }).join('')+
         '</select></div>';
@@ -1045,6 +1047,108 @@ const AF = (() => {
     `;
   }
 
+  const academyDayNames = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+
+  function academyWeekdays(days) {
+    return (days || []).map(x => academyDayNames[Number(x)] || x).join('، ');
+  }
+
+  async function openAcademyRecurringLive(onSaved) {
+    const opts = await getOptions();
+    const modal = document.getElementById('academyModal');
+    const form = document.getElementById('academyModalForm');
+
+    document.getElementById('academyModalTitle').textContent = 'جدول محاضرات متكرر';
+    document.getElementById('academyModalSubtitle').textContent = 'حدد الأيام والوقت، وسيتم إنشاء الحصص تلقائيًا وإرسال التذكيرات للطلاب.';
+
+    form.innerHTML = `
+      <div class="field"><label>الدورة</label><select name="courseId" id="ownerSeriesCourse" required>
+        <option value="">اختر الدورة...</option>
+        ${(opts.courses||[]).map(x => '<option value="'+esc(x._id)+'">'+esc(x.title)+'</option>').join('')}
+      </select></div>
+      <div class="field"><label>المجموعة</label><select name="groupId" id="ownerSeriesGroup"><option value="">كل المجموعات</option></select></div>
+      <div class="field"><label>المدرب</label><select name="instructorId" required>
+        <option value="">اختر المدرب...</option>
+        ${(opts.instructors||[]).map(x => '<option value="'+esc(x._id)+'">'+esc(x.name)+'</option>').join('')}
+      </select></div>
+      <div class="field"><label>العنوان</label><input name="title" required placeholder="مثال: البرمجة - المحاضرة المباشرة"></div>
+      <div class="field"><label>تاريخ البداية</label><input name="startDate" type="date" required></div>
+      <div class="field"><label>تاريخ النهاية</label><input name="endDate" type="date" required></div>
+      <div class="field"><label>وقت الحصة</label><input name="time" type="time" required></div>
+      <div class="field"><label>مدة الحصة بالدقائق</label><input name="durationMinutes" type="number" min="1" value="60" required></div>
+
+      <div class="academy-note full">
+        <b>أيام الحصص</b>
+        <div class="academy-weekdays" id="ownerSeriesWeekdays">
+          ${academyDayNames.map((name,index) => '<label><input type="checkbox" value="'+index+'"><span>'+esc(name)+'</span></label>').join('')}
+        </div>
+      </div>
+
+      <div class="field"><label>التأخير بعد (دقائق)</label><input name="lateAfterMinutes" type="number" min="0" value="10"></div>
+      <div class="field"><label>فتح الدخول قبل (دقائق)</label><input name="joinWindowBeforeMinutes" type="number" min="0" value="15"></div>
+      <div class="field"><label>التذكير قبل (دقائق)</label><input name="reminderMinutes" type="number" min="0" max="1440" value="5"></div>
+      <div class="field full"><label>الوصف</label><textarea name="description"></textarea></div>
+
+      <label class="academy-note full"><input name="attendanceEnabled" type="checkbox" checked> تفعيل التحضير التلقائي</label>
+      <label class="academy-note full"><input name="notifyInApp" type="checkbox" checked> تنبيه داخل AcademyFlow</label>
+      <label class="academy-note full"><input name="notifyEmail" type="checkbox" checked> تذكير عبر البريد الإلكتروني</label>
+
+      <div class="academy-form-message" id="ownerSeriesMessage"></div>
+      <div class="academy-form-actions">
+        <button class="btn ghost" id="ownerSeriesCancel" type="button">إلغاء</button>
+        <button class="btn primary" type="submit">إنشاء الجدول</button>
+      </div>
+    `;
+
+    modal.hidden = false;
+    document.getElementById('ownerSeriesCancel').onclick = () => modal.hidden = true;
+
+    const course = document.getElementById('ownerSeriesCourse');
+    const group = document.getElementById('ownerSeriesGroup');
+    course.onchange = () => {
+      const rows = (opts.groups || []).filter(x => String(x.courseId) === String(course.value));
+      group.innerHTML = '<option value="">كل المجموعات</option>'+
+        rows.map(x => '<option value="'+esc(x._id)+'">'+esc(x.name)+'</option>').join('');
+    };
+
+    form.onsubmit = async e => {
+      e.preventDefault();
+      const btn = form.querySelector('button[type="submit"]');
+      const msg = document.getElementById('ownerSeriesMessage');
+      const payload = Object.fromEntries(new FormData(form).entries());
+
+      payload.weekdays = [...document.querySelectorAll('#ownerSeriesWeekdays input:checked')].map(x => Number(x.value));
+      payload.attendanceEnabled = form.elements.attendanceEnabled.checked;
+      payload.notifyInApp = form.elements.notifyInApp.checked;
+      payload.notifyEmail = form.elements.notifyEmail.checked;
+
+      if (!payload.weekdays.length) {
+        msg.textContent = 'اختر يومًا واحدًا على الأقل.';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'جاري إنشاء الحصص...';
+      msg.textContent = '';
+
+      try {
+        const result = await api('/api/live-sessions/series',{
+          method:'POST',
+          body:JSON.stringify(payload)
+        });
+
+        modal.hidden = true;
+        alert('تم إنشاء '+result.createdSessions+' حصة'+(result.zoomFailures ? '، منها '+result.zoomFailures+' تحتاج إعادة ربط Zoom.' : '.'));
+        await onSaved();
+      } catch (err) {
+        msg.textContent = err.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'إنشاء الجدول';
+      }
+    };
+  }
+
   async function renderLive() {
     const target = document.getElementById('pageContent');
 
@@ -1067,9 +1171,11 @@ const AF = (() => {
       fields:[
         ['title','عنوان المحاضرة','text',true],
         ['courseId','الدورة','dynamicSelect',false,'courses'],
+        ['groupId','المجموعة','dynamicSelect',false,'groups'],
         ['instructorId','المدرب','dynamicSelect',true,'instructors'],
         ['startAt','موعد البداية','datetime-local',true],
         ['durationMinutes','المدة بالدقائق','number',false],
+        ['reminderMinutes','التذكير قبل (دقائق)','number',false],
         ['description','الوصف','textarea',false]
       ],
       endpoint:'/api/live-sessions'
@@ -1082,7 +1188,7 @@ const AF = (() => {
             <h2>جلسات Zoom</h2>
             <p>تعديل الموعد والمدة والإلغاء يتم من نفس الصفحة، وتتم مزامنة التغييرات مع Zoom عند تفعيل التكامل.</p>
           </div>
-          ${allowed(config.createRoles) ? '<button class="btn primary" id="academyAddLive">+ محاضرة</button>' : ''}
+          ${allowed(config.createRoles) ? '<div class="academy-row-actions"><button class="btn soft" id="academyAddLiveSeries">+ جدول متكرر</button><button class="btn primary" id="academyAddLive">+ محاضرة</button></div>' : ''}
         </div>
 
         <div class="academy-note" style="margin-bottom:14px">
@@ -1091,13 +1197,24 @@ const AF = (() => {
 
         <div id="liveRows"><div class="academy-empty">جاري التحميل...</div></div>
       </section>
+
+      <section class="academy-card academy-section">
+        <div class="academy-card-head">
+          <div><h2>الجداول المتكررة</h2><p>كل حصص الدورة التي تم إنشاؤها تلقائيًا حسب الأيام والأوقات.</p></div>
+        </div>
+        <div id="liveSeriesRows"><div class="academy-empty">جاري التحميل...</div></div>
+      </section>
     `;
 
     let rows = [];
 
     const load = async () => {
       try {
-        rows = await api('/api/live-sessions');
+        const [liveRows, seriesRows] = await Promise.all([
+          api('/api/live-sessions'),
+          allowed(['owner','admin']) ? api('/api/live-sessions/series') : Promise.resolve([])
+        ]);
+        rows = liveRows;
 
         document.getElementById('liveRows').innerHTML = rows.length
           ? '<div class="academy-list">'+rows.map((x,index) => `
@@ -1108,7 +1225,9 @@ const AF = (() => {
                     ${fmtDate(x.startAt,true)} ·
                     ${esc(x.durationMinutes || 60)} دقيقة ·
                     ${esc(x.courseId?.title || 'بدون دورة')} ·
-                    ${esc(x.instructorId?.name || 'بدون مدرب')}
+                    ${esc(x.groupId?.name || 'كل المجموعات')} ·
+                    ${esc(x.instructorId?.name || 'بدون مدرب')} ·
+                    تذكير قبل ${esc(x.reminderMinutes ?? 5)} د
                   </span>
                 </div>
 
@@ -1122,6 +1241,9 @@ const AF = (() => {
                         (x.status==='cancelled'?'إعادة الجدولة':'إلغاء')+
                       '</button>'
                     : ''}
+                  ${!x.zoomJoinUrl && x.status === 'scheduled' && allowed(config.manageRoles)
+                    ? '<button class="btn soft live-action" data-action="reconnect" data-index="'+index+'" type="button">إنشاء رابط Zoom</button>'
+                    : ''}
                   ${x.zoomJoinUrl && x.status !== 'cancelled'
                     ? '<a class="btn soft" target="_blank" rel="noopener" href="'+esc(x.zoomJoinUrl)+'">Zoom</a>'
                     : ''}
@@ -1129,6 +1251,37 @@ const AF = (() => {
               </div>
             `).join('')+'</div>'
           : '<div class="academy-empty">لا توجد محاضرات مجدولة.</div>';
+
+        document.getElementById('liveSeriesRows').innerHTML = seriesRows.length
+          ? '<div class="academy-list">'+seriesRows.map((s,index) => `
+              <div class="academy-list-row">
+                <div>
+                  <b>${esc(s.title)}</b>
+                  <span>${esc(s.courseId?.title || '')} · ${esc(s.groupId?.name || 'كل المجموعات')} · ${academyWeekdays(s.weekdays)} · ${esc(s.time)} · ${esc(s.sessionCount)} حصة</span>
+                  <small>${esc(s.startDate)} → ${esc(s.endDate)} · تذكير قبل ${esc(s.reminderMinutes)} د</small>
+                </div>
+                <div class="academy-row-actions">
+                  ${status(s.status)}
+                  ${s.status === 'active' ? '<button class="btn ghost owner-series-cancel" data-index="'+index+'" type="button">إلغاء الحصص القادمة</button>' : ''}
+                </div>
+              </div>
+            `).join('')+'</div>'
+          : '<div class="academy-empty">لا توجد جداول متكررة حتى الآن.</div>';
+
+        document.querySelectorAll('.owner-series-cancel').forEach(btn => {
+          btn.onclick = async () => {
+            const series = seriesRows[Number(btn.dataset.index)];
+            if (!series || !confirm('إلغاء جميع الحصص القادمة في هذا الجدول؟')) return;
+
+            try {
+              const result = await api('/api/live-sessions/series/'+encodeURIComponent(series._id)+'/cancel-future',{ method:'PATCH' });
+              alert('تم إلغاء '+result.cancelled+' حصة قادمة.');
+              await load();
+            } catch (err) {
+              alert(err.message);
+            }
+          };
+        });
 
         document.querySelectorAll('.live-action').forEach(btn => {
           btn.onclick = () => {
@@ -1138,6 +1291,18 @@ const AF = (() => {
             if (btn.dataset.action === 'details') return openDetails(config,row);
             if (btn.dataset.action === 'edit') return openForm(config,load,row);
             if (btn.dataset.action === 'extend') return openExtend(config,row,load);
+
+            if (btn.dataset.action === 'reconnect') {
+              return api(
+                config.updateEndpoint.replace(':id',encodeURIComponent(row.id || row._id)),
+                { method:'PATCH', body:JSON.stringify({}) }
+              ).then(updated => {
+                if (!updated.zoomMeetingId && !updated.zoomJoinUrl) {
+                  alert('تكامل Zoom غير مفعل في إعدادات السيرفر.');
+                }
+                return load();
+              }).catch(err => alert(err.message));
+            }
 
             if (btn.dataset.action === 'cancel') {
               return changeRecordStatus(
@@ -1161,6 +1326,9 @@ const AF = (() => {
     if (allowed(config.createRoles)) {
       document.getElementById('academyAddLive').onclick =
         () => openForm(config,load);
+
+      document.getElementById('academyAddLiveSeries').onclick =
+        () => openAcademyRecurringLive(load);
     }
 
     await load();
