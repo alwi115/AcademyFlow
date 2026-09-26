@@ -179,6 +179,45 @@ async function sendTestEmail({ to, academyName }) {
   });
 }
 
+async function sendSystemAlert({ to, severity, title, message, details = {} }) {
+  const severityLabel = {
+    info: 'معلومة',
+    warning: 'تحذير',
+    critical: 'حرج'
+  }[severity] || 'تنبيه';
+
+  const detailLines = Object.entries(details || {})
+    .filter(([,value]) => value !== undefined && value !== null && value !== '')
+    .slice(0, 12)
+    .map(([key,value]) => `${key}: ${String(value)}`);
+
+  return sendGridRequest({
+    to,
+    subject: `AcademyFlow · ${severityLabel}: ${title}`,
+    text: [
+      `الحالة: ${severityLabel}`,
+      `العنوان: ${title}`,
+      '',
+      String(message || ''),
+      detailLines.length ? '' : null,
+      ...detailLines,
+      '',
+      'افتح مركز صحة النظام لمراجعة التفاصيل.'
+    ].filter(Boolean).join('\n'),
+    html: `
+      <div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.8;color:#111827">
+        <h2 style="margin:0 0 12px">${escapeHtml(title)}</h2>
+        <p><strong>الحالة:</strong> ${escapeHtml(severityLabel)}</p>
+        <p>${escapeHtml(message)}</p>
+        ${detailLines.length ? `
+          <pre style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:8px;white-space:pre-wrap">${escapeHtml(detailLines.join('\n'))}</pre>
+        ` : ''}
+        <p style="color:#64748b">راجع مركز صحة AcademyFlow لمعرفة الحالة الحالية.</p>
+      </div>
+    `
+  });
+}
+
 async function sendLiveReminder({ to, studentName, academyName, session, minutes }) {
   const base = appBaseUrl();
   const liveUrl = base ? base + '/student/live.html' : '';
@@ -229,5 +268,6 @@ module.exports = {
   configStatus,
   canSendTo,
   sendTestEmail,
-  sendLiveReminder
+  sendLiveReminder,
+  sendSystemAlert
 };
