@@ -284,6 +284,16 @@ async function createCourse(req, res) {
   if (!title) return res.status(400).json({ message: 'Course title is required' });
   if (instructorId) await assertInstructor(instructorId, academyId);
 
+  if (
+    req.user.role === 'content_manager' &&
+    price !== undefined &&
+    Number(price || 0) !== 0
+  ) {
+    return res.status(403).json({
+      message: 'إدارة المحتوى لا تملك صلاحية تحديد سعر الدورة'
+    });
+  }
+
   const normalizedCode = code ? String(code).trim().toUpperCase() : undefined;
   if (normalizedCode && await Course.exists({ academyId, code: normalizedCode })) {
     return res.status(409).json({ message: 'Course code is already used' });
@@ -297,7 +307,7 @@ async function createCourse(req, res) {
     category: clean(category),
     deliveryType: deliveryType || 'recorded',
     instructorId: instructorId || null,
-    price: Number(price || 0),
+    price: req.user.role === 'content_manager' ? 0 : Number(price || 0),
     startAt: startAt || null,
     endAt: endAt || null,
     thumbnailUrl: clean(thumbnailUrl),
@@ -464,8 +474,26 @@ async function createAttendance(req, res) {
   }
 
   const student = await assertOwned(User, studentId, academyId, 'Student');
-  if (student.role !== 'student') return res.status(400).json({ message: 'Selected user is not a student' });
+  if (student.role !== 'student') {
+    return res.status(400).json({ message: 'Selected user is not a student' });
+  }
+
   await assertOwned(Course, courseId, academyId, 'Course');
+
+  const enrollment = await Enrollment.findOne({
+    academyId,
+    studentId,
+    courseId,
+    status: { $in: ['active','paused','completed'] }
+  }).select('groupId');
+
+  if (!enrollment) {
+    return res.status(400).json({
+      message: 'Student is not enrolled in this course'
+    });
+  }
+
+  let resolvedGroupId = enrollment.groupId || null;
 
   if (groupId) {
     const group = await Group.findOne({
@@ -481,28 +509,23 @@ async function createAttendance(req, res) {
       });
     }
 
-    const enrollment = await Enrollment.findOne({
-      academyId,
-      studentId,
-      courseId,
-      status: { $in: ['active','paused','completed'] }
-    }).select('groupId');
-
     if (
-      enrollment?.groupId &&
+      enrollment.groupId &&
       String(enrollment.groupId) !== String(group._id)
     ) {
       return res.status(400).json({
         message: 'Student is not enrolled in the selected group'
       });
     }
+
+    resolvedGroupId = group._id;
   }
 
   const row = await Attendance.create({
     academyId,
     studentId,
     courseId,
-    groupId: groupId || null,
+    groupId: resolvedGroupId,
     date,
     status: status || 'present',
     note: clean(note)
@@ -600,11 +623,29 @@ async function createCertificate(req, res) {
   const academyId = req.academyId;
   const { studentId, courseId, certificateNo, issuedAt } = req.body;
 
-  if (!studentId || !courseId) return res.status(400).json({ message: 'Student and course are required' });
+  if (!studentId || !courseId) {
+    return res.status(400).json({ message: 'Student and course are required' });
+  }
 
   const student = await assertOwned(User, studentId, academyId, 'Student');
-  if (student.role !== 'student') return res.status(400).json({ message: 'Selected user is not a student' });
+  if (student.role !== 'student') {
+    return res.status(400).json({ message: 'Selected user is not a student' });
+  }
+
   await assertOwned(Course, courseId, academyId, 'Course');
+
+  const enrollment = await Enrollment.exists({
+    academyId,
+    studentId,
+    courseId,
+    status: { $in: ['active','paused','completed'] }
+  });
+
+  if (!enrollment) {
+    return res.status(400).json({
+      message: 'Student is not enrolled in this course'
+    });
+  }
 
   const generated = `CERT-${new Date().getFullYear()}-${String(Date.now()).slice(-7)}-${Math.floor(Math.random()*90+10)}`;
   const row = await Certificate.create({
