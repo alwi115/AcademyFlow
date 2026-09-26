@@ -372,6 +372,30 @@ async function main() {
     await expect('branch_manager', 'PATCH', '/api/academy/groups/' + groupB._id, 404, {
       name: 'Hijacked Group B'
     });
+
+    await expect('branch_manager', 'POST', '/api/academy/groups', 403, {
+      name: 'Scope escalation group',
+      courseId: String(courseB._id),
+      branchId: String(branchA._id),
+      instructorId: String(branchBInstructor._id)
+    });
+
+    await expect('branch_manager', 'PATCH', '/api/academy/groups/' + group._id, 403, {
+      courseId: String(courseB._id)
+    });
+
+    await expect('branch_manager', 'PATCH', '/api/academy/groups/' + group._id, 403, {
+      instructorId: String(branchBInstructor._id)
+    });
+
+    const allowedBranchGroup = await expect('branch_manager', 'POST', '/api/academy/groups', 201, {
+      name: 'Allowed Branch A Group',
+      courseId: String(course._id),
+      branchId: String(branchA._id),
+      instructorId: String(users.instructor._id),
+      status: 'active'
+    });
+    assert.strictEqual(String(allowedBranchGroup.body.branchId), String(branchA._id));
     await expect('branch_manager', 'POST', '/api/academy/enrollments', 403, {
       studentId: String(branchBStudent._id),
       courseId: String(courseB._id),
