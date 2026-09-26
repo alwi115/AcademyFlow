@@ -69,6 +69,16 @@ async function updateCourse(req, res) {
 
   if (req.body.instructorId !== undefined) {
     if (req.body.instructorId) {
+      if (
+        req.user.role === 'branch_manager' &&
+        String(req.body.instructorId) !== String(row.instructorId || '') &&
+        !branchManagerScope.instructorIds.includes(String(req.body.instructorId))
+      ) {
+        return res.status(403).json({
+          message: 'مدير الفرع لا يستطيع تعيين مدرب خارج نطاق فرعه'
+        });
+      }
+
       await assertInstructor(req.body.instructorId, req.academyId);
       row.instructorId = req.body.instructorId;
     } else {
@@ -139,7 +149,44 @@ async function updateGroup(req, res) {
     return res.status(404).json({ message: 'المجموعة غير موجودة أو خارج نطاق فرعك' });
   }
 
+  let branchManagerScope = null;
+
+  if (req.user.role === 'branch_manager') {
+    const scopedGroups = await Group.find({
+      academyId: req.academyId,
+      branchId: req.user.branchId,
+      status: { $ne: 'cancelled' }
+    }).select('courseId instructorId');
+
+    const allowedCourseIds = [...new Set(
+      scopedGroups.map(group => String(group.courseId || '')).filter(Boolean)
+    )];
+
+    const scopedCourses = await Course.find({
+      academyId: req.academyId,
+      _id: { $in: allowedCourseIds }
+    }).select('instructorId');
+
+    branchManagerScope = {
+      courseIds: allowedCourseIds,
+      instructorIds: [...new Set([
+        ...scopedGroups.map(group => String(group.instructorId || '')).filter(Boolean),
+        ...scopedCourses.map(course => String(course.instructorId || '')).filter(Boolean)
+      ])]
+    };
+  }
+
   if (req.body.courseId !== undefined) {
+    if (
+      req.user.role === 'branch_manager' &&
+      String(req.body.courseId) !== String(row.courseId) &&
+      !branchManagerScope.courseIds.includes(String(req.body.courseId))
+    ) {
+      return res.status(403).json({
+        message: 'مدير الفرع لا يستطيع ربط المجموعة بدورة خارج نطاق فرعه'
+      });
+    }
+
     const course = await Course.findOne({
       _id: req.body.courseId,
       academyId: req.academyId
