@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const UserSchema = new mongoose.Schema({
   academyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Academy', default: null, index: true },
+  branchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', default: null, index: true },
   name: { type: String, required: true, trim: true },
   username: {
     type: String,
