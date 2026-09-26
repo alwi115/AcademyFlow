@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const Academy = require('../src/models/Academy');
+const { CURRENT_LEGAL_VERSION } = require('../src/config/legal');
 const User = require('../src/models/User');
 const Course = require('../src/models/Course');
 const academyRoutes = require('../src/routes/academy.routes');
@@ -49,7 +50,13 @@ async function main() {
     email: 'performance-owner@example.test',
     passwordHash: hash,
     role: 'owner',
-    active: true
+    active: true,
+    legalAcceptance: {
+      termsVersion: CURRENT_LEGAL_VERSION,
+      privacyVersion: CURRENT_LEGAL_VERSION,
+      dpaVersion: CURRENT_LEGAL_VERSION,
+      acceptedAt: new Date()
+    }
   });
 
   await Course.insertMany(
