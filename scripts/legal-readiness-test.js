@@ -156,13 +156,28 @@ async function main() {
     assert.strictEqual(superLogin.status, 200);
     const superSessionCookie = activeSessionCookie(superLogin);
 
+    const superMeClean = await fetch(base + '/api/auth/me', {
+      headers: { Cookie: superSessionCookie }
+    });
+    const superMeCleanBody = await superMeClean.json().catch(() => ({}));
+    assert.strictEqual(
+      superMeClean.status,
+      200,
+      'clean superadmin session failed: ' + JSON.stringify(superMeCleanBody)
+    );
+    assert.strictEqual(superMeCleanBody.user.role, 'superadmin');
+
     const superMe = await fetch(base + '/api/auth/me', {
       headers: {
         Cookie: 'af_session=stale.invalid.cookie; ' + superSessionCookie
       }
     });
-    assert.strictEqual(superMe.status, 200);
-    const superMeBody = await superMe.json();
+    const superMeBody = await superMe.json().catch(() => ({}));
+    assert.strictEqual(
+      superMe.status,
+      200,
+      'duplicate-cookie superadmin session failed: ' + JSON.stringify(superMeBody)
+    );
     assert.strictEqual(superMeBody.user.role, 'superadmin');
 
     const ownerCsrfLogin = await csrfCookieAndToken();
@@ -183,13 +198,27 @@ async function main() {
     assert.strictEqual(ownerLogin.status, 200);
     const ownerSessionCookie = activeSessionCookie(ownerLogin);
 
+    const ownerMeClean = await fetch(base + '/api/auth/me', {
+      headers: { Cookie: ownerSessionCookie }
+    });
+    const ownerMeCleanBody = await ownerMeClean.json().catch(() => ({}));
+    assert.strictEqual(
+      ownerMeClean.status,
+      200,
+      'clean owner session failed: ' + JSON.stringify(ownerMeCleanBody)
+    );
+
     const ownerMe = await fetch(base + '/api/auth/me', {
       headers: {
         Cookie: 'af_session=expired.legacy.cookie; ' + ownerSessionCookie
       }
     });
-    assert.strictEqual(ownerMe.status, 200);
-    const ownerMeBody = await ownerMe.json();
+    const ownerMeBody = await ownerMe.json().catch(() => ({}));
+    assert.strictEqual(
+      ownerMe.status,
+      200,
+      'duplicate-cookie owner session failed: ' + JSON.stringify(ownerMeBody)
+    );
     assert.strictEqual(ownerMeBody.user.role, 'owner');
     assert.strictEqual(ownerMeBody.user.legalAcceptanceRequired, true);
 
