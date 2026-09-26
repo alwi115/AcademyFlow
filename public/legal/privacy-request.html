@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="color-scheme" content="light dark">
+  <title>طلب خصوصية | AcademyFlow</title>
+  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/legal.css">
+  <script src="/js/ui.js"></script>
+</head><body class="legal-page"><div class="legal-shell">
+<header class="legal-topbar">
+  <a class="brand" href="/"><span class="brand-badge">AF</span><span class="brand-text"><b data-platform-name>AcademyFlow</b><small>LEGAL CENTER</small></span></a>
+  <nav class="legal-links"><a href="/legal/privacy.html">الخصوصية</a><a href="/legal/terms.html">الشروط</a><a href="/legal/privacy-request.html">طلب خصوصية</a></nav>
+  <div class="legal-actions"><button class="theme-toggle" data-theme-toggle data-theme-icon type="button" aria-label="تبديل المظهر">◐</button><a class="btn ghost" href="/">الرئيسية</a></div>
+</header>
+<main><section class="legal-hero"><span class="legal-kicker">PRIVACY RIGHTS REQUEST</span><h1>طلب حقوق البيانات</h1><p>استخدم النموذج لطلب نسخة من بياناتك أو تصحيحها أو حذفها أو نقلها أو الاعتراض على معالجتها أو سحب موافقتك أو تقديم شكوى.</p></section>
+<section class="legal-section">
+  <div class="legal-note" style="margin-bottom:16px">لحماية بياناتك قد نطلب منك التحقق من الهوية قبل تنفيذ الطلب. لا ترسل كلمة مرور أو توكن أو بيانات بطاقة.</div>
+  <form class="legal-form" id="privacyRequestForm">
+    <div class="field"><label for="privacyType">نوع الطلب</label><select id="privacyType" name="type" required><option value="access">الحصول على نسخة من البيانات</option><option value="correction">تصحيح أو تحديث البيانات</option><option value="deletion">حذف البيانات</option><option value="portability">نقل البيانات</option><option value="objection">الاعتراض على المعالجة</option><option value="withdraw_consent">سحب الموافقة</option><option value="complaint">شكوى خصوصية</option></select></div>
+    <div class="field"><label for="privacyName">الاسم</label><input id="privacyName" name="name" maxlength="160" required></div>
+    <div class="field"><label for="privacyEmail">البريد المرتبط بالحساب</label><input id="privacyEmail" name="email" type="email" maxlength="254" required></div>
+    <div class="field"><label for="privacyPhone">الهاتف (اختياري)</label><input id="privacyPhone" name="phone" maxlength="40"></div>
+    <div class="field"><label for="privacyAcademy">كود الأكاديمية (إن وجد)</label><input id="privacyAcademy" name="academyCode" maxlength="32" placeholder="AF-0001"></div>
+    <div class="field legal-hidden" aria-hidden="true"><label for="privacyWebsite">Website</label><input id="privacyWebsite" name="website" tabindex="-1" autocomplete="off"></div>
+    <div class="field full"><label for="privacyDetails">تفاصيل تساعدنا على تحديد البيانات</label><textarea id="privacyDetails" name="details" maxlength="4000" placeholder="مثال: أريد حذف حساب الطالب المرتبط بهذا البريد..."></textarea></div>
+    <div class="full legal-check"><input id="privacyTruth" type="checkbox" required><label for="privacyTruth">أؤكد أن المعلومات صحيحة وأنني صاحب البيانات أو مخول قانونًا بتقديم الطلب.</label></div>
+    <div class="full"><button class="btn primary" type="submit">إرسال الطلب</button></div>
+    <p id="privacyRequestResult" class="legal-result" aria-live="polite"></p>
+  </form>
+</section>
+</main><footer class="legal-footer"><span>© <span data-year></span> <span data-platform-name>AcademyFlow</span></span><nav><a href="/legal/privacy.html">الخصوصية</a><a href="/legal/terms.html">الشروط</a><a href="/legal/refund.html">الاسترداد</a><a href="/legal/data-deletion.html">حذف البيانات</a><a href="/legal/support.html">الدعم</a></nav></footer>
+</div><script src="/js/legal.js"></script></body></html>
