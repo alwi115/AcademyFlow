@@ -14,6 +14,7 @@ const Certificate = require('../models/Certificate');
 const Notification = require('../models/Notification');
 const SupportTicket = require('../models/SupportTicket');
 const LiveSession = require('../models/LiveSession');
+const auditService = require('../services/audit.service');
 
 const STAFF_ROLES = ['admin','branch_manager','accountant','reception','content_manager','support'];
 
@@ -430,6 +431,15 @@ async function updateUser(req, res) {
   });
 
   if (!row) return res.status(404).json({ message: 'User not found' });
+
+  const before = {
+    name: row.name,
+    email: row.email,
+    phone: row.phone || '',
+    role: row.role,
+    branchId: row.branchId || null,
+    active: row.active
+  };
   if (row.role === 'owner') {
     return res.status(403).json({ message: 'Owner account cannot be modified here' });
   }
@@ -491,6 +501,24 @@ async function updateUser(req, res) {
   row.branchId = nextBranchId;
 
   await row.save();
+
+  await auditService.record(req, {
+    action: 'academy.user.update',
+    targetType: 'user',
+    targetId: row._id,
+    targetLabel: row.email,
+    details: { changedFields: Object.keys(req.body || {}) },
+    before,
+    after: {
+      name: row.name,
+      email: row.email,
+      phone: row.phone || '',
+      role: row.role,
+      branchId: row.branchId || null,
+      active: row.active
+    },
+    statusCode: 200
+  });
 
   res.json({
     id: row._id,
@@ -965,6 +993,29 @@ async function createPayment(req, res) {
     notes: clean(notes)
   });
 
+  await auditService.record(req, {
+    action: 'academy.payment.create',
+    targetType: 'payment',
+    targetId: row._id,
+    targetLabel: row.reference || String(row._id),
+    details: {
+      studentId: row.studentId,
+      courseId: row.courseId || null,
+      amount: row.amount,
+      currency: row.currency,
+      method: row.method,
+      status: row.status
+    },
+    after: {
+      amount: row.amount,
+      currency: row.currency,
+      method: row.method,
+      status: row.status,
+      paidAt: row.paidAt
+    },
+    statusCode: 201
+  });
+
   res.status(201).json(row);
 }
 
@@ -1122,6 +1173,10 @@ async function getSettings(req, res) {
 }
 
 async function updateSettings(req, res) {
+  const beforeRow = await Academy.findById(req.academyId)
+    .select('name nameEn logoUrl phone email country city currency timezone branding')
+    .lean();
+
   const allowed = ['name','nameEn','logoUrl','phone','email','country','city','currency','timezone'];
   const update = {};
 
@@ -1142,6 +1197,28 @@ async function updateSettings(req, res) {
     { $set: update },
     { new: true, runValidators: true }
   );
+
+  await auditService.record(req, {
+    action: 'academy.settings.update',
+    targetType: 'academy',
+    targetId: row?._id || req.academyId,
+    targetLabel: row?.name || '',
+    details: { changedFields: Object.keys(update) },
+    before: beforeRow,
+    after: row ? {
+      name: row.name,
+      nameEn: row.nameEn,
+      logoUrl: row.logoUrl,
+      phone: row.phone,
+      email: row.email,
+      country: row.country,
+      city: row.city,
+      currency: row.currency,
+      timezone: row.timezone,
+      branding: row.branding
+    } : null,
+    statusCode: 200
+  });
 
   res.json(row);
 }
