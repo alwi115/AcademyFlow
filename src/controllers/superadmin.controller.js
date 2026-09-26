@@ -452,6 +452,19 @@ async function health(req, res) {
   ]);
 
   const email = mailer.configStatus();
+  const legalSettings = await platformSettings();
+  const legalRequiredFields = {
+    legalEntityName: Boolean(String(legalSettings.legalEntityName || '').trim()),
+    commercialRegistrationNumber: Boolean(String(legalSettings.commercialRegistrationNumber || '').trim()),
+    businessAddress: Boolean(String(legalSettings.businessAddress || '').trim()),
+    supportEmail: Boolean(String(legalSettings.supportEmail || '').trim()),
+    privacyOfficerEmail: Boolean(String(legalSettings.privacyOfficerEmail || '').trim())
+  };
+  const legalMissing = Object.entries(legalRequiredFields)
+    .filter(([, ready]) => !ready)
+    .map(([key]) => key);
+  const legalComplete = legalMissing.length === 0;
+
   const latestBackup = backups[0] || null;
   const backupAgeHours = latestBackup?.createdAt
     ? Math.round(((Date.now() - new Date(latestBackup.createdAt).getTime()) / 3600000) * 10) / 10
@@ -486,7 +499,8 @@ async function health(req, res) {
       !zoomOAuthConfigured ||
       recentErrors.length > 0 ||
       academyIssues.length > 0 ||
-      activeAlerts.length > 0
+      activeAlerts.length > 0 ||
+      !legalComplete
     );
 
   res.json({
@@ -553,6 +567,13 @@ async function health(req, res) {
       backupEncryptionConfigured: storage.encryptionConfigured
     },
     counts: { academies, users, plans, auditLogs: logs },
+    legalReadiness: {
+      complete: legalComplete,
+      missing: legalMissing,
+      fields: legalRequiredFields,
+      ecommerceLicenseConfigured: Boolean(String(legalSettings.ecommerceLicenseNumber || '').trim()),
+      taxNumberConfigured: Boolean(String(legalSettings.taxNumber || '').trim())
+    },
     monitoring: {
       enabled: systemMonitor.enabled(),
       intervalMinutes: Number(process.env.MONITOR_INTERVAL_MINUTES || 15),
