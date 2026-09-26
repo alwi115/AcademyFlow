@@ -10,6 +10,8 @@ const Course = require('../src/models/Course');
 const Branch = require('../src/models/Branch');
 const Group = require('../src/models/Group');
 const Enrollment = require('../src/models/Enrollment');
+const Assessment = require('../src/models/Assessment');
+const QuizAttempt = require('../src/models/QuizAttempt');
 const LiveSession = require('../src/models/LiveSession');
 
 const academyRoutes = require('../src/routes/academy.routes');
@@ -155,6 +157,32 @@ async function main() {
     courseId: courseB._id,
     groupId: groupB._id,
     status: 'active'
+  });
+
+  const quiz = await Assessment.create({
+    academyId: academy._id,
+    courseId: course._id,
+    type: 'quiz',
+    title: 'RBAC Quiz',
+    totalMarks: 10,
+    passingMark: 5,
+    durationMinutes: 30,
+    maxAttempts: 2,
+    passingPercentage: 50,
+    status: 'draft'
+  });
+
+  const quizAttempt = await QuizAttempt.create({
+    academyId: academy._id,
+    assessmentId: quiz._id,
+    courseId: course._id,
+    studentId: users.student._id,
+    attemptNumber: 1,
+    status: 'pending_review',
+    totalMarks: 10,
+    score: 0,
+    percentage: 0,
+    requiresManualReview: true
   });
 
   await LiveSession.create({
@@ -378,6 +406,46 @@ async function main() {
       description: 'No pricing privilege'
     });
     assert.strictEqual(Number(contentCourse.body.price), 0);
+
+    // Content managers can build quizzes but cannot inspect student attempts or grades.
+    const contentQuiz = await expect(
+      'content_manager',
+      'GET',
+      '/api/academy/quizzes/' + quiz._id,
+      200
+    );
+    assert.strictEqual(contentQuiz.body.hasAttempts, true);
+    assert.strictEqual(contentQuiz.body.attempts.length, 0);
+
+    await expect(
+      'content_manager',
+      'GET',
+      '/api/academy/quizzes/' + quiz._id + '/attempts',
+      403
+    );
+
+    await expect(
+      'content_manager',
+      'GET',
+      '/api/academy/quizzes/' + quiz._id + '/attempts/' + quizAttempt._id,
+      403
+    );
+
+    const ownerAttempts = await expect(
+      'owner',
+      'GET',
+      '/api/academy/quizzes/' + quiz._id + '/attempts',
+      200
+    );
+    assert.strictEqual(ownerAttempts.body.length, 1);
+
+    const instructorAttempts = await expect(
+      'instructor',
+      'GET',
+      '/api/instructor/quizzes/' + quiz._id + '/attempts',
+      200
+    );
+    assert.strictEqual(instructorAttempts.body.length, 1);
 
     // Certificate issuance is limited to students actually enrolled in the course.
     await expect('content_manager', 'POST', '/api/academy/certificates', 400, {
