@@ -662,9 +662,27 @@ async function createGroup(req, res) {
   await assertOwned(Course, courseId, academyId, 'Course');
 
   if (isBranchManager(req)) {
+    const scope = await branchScope(req);
+
+    if (!scope.courseIds.includes(String(courseId))) {
+      return res.status(403).json({
+        message: 'You cannot attach a course from outside your assigned branch scope'
+      });
+    }
+
+    if (
+      instructorId &&
+      !scope.instructorIds.includes(String(instructorId))
+    ) {
+      return res.status(403).json({
+        message: 'You cannot assign an instructor from outside your assigned branch scope'
+      });
+    }
+
     if (branchId && String(branchId) !== String(req.user.branchId)) {
       return res.status(403).json({ message: 'You can only manage groups in your assigned branch' });
     }
+
     branchId = req.user.branchId;
   }
 
