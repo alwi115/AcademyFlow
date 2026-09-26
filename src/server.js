@@ -72,6 +72,17 @@ const HARDENED_PUBLIC_PATHS = new Set([
   '/academy/login.html',
   '/owner/login.html',
   '/superadmin/login.html',
+  '/academy/legal-acceptance.html',
+  '/legal/index.html',
+  '/legal/privacy.html',
+  '/legal/terms.html',
+  '/legal/refund.html',
+  '/legal/data-deletion.html',
+  '/legal/cookies.html',
+  '/legal/acceptable-use.html',
+  '/legal/support.html',
+  '/legal/dpa.html',
+  '/legal/privacy-request.html',
   '/robots.txt',
   '/sitemap.xml'
 ]);
@@ -165,6 +176,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+app.use('/api/public', require('./routes/public.routes'));
 app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/superadmin', require('./routes/superadmin.routes'));
 app.use('/api/academy', require('./routes/academy.routes'));
