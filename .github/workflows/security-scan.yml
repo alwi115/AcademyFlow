@@ -203,6 +203,7 @@ jobs:
     env:
       MONGODB_URI: mongodb://127.0.0.1:27019/academyflow_backup_test
       BACKUP_DIR: /tmp/academyflow-backup-ci
+      BACKUP_ENCRYPTION_KEY: backup-ci-encryption-key-0123456789-abcdefghijklmnopqrstuvwxyz
       NODE_ENV: test
     steps:
       - name: Checkout
