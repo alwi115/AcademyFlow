@@ -99,14 +99,20 @@ app.use((req, res, next) => {
   const isSuperAdminBackupRoute = req.path.startsWith('/api/superadmin/backups');
   const mutating = ['POST','PUT','PATCH','DELETE'].includes(req.method);
 
-  if (
-    operation === 'restore' &&
-    !req.path.startsWith('/api/superadmin/')
-  ) {
-    res.setHeader('Retry-After', '60');
-    return res.status(503).json({
-      message: 'System restore is in progress. Please retry shortly.'
-    });
+  if (operation === 'restore') {
+    const safeRestoreRead =
+      req.method === 'GET' &&
+      (
+        req.path === '/api/superadmin/health' ||
+        req.path === '/api/superadmin/backups'
+      );
+
+    if (!safeRestoreRead) {
+      res.setHeader('Retry-After', '60');
+      return res.status(503).json({
+        message: 'System restore is in progress. Please retry shortly.'
+      });
+    }
   }
 
   if (
