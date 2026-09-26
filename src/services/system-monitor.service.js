@@ -3,6 +3,7 @@ const Academy = require('../models/Academy');
 const SystemError = require('../models/SystemError');
 const SystemAlert = require('../models/SystemAlert');
 const SystemSetting = require('../models/SystemSetting');
+const PrivacyIncident = require('../models/PrivacyIncident');
 const backupService = require('./backup.service');
 const mailer = require('./mailer.service');
 const externalBackup = require('./external-backup.service');
@@ -74,7 +75,7 @@ async function collectIssues() {
     }
   }
 
-  const [backups, storage, errorCount, brokenZoom, externalStorage, legalSettings] = await Promise.all([
+  const [backups, storage, errorCount, brokenZoom, externalStorage, legalSettings, overduePrivacyIncidents] = await Promise.all([
     backupService.listBackups().catch(() => []),
     backupService.storageStatus(),
     SystemError.countDocuments({
@@ -90,7 +91,15 @@ async function collectIssues() {
       ]
     }),
     externalBackup.healthCheck(),
-    SystemSetting.findOne({ key: 'platform' }).lean()
+    SystemSetting.findOne({ key: 'platform' }).lean(),
+    PrivacyIncident.countDocuments({
+      status: { $ne: 'closed' },
+      detectedAt: { $lte: new Date(now - 72 * 60 * 60 * 1000) },
+      $or: [
+        { authorityNotificationRequired: true, authorityNotifiedAt: null },
+        { subjectsNotificationRequired: true, subjectsNotifiedAt: null }
+      ]
+    })
   ]);
 
   const staleHours = numberEnv('BACKUP_STALE_HOURS', 30, 2, 720);
@@ -212,6 +221,16 @@ async function collectIssues() {
       title: 'الهوية القانونية والتجارية غير مكتملة',
       message: 'أكمل بيانات المنشأة والخصوصية في إعدادات السوبر أدمن.',
       details: { missing: legalMissing.join(', ') }
+    });
+  }
+
+  if (overduePrivacyIncidents > 0) {
+    issues.push({
+      key: 'privacy.notification_deadline_overdue',
+      severity: 'critical',
+      title: 'مهلة إخطار حادث بيانات متأخرة',
+      message: `${overduePrivacyIncidents} حادث بيانات تجاوز 72 ساعة مع إخطار مطلوب وغير مسجل.`,
+      details: { overduePrivacyIncidents }
     });
   }
 
