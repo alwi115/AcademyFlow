@@ -7,6 +7,7 @@ const AuditLog = require('../models/AuditLog');
 const SystemSetting = require('../models/SystemSetting');
 const SystemError = require('../models/SystemError');
 const SystemAlert = require('../models/SystemAlert');
+const PrivacyRequest = require('../models/PrivacyRequest');
 const backupService = require('../services/backup.service');
 const mailer = require('../services/mailer.service');
 const bootstrapSuperAdmin = require('../services/superadmin-bootstrap.service');
@@ -651,6 +652,54 @@ async function restoreBackup(req, res) {
   });
 }
 
+async function listPrivacyRequests(req, res) {
+  const filter = {};
+  if (req.query.status) {
+    filter.status = String(req.query.status);
+  }
+
+  const rows = await PrivacyRequest.find(filter)
+    .populate('handledBy', 'name username email')
+    .sort({ createdAt: -1 })
+    .limit(300);
+
+  res.json(rows);
+}
+
+async function updatePrivacyRequest(req, res) {
+  const row = await PrivacyRequest.findById(req.params.id);
+  if (!row) return res.status(404).json({ message: 'Privacy request not found' });
+
+  const allowedStatuses = ['received','verifying','in_progress','completed','rejected'];
+
+  if (req.body.status !== undefined) {
+    const status = String(req.body.status);
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ message: 'Invalid privacy request status' });
+    }
+    row.status = status;
+    row.completedAt = status === 'completed' ? new Date() : null;
+  }
+
+  if (req.body.identityVerified !== undefined) {
+    row.identityVerified = Boolean(req.body.identityVerified);
+  }
+
+  if (req.body.internalNote !== undefined) {
+    row.internalNote = String(req.body.internalNote || '').trim().slice(0, 4000);
+  }
+
+  row.handledBy = req.user.sub;
+  await row.save();
+
+  await audit(req, 'privacy.request.update', 'privacy_request', row._id, row.requestNumber, {
+    status: row.status,
+    identityVerified: row.identityVerified
+  });
+
+  res.json(await row.populate('handledBy', 'name username email'));
+}
+
 async function listAudit(req, res) {
   const limit = Math.min(Math.max(Number(req.query.limit || 100), 1), 300);
   const rows = await AuditLog.find()
@@ -711,6 +760,8 @@ module.exports = {
   createBackup,
   validateBackup,
   restoreBackup,
+  listPrivacyRequests,
+  updatePrivacyRequest,
   listAudit,
   getSettings,
   updateSettings
