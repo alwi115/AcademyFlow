@@ -1365,6 +1365,7 @@ const SA = (() => {
               </section>
               <section class="sa-settings-block">
                 <h3>حماية البيانات</h3>
+                <div class="field"><label>اسم مسؤول حماية البيانات / الخصوصية</label><input name="privacyOfficerName" value="${esc(s.privacyOfficerName || '')}"></div>
                 <div class="field"><label>بريد مسؤول حماية البيانات / الخصوصية</label><input name="privacyOfficerEmail" type="email" value="${esc(s.privacyOfficerEmail || '')}"></div>
                 <div class="sa-note">يُستخدم هذا البريد في سياسة الخصوصية وطلبات أصحاب البيانات. يفضّل بريدًا وظيفيًا مستقلًا عن البريد الشخصي.</div>
               </section>
