@@ -11,6 +11,7 @@ const User = require('../src/models/User');
 const PrivacyRequest = require('../src/models/PrivacyRequest');
 const SystemSetting = require('../src/models/SystemSetting');
 const publicRoutes = require('../src/routes/public.routes');
+const superadminRoutes = require('../src/routes/superadmin.routes');
 const authRoutes = require('../src/routes/auth.routes');
 const academyRoutes = require('../src/routes/academy.routes');
 const { CURRENT_LEGAL_VERSION } = require('../src/config/legal');
@@ -37,8 +38,8 @@ function tokenFor(user) {
   return jwt.sign({
     sub: String(user._id),
     role: user.role,
-    academyId: String(user.academyId),
-    branchId: null
+    academyId: user.academyId ? String(user.academyId) : null,
+    branchId: user.branchId ? String(user.branchId) : null
   }, process.env.JWT_SECRET, {
     algorithm: 'HS256',
     expiresIn: '1h'
@@ -80,11 +81,22 @@ async function main() {
     active: true
   });
 
+  const superadmin = await User.create({
+    academyId: null,
+    name: 'Legal Super Admin',
+    username: 'legal-superadmin',
+    email: 'legal-superadmin@example.test',
+    passwordHash: hash,
+    role: 'superadmin',
+    active: true
+  });
+
   const app = express();
   app.set('trust proxy', 1);
   app.use(express.json());
   app.use('/api/public', publicRoutes);
   app.use('/api/auth', authRoutes);
+  app.use('/api/superadmin', superadminRoutes);
   app.use('/api/academy', academyRoutes);
   app.use((err, req, res, next) => {
     res.status(Number(err.status || 500)).json({ message: err.message || 'error' });
@@ -164,6 +176,46 @@ async function main() {
     const privacyBody = await privacyRes.json();
     assert(/^PR-\d{8}-[A-F0-9]{8}$/.test(privacyBody.requestNumber));
     assert(await PrivacyRequest.exists({ requestNumber: privacyBody.requestNumber }));
+
+    const superToken = tokenFor(superadmin);
+
+    const activitiesRes = await fetch(base + '/api/superadmin/compliance/processing-activities', {
+      headers: { Authorization: 'Bearer ' + superToken }
+    });
+    assert.strictEqual(activitiesRes.status, 200);
+    const activities = await activitiesRes.json();
+    assert(activities.length >= 8);
+    assert(activities.some(row => row.key === 'encrypted-backups'));
+    assert(activities.some(row => row.key === 'security-audit-monitoring'));
+
+    const incidentRes = await fetch(base + '/api/superadmin/compliance/incidents', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + superToken,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        title: 'Legal regression privacy incident',
+        description: 'Regression-only incident record.',
+        riskLevel: 'high',
+        rightsRisk: true,
+        highRiskToSubjects: true,
+        authorityNotificationRequired: true,
+        subjectsNotificationRequired: true,
+        dataCategories: 'email\nattendance'
+      })
+    });
+    assert.strictEqual(incidentRes.status, 201);
+    const incident = await incidentRes.json();
+    assert(/^INC-\d{8}-[A-F0-9]{8}$/.test(incident.incidentNumber));
+    assert.strictEqual(incident.rightsRisk, true);
+
+    const incidentListRes = await fetch(base + '/api/superadmin/compliance/incidents', {
+      headers: { Authorization: 'Bearer ' + superToken }
+    });
+    assert.strictEqual(incidentListRes.status, 200);
+    const incidentList = await incidentListRes.json();
+    assert(incidentList.some(row => row.incidentNumber === incident.incidentNumber));
 
     const crossSite = await fetch(base + '/api/public/privacy-requests', {
       method: 'POST',
