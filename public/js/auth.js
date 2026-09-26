@@ -108,7 +108,7 @@ async function academyFlowLogin(event, kind){
   } catch (error) {
     console.error('AcademyFlow login error:', error);
     if (message) {
-      message.textContent = 'تعذر الاتصال بالخادم، حاول مرة أخرى.';
+      message.textContent = error?.message || 'تعذر الاتصال بالخادم، حاول مرة أخرى.';
     }
   } finally {
     form.dataset.submitting = '0';
