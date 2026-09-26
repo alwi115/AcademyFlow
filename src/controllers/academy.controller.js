@@ -342,7 +342,7 @@ async function listEnrollments(req, res) {
   const rows = await Enrollment.find({ academyId: req.academyId })
     .populate('studentId', 'name email phone')
     .populate('courseId', 'title code')
-    .populate('groupId', 'name')
+    .populate({ path: 'groupId', match: { academyId: req.academyId }, select: 'name' })
     .sort({ createdAt: -1 });
   res.json(rows);
 }
@@ -396,7 +396,7 @@ async function listAttendance(req, res) {
   const rows = await Attendance.find(query)
     .populate('studentId', 'name')
     .populate('courseId', 'title')
-    .populate('groupId', 'name')
+    .populate({ path: 'groupId', match: { academyId: req.academyId }, select: 'name' })
     .sort({ date: -1 })
     .limit(300);
 
