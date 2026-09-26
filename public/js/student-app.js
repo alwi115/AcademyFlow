@@ -298,6 +298,37 @@ const StudentPortal = (() => {
     `;
   }
 
+  function bindLiveJoinButtons() {
+    document.querySelectorAll('.student-join-live').forEach(button => {
+      button.onclick = async () => {
+        const sessionId = button.dataset.sessionId;
+        const popup = window.open('about:blank', '_blank');
+        const original = button.textContent;
+
+        button.disabled = true;
+        button.textContent = 'جاري تسجيل الحضور...';
+
+        try {
+          const data = await api('/api/student/live/' + encodeURIComponent(sessionId) + '/join', {
+            method: 'POST'
+          });
+
+          button.textContent = data.attendance?.attendanceStatus === 'late'
+            ? 'تم تسجيلك متأخرًا'
+            : 'تم تسجيل الحضور';
+
+          if (popup) popup.location.href = data.joinUrl;
+          else location.href = data.joinUrl;
+        } catch (err) {
+          if (popup) popup.close();
+          button.disabled = false;
+          button.textContent = original;
+          alert(err.message);
+        }
+      };
+    });
+  }
+
   async function renderDashboard() {
     const target = document.getElementById('studentPageContent');
     target.innerHTML = '<div class="student-empty">جاري تجهيز صفحتك...</div>';
@@ -330,7 +361,7 @@ const StudentPortal = (() => {
               ${d.upcomingLive?.length ? d.upcomingLive.map(x => `
                 <div class="student-list-row">
                   <div><b>${esc(x.title)}</b><span>${fmtDate(x.startAt,true)} · ${esc(x.course || '')}</span></div>
-                  ${x.zoomJoinUrl ? '<a class="btn primary" target="_blank" rel="noopener" href="'+esc(x.zoomJoinUrl)+'">انضم</a>' : status(x.status)}
+                  ${x.joinAvailable ? '<button class="btn primary student-join-live" data-session-id="'+esc(x.id)+'" type="button">انضم عبر AcademyFlow</button>' : status(x.status)}
                 </div>
               `).join('') : '<div class="student-empty">لا توجد محاضرات قادمة.</div>'}
             </div>
@@ -346,6 +377,7 @@ const StudentPortal = (() => {
           </article>
         </section>
       `;
+      bindLiveJoinButtons();
     } catch (err) {
       target.innerHTML = '<div class="student-card student-empty">'+esc(err.message)+'</div>';
     }
@@ -487,13 +519,13 @@ const StudentPortal = (() => {
           <div class="student-card-head"><div><h2>جلسات Zoom</h2><p>لا يظهر لك إلا الجلسات المرتبطة بدوراتك.</p></div></div>
           <div class="student-list">
             ${rows.length ? rows.map(x => {
-              const upcoming = new Date(x.startAt).getTime() >= now && x.status !== 'ended';
+              const joinable = x.joinAvailable && !['ended','cancelled'].includes(x.status);
               return `
                 <div class="student-list-row">
                   <div><b>${esc(x.title)}</b><span>${esc(x.course?.title || '')} · ${fmtDate(x.startAt,true)} · ${esc(x.instructor?.name || '')}</span></div>
                   <div class="student-actions">
                     ${status(x.status)}
-                    ${upcoming && x.zoomJoinUrl ? '<a class="btn primary" target="_blank" rel="noopener" href="'+esc(x.zoomJoinUrl)+'">دخول Zoom</a>' : ''}
+                    ${joinable ? '<button class="btn primary student-join-live" data-session-id="'+esc(x.id)+'" type="button">دخول Zoom</button>' : ''}
                   </div>
                 </div>
               `;
@@ -501,6 +533,7 @@ const StudentPortal = (() => {
           </div>
         </section>
       `;
+      bindLiveJoinButtons();
     } catch (err) {
       target.innerHTML = '<div class="student-card student-empty">'+esc(err.message)+'</div>';
     }

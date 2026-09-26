@@ -12,6 +12,11 @@ const AF = (() => {
     return {};
   }
 
+  if (user.role === 'instructor') {
+    location.href = '/instructor/dashboard.html';
+    return {};
+  }
+
   const page = document.body.dataset.page || 'dashboard';
   const optionsCache = { value: null };
 

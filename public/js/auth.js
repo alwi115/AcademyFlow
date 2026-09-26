@@ -42,6 +42,8 @@ async function login(e, kind){
       location.replace('/superadmin/dashboard.html');
     } else if (data.user.role === 'student') {
       location.replace('/student/dashboard.html');
+    } else if (data.user.role === 'instructor') {
+      location.replace('/instructor/dashboard.html');
     } else {
       location.replace('/academy/dashboard.html');
     }

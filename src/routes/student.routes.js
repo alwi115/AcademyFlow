@@ -3,6 +3,7 @@ const { auth, allowRoles } = require('../middleware/auth');
 const tenant = require('../middleware/tenant');
 const c = require('../controllers/student.controller');
 const q = require('../controllers/student-quiz.controller');
+const liveAttendance = require('../controllers/live-attendance.controller');
 
 router.use(auth, tenant, allowRoles('student'));
 
@@ -12,6 +13,7 @@ router.get('/courses/:id', c.courseDetails);
 router.post('/lessons/:lessonId/progress', c.setLessonProgress);
 
 router.get('/live', c.liveSessions);
+router.post('/live/:sessionId/join', liveAttendance.joinSession);
 
 router.get('/assessments', c.assessments);
 router.post('/assignments/:id/submission', c.submitAssignment);

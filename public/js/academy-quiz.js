@@ -3,6 +3,12 @@ window.AcademyQuizAdmin = (() => {
     try { return JSON.parse(localStorage.getItem('af_user') || 'null'); } catch { return null; }
   }
 
+  function portalPath(file) {
+    return document.body.classList.contains('instructor-app')
+      ? '/instructor/' + file
+      : '/academy/' + file;
+  }
+
   function esc(value) {
     return String(value ?? '')
       .replaceAll('&','&amp;')
@@ -232,7 +238,7 @@ window.AcademyQuizAdmin = (() => {
                 <span>النجاح: ${esc(row.passingPercentage ?? 50)}%</span>
                 <span>الإغلاق: ${fmtDate(row.dueAt,true)}</span>
               </div>
-              <a class="btn primary" href="/academy/quiz-builder.html?id=${encodeURIComponent(row._id)}">إدارة الاختبار</a>
+              <a class="btn primary" href="${portalPath('quiz-builder.html')}?id=${encodeURIComponent(row._id)}">إدارة الاختبار</a>
             </article>
           `).join('')}
         </div>
@@ -250,7 +256,7 @@ window.AcademyQuizAdmin = (() => {
 
     document.getElementById('quizSearch').oninput=draw;
     document.getElementById('quizCreate').onclick=()=>openQuizForm(null,async saved=>{
-      location.href='/academy/quiz-builder.html?id='+encodeURIComponent(saved._id);
+      location.href=portalPath('quiz-builder.html')+'?id='+encodeURIComponent(saved._id);
     });
 
     await load();
@@ -557,7 +563,7 @@ window.AcademyQuizAdmin = (() => {
           <section class="academy-card quiz-builder-hero">
             <div class="quiz-builder-title">
               <div>
-                <a class="quiz-back-link" href="/academy/quizzes.html">← الاختبارات</a>
+                <a class="quiz-back-link" href="${portalPath('quizzes.html')}">← الاختبارات</a>
                 <span class="quiz-course-label">${esc(quiz.courseId?.title || '')}</span>
                 <h2>${esc(quiz.title)}</h2>
                 <p>${esc(quiz.description || 'بدون تعليمات إضافية.')}</p>

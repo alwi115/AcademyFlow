@@ -7,6 +7,10 @@ const {
   normalizeQuestionPayload,
   recomputeAttempt
 } = require('../services/quiz.service');
+const {
+  manageableCourseIds: instructorCourseIds,
+  assertCourse: assertInstructorCourse
+} = require('../services/instructor-scope.service');
 
 function clean(value) {
   return typeof value === 'string' ? value.trim() : value;
@@ -14,16 +18,14 @@ function clean(value) {
 
 async function manageableCourseIds(req) {
   if (req.user.role !== 'instructor') return null;
-
-  const rows = await Course.find({
-    academyId: req.academyId,
-    instructorId: req.user.sub
-  }).select('_id');
-
-  return rows.map(row => row._id);
+  return instructorCourseIds(req);
 }
 
 async function assertCourseAccess(req, courseId) {
+  if (req.user.role === 'instructor') {
+    return assertInstructorCourse(req, courseId);
+  }
+
   const course = await Course.findOne({
     _id: courseId,
     academyId: req.academyId
@@ -32,15 +34,6 @@ async function assertCourseAccess(req, courseId) {
   if (!course) {
     const err = new Error('الدورة غير موجودة في هذه الأكاديمية');
     err.status = 404;
-    throw err;
-  }
-
-  if (
-    req.user.role === 'instructor' &&
-    String(course.instructorId || '') !== String(req.user.sub)
-  ) {
-    const err = new Error('لا تملك صلاحية إدارة اختبارات هذه الدورة');
-    err.status = 403;
     throw err;
   }
 
@@ -60,13 +53,8 @@ async function getQuizForAdmin(req, id) {
     throw err;
   }
 
-  if (
-    req.user.role === 'instructor' &&
-    String(quiz.courseId?.instructorId || '') !== String(req.user.sub)
-  ) {
-    const err = new Error('لا تملك صلاحية إدارة هذا الاختبار');
-    err.status = 403;
-    throw err;
+  if (req.user.role === 'instructor') {
+    await assertInstructorCourse(req, quiz.courseId?._id || quiz.courseId);
   }
 
   return quiz;

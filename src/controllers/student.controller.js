@@ -112,7 +112,11 @@ async function dashboard(req, res) {
       academyId,
       audience: { $in: ['all','students'] },
       status: 'sent',
-      channel: 'in_app'
+      channel: 'in_app',
+      $or: [
+        { courseId: null },
+        { courseId: { $in: courseIds } }
+      ]
     })
   ]);
 
@@ -164,7 +168,7 @@ async function dashboard(req, res) {
       startAt: row.startAt,
       durationMinutes: row.durationMinutes,
       status: row.status,
-      zoomJoinUrl: row.zoomJoinUrl || ''
+      joinAvailable: Boolean(row.zoomJoinUrl)
     }))
   });
 }
@@ -326,7 +330,10 @@ async function liveSessions(req, res) {
     durationMinutes: row.durationMinutes,
     status: row.status,
     zoomMeetingId: row.zoomMeetingId || '',
-    zoomJoinUrl: row.zoomJoinUrl || ''
+    joinAvailable: Boolean(row.zoomJoinUrl),
+    attendanceEnabled: row.attendanceEnabled,
+    lateAfterMinutes: row.lateAfterMinutes,
+    joinWindowBeforeMinutes: row.joinWindowBeforeMinutes
   })));
 }
 
@@ -475,12 +482,19 @@ async function certificates(req, res) {
 }
 
 async function notifications(req, res) {
+  const courseIds = await enrolledCourseIds(req.academyId, req.user.sub);
+
   const rows = await Notification.find({
     academyId: req.academyId,
     audience: { $in: ['all','students'] },
     status: 'sent',
-    channel: 'in_app'
+    channel: 'in_app',
+    $or: [
+      { courseId: null },
+      { courseId: { $in: courseIds } }
+    ]
   })
+    .populate('courseId', 'title code')
     .sort({ sentAt: -1, createdAt: -1 })
     .limit(200);
 

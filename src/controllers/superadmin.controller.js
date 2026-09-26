@@ -357,7 +357,8 @@ async function health(req, res) {
       mongoConfigured: Boolean(process.env.MONGODB_URI),
       allowedOriginsConfigured: Boolean(process.env.ALLOWED_ORIGINS),
       superAdminConfigured: Boolean(process.env.SUPERADMIN_USERNAME && process.env.SUPERADMIN_PASSWORD),
-      zoomConfigured: Boolean(process.env.ZOOM_ACCOUNT_ID && process.env.ZOOM_CLIENT_ID && process.env.ZOOM_CLIENT_SECRET)
+      zoomConfigured: Boolean(process.env.ZOOM_ACCOUNT_ID && process.env.ZOOM_CLIENT_ID && process.env.ZOOM_CLIENT_SECRET),
+      zoomWebhookConfigured: Boolean(process.env.ZOOM_WEBHOOK_SECRET_TOKEN)
     },
     counts: { academies, users, plans, auditLogs: logs }
   });

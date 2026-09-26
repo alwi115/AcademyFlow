@@ -801,6 +801,7 @@ const SA = (() => {
                 <div class="sa-config-row"><b>ALLOWED_ORIGINS</b>${yesNo(h.configuration.allowedOriginsConfigured)}</div>
                 <div class="sa-config-row"><b>Super Admin</b>${yesNo(h.configuration.superAdminConfigured)}</div>
                 <div class="sa-config-row"><b>Zoom Server-to-Server</b>${yesNo(h.configuration.zoomConfigured)}</div>
+                <div class="sa-config-row"><b>Zoom Attendance Webhook</b>${yesNo(h.configuration.zoomWebhookConfigured)}</div>
               </div>
             </article>
 

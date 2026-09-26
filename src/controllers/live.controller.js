@@ -6,23 +6,61 @@ const zoom = require('../services/zoom.service');
 
 async function createLiveSession(req, res) {
   const academyId = req.academyId;
-  const { title, description, instructorId, startAt, durationMinutes = 60, courseId } = req.body;
+  let { title, description, instructorId, startAt, durationMinutes = 60, courseId } = req.body;
+
+  if (req.user.role === 'instructor') {
+    instructorId = req.user.sub;
+  }
 
   if (!title || !instructorId || !startAt) {
-    return res.status(400).json({ message: 'Title, instructor and start time are required' });
+    return res.status(400).json({
+      message: 'Title, instructor and start time are required'
+    });
   }
 
   const [academy, instructor, course] = await Promise.all([
     Academy.findById(academyId),
-    User.findOne({ _id: instructorId, academyId, role: 'instructor', active: true }),
-    courseId ? Course.findOne({ _id: courseId, academyId }) : Promise.resolve(null)
+    User.findOne({
+      _id: instructorId,
+      academyId,
+      role: 'instructor',
+      active: true
+    }),
+    courseId
+      ? Course.findOne({ _id: courseId, academyId })
+      : Promise.resolve(null)
   ]);
 
   if (!academy) return res.status(404).json({ message: 'Academy not found' });
-  if (!instructor) return res.status(400).json({ message: 'Instructor does not belong to this academy' });
-  if (courseId && !course) return res.status(400).json({ message: 'Course does not belong to this academy' });
 
-  let meeting = { meetingId: '', joinUrl: '', startUrl: '', password: '' };
+  if (!instructor) {
+    return res.status(400).json({
+      message: 'Instructor does not belong to this academy'
+    });
+  }
+
+  if (courseId && !course) {
+    return res.status(400).json({
+      message: 'Course does not belong to this academy'
+    });
+  }
+
+  if (
+    req.user.role === 'instructor' &&
+    course &&
+    String(course.instructorId || '') !== String(req.user.sub)
+  ) {
+    return res.status(403).json({
+      message: 'You cannot create a live session for another instructor course'
+    });
+  }
+
+  let meeting = {
+    meetingId: '',
+    joinUrl: '',
+    startUrl: '',
+    password: ''
+  };
 
   if (zoom.configured()) {
     meeting = await zoom.createMeeting({
@@ -40,7 +78,7 @@ async function createLiveSession(req, res) {
     description: String(description || '').trim(),
     instructorId,
     startAt,
-    durationMinutes: Number(durationMinutes || 60),
+    durationMinutes: Math.max(1, Number(durationMinutes || 60)),
     zoomMeetingId: meeting.meetingId,
     zoomJoinUrl: meeting.joinUrl,
     zoomStartUrl: meeting.startUrl,
@@ -58,7 +96,13 @@ async function createLiveSession(req, res) {
 }
 
 async function listLiveSessions(req, res) {
-  const rows = await LiveSession.find({ academyId: req.academyId })
+  const query = { academyId: req.academyId };
+
+  if (req.user.role === 'instructor') {
+    query.instructorId = req.user.sub;
+  }
+
+  const rows = await LiveSession.find(query)
     .populate('courseId', 'title code')
     .populate('instructorId', 'name email')
     .sort({ startAt: 1 });
@@ -79,4 +123,7 @@ async function listLiveSessions(req, res) {
   })));
 }
 
-module.exports = { createLiveSession, listLiveSessions };
+module.exports = {
+  createLiveSession,
+  listLiveSessions
+};
