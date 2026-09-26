@@ -1110,6 +1110,14 @@ const SA = (() => {
 
   async function renderAudit() {
     const target = document.getElementById('saPageContent');
+
+    const changedKeys = row => {
+      const before = row.before && typeof row.before === 'object' ? row.before : {};
+      const after = row.after && typeof row.after === 'object' ? row.after : {};
+      return [...new Set([...Object.keys(before), ...Object.keys(after)])]
+        .filter(key => JSON.stringify(before[key]) !== JSON.stringify(after[key]))
+        .slice(0, 12);
+    };
     target.innerHTML = `
       <section class="sa-card">
         <div class="sa-card-head">
@@ -1132,17 +1140,28 @@ const SA = (() => {
       document.getElementById('auditRows').innerHTML = `
         <div class="sa-table-wrap">
           <table class="sa-table">
-            <thead><tr><th>الوقت</th><th>الإجراء</th><th>الهدف</th><th>المنفذ</th><th>التفاصيل</th></tr></thead>
+            <thead><tr><th>الوقت</th><th>الإجراء</th><th>الهدف</th><th>المنفذ</th><th>السياق</th><th>التغيير</th></tr></thead>
             <tbody>
               ${filtered.length ? filtered.map(x => `
                 <tr>
                   <td>${fmtDate(x.createdAt,true)}</td>
                   <td><span class="sa-audit-action">${esc(x.action)}</span></td>
                   <td class="sa-row-title"><b>${esc(x.targetLabel || x.targetType)}</b><small>${esc(x.targetType)}</small></td>
-                  <td>${esc(x.actorId?.username || x.actorId?.name || 'Super Admin')}</td>
-                  <td><small>${esc(Object.keys(x.details || {}).join('، ') || '—')}</small></td>
+                  <td>
+                    <b>${esc(x.actorId?.username || x.actorId?.name || x.actorRole || 'System')}</b>
+                    <small style="display:block;color:var(--text-mute)">${esc(x.academyId?.code || 'Platform')}</small>
+                  </td>
+                  <td>
+                    <small style="display:block">${esc((x.method || '') + ' ' + (x.path || ''))}</small>
+                    <small style="display:block;color:var(--text-mute)">IP: ${esc(x.ip || '—')}</small>
+                    <small style="display:block;color:var(--text-mute)">Req: ${esc(x.requestId || '—')}</small>
+                  </td>
+                  <td>
+                    <small style="display:block">حقول: ${esc(changedKeys(x).join('، ') || '—')}</small>
+                    <small style="display:block;color:var(--text-mute)">${esc(Object.keys(x.details || {}).join('، ') || '—')}</small>
+                  </td>
                 </tr>
-              `).join('') : '<tr><td colspan="5" class="sa-empty">لا يوجد سجل بعد. العمليات الجديدة ستظهر هنا.</td></tr>'}
+              `).join('') : '<tr><td colspan="6" class="sa-empty">لا يوجد سجل بعد. العمليات الجديدة ستظهر هنا.</td></tr>'}
             </tbody>
           </table>
         </div>
