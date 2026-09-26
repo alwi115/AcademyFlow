@@ -8,6 +8,7 @@ const SystemSetting = require('../models/SystemSetting');
 const SystemError = require('../models/SystemError');
 const backupService = require('../services/backup.service');
 const mailer = require('../services/mailer.service');
+const bootstrapSuperAdmin = require('../services/superadmin-bootstrap.service');
 
 async function platformSettings() {
   return SystemSetting.findOneAndUpdate(
@@ -555,13 +556,21 @@ async function restoreBackup(req, res) {
 
   const result = await backupService.restoreBackup(req.params.id);
 
+  // Restore may bring back an older Super Admin record. Re-sync the environment
+  // credential after the database write so the platform owner cannot be locked out.
+  const superAdminRecovery = await bootstrapSuperAdmin({ resetPassword: true });
+
   await audit(req, 'backup.restore', 'backup', result.restored.id, result.restored.id, {
     safetyBackupId: result.safetyBackup.id,
     restoredCollections: result.restoredCollections,
-    restoredDocuments: result.restoredDocuments
+    restoredDocuments: result.restoredDocuments,
+    superAdminRecovery: superAdminRecovery.reason || 'ok'
   });
 
-  res.json(result);
+  res.json({
+    ...result,
+    superAdminRecovery
+  });
 }
 
 async function listAudit(req, res) {
