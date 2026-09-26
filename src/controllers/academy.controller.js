@@ -74,6 +74,13 @@ async function dashboard(req, res) {
   const academyId = req.academyId;
   const objectId = new mongoose.Types.ObjectId(academyId);
   const now = new Date();
+  const role = req.user.role;
+
+  const canSeePeople = ['owner','admin','branch_manager','reception'].includes(role);
+  const canSeeContent = ['owner','admin','branch_manager','reception','content_manager'].includes(role);
+  const canSeeFinance = ['owner','admin','accountant'].includes(role);
+  const canSeeSchedule = ['owner','admin','branch_manager','reception','content_manager'].includes(role);
+  const canOpenZoom = ['owner','admin'].includes(role);
 
   const [
     students,
@@ -85,21 +92,35 @@ async function dashboard(req, res) {
     paidRows,
     upcomingSessions
   ] = await Promise.all([
-    User.countDocuments({ academyId, role: 'student', active: true }),
-    User.countDocuments({ academyId, role: 'instructor', active: true }),
-    Course.countDocuments({ academyId, status: { $ne: 'archived' } }),
-    Group.countDocuments({ academyId, status: { $in: ['planned','active'] } }),
-    Enrollment.countDocuments({ academyId, status: 'active' }),
-    LiveSession.countDocuments({ academyId, startAt: { $gte: now }, status: { $in: ['scheduled','live'] } }),
-    Payment.aggregate([
-      { $match: { academyId: objectId, status: 'paid' } },
-      { $group: { _id: null, total: { $sum: '$amount' } } }
-    ]),
-    LiveSession.find({ academyId, startAt: { $gte: now }, status: { $in: ['scheduled','live'] } })
-      .populate('courseId', 'title')
-      .populate('instructorId', 'name')
-      .sort({ startAt: 1 })
-      .limit(5)
+    canSeePeople ? User.countDocuments({ academyId, role: 'student', active: true }) : 0,
+    canSeePeople ? User.countDocuments({ academyId, role: 'instructor', active: true }) : 0,
+    canSeeContent ? Course.countDocuments({ academyId, status: { $ne: 'archived' } }) : 0,
+    canSeeContent ? Group.countDocuments({ academyId, status: { $in: ['planned','active'] } }) : 0,
+    canSeePeople ? Enrollment.countDocuments({ academyId, status: 'active' }) : 0,
+    canSeeSchedule
+      ? LiveSession.countDocuments({
+          academyId,
+          startAt: { $gte: now },
+          status: { $in: ['scheduled','live'] }
+        })
+      : 0,
+    canSeeFinance
+      ? Payment.aggregate([
+          { $match: { academyId: objectId, status: 'paid' } },
+          { $group: { _id: null, total: { $sum: '$amount' } } }
+        ])
+      : [],
+    canSeeSchedule
+      ? LiveSession.find({
+          academyId,
+          startAt: { $gte: now },
+          status: { $in: ['scheduled','live'] }
+        })
+          .populate('courseId', 'title')
+          .populate('instructorId', 'name')
+          .sort({ startAt: 1 })
+          .limit(5)
+      : []
   ]);
 
   res.json({
@@ -109,7 +130,7 @@ async function dashboard(req, res) {
     groups,
     activeEnrollments,
     upcomingLive,
-    revenue: paidRows[0]?.total || 0,
+    revenue: canSeeFinance ? (paidRows[0]?.total || 0) : null,
     upcomingSessions: upcomingSessions.map(x => ({
       id: x._id,
       title: x.title,
@@ -117,19 +138,37 @@ async function dashboard(req, res) {
       durationMinutes: x.durationMinutes,
       course: x.courseId?.title || '',
       instructor: x.instructorId?.name || '',
-      zoomJoinUrl: x.zoomJoinUrl || ''
+      zoomJoinUrl: canOpenZoom ? (x.zoomJoinUrl || '') : ''
     }))
   });
 }
 
 async function options(req, res) {
   const academyId = req.academyId;
+  const role = req.user.role;
+
+  const needsStudents = ['owner','admin','branch_manager','reception','accountant','content_manager'].includes(role);
+  const needsInstructors = ['owner','admin','branch_manager','reception','content_manager'].includes(role);
+  const needsCourses = ['owner','admin','branch_manager','reception','accountant','content_manager'].includes(role);
+  const needsGroups = ['owner','admin','branch_manager','reception'].includes(role);
+  const needsBranches = ['owner','admin','branch_manager','reception'].includes(role);
+
   const [students, instructors, courses, groups, branches] = await Promise.all([
-    User.find({ academyId, role: 'student', active: true }).select('name email').sort({ name: 1 }),
-    User.find({ academyId, role: 'instructor', active: true }).select('name email').sort({ name: 1 }),
-    Course.find({ academyId, status: { $ne: 'archived' } }).select('title code').sort({ title: 1 }),
-    Group.find({ academyId, status: { $ne: 'cancelled' } }).select('name courseId').sort({ name: 1 }),
-    Branch.find({ academyId, active: true }).select('name code').sort({ name: 1 })
+    needsStudents
+      ? User.find({ academyId, role: 'student', active: true }).select('name email').sort({ name: 1 })
+      : [],
+    needsInstructors
+      ? User.find({ academyId, role: 'instructor', active: true }).select('name email').sort({ name: 1 })
+      : [],
+    needsCourses
+      ? Course.find({ academyId, status: { $ne: 'archived' } }).select('title code').sort({ title: 1 })
+      : [],
+    needsGroups
+      ? Group.find({ academyId, status: { $ne: 'cancelled' } }).select('name courseId').sort({ name: 1 })
+      : [],
+    needsBranches
+      ? Branch.find({ academyId, active: true }).select('name code').sort({ name: 1 })
+      : []
   ]);
 
   res.json({ students, instructors, courses, groups, branches });
@@ -138,8 +177,21 @@ async function options(req, res) {
 async function listUsers(req, res) {
   const academyId = req.academyId;
   const kind = req.query.kind || 'student';
-  let roleFilter;
+  const role = req.user.role;
 
+  const allowedKinds = {
+    owner: new Set(['student','instructor','staff']),
+    admin: new Set(['student','instructor','staff']),
+    branch_manager: new Set(['student','instructor']),
+    reception: new Set(['student','instructor']),
+    content_manager: new Set(['instructor'])
+  };
+
+  if (!allowedKinds[role]?.has(kind)) {
+    return res.status(403).json({ message: 'Forbidden' });
+  }
+
+  let roleFilter;
   if (kind === 'staff') roleFilter = { $in: STAFF_ROLES };
   else if (['student','instructor'].includes(kind)) roleFilter = kind;
   else return res.status(400).json({ message: 'Invalid user kind' });
