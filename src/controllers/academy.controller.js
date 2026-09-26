@@ -70,6 +70,35 @@ async function assertInstructor(id, academyId) {
   return row;
 }
 
+function isBranchManager(req) {
+  return req.user?.role === 'branch_manager';
+}
+
+async function branchGroups(req, { includeCancelled = false } = {}) {
+  if (!isBranchManager(req)) return null;
+
+  if (!req.user.branchId) {
+    const err = new Error('Branch manager is not assigned to a branch');
+    err.status = 403;
+    throw err;
+  }
+
+  const query = {
+    academyId: req.academyId,
+    branchId: req.user.branchId
+  };
+
+  if (!includeCancelled) query.status = { $ne: 'cancelled' };
+
+  return Group.find(query).select('_id courseId instructorId');
+}
+
+async function branchGroupIds(req, options) {
+  const rows = await branchGroups(req, options);
+  return rows ? rows.map(row => row._id) : null;
+}
+
+
 async function dashboard(req, res) {
   const academyId = req.academyId;
   const objectId = new mongoose.Types.ObjectId(academyId);
@@ -205,11 +234,36 @@ async function listUsers(req, res) {
 
 async function createUser(req, res) {
   const academyId = req.academyId;
-  const { name, email, phone, password, role } = req.body;
+  const { name, email, phone, password, role, branchId } = req.body;
   const allowed = ['student','instructor',...STAFF_ROLES];
 
   if (!name || !email || !password || !allowed.includes(role)) {
     return res.status(400).json({ message: 'Name, email, password and a valid role are required' });
+  }
+
+  if (role === 'admin' && req.user.role !== 'owner') {
+    return res.status(403).json({
+      message: 'Only the academy owner can create another admin'
+    });
+  }
+
+  let resolvedBranchId = null;
+  if (role === 'branch_manager') {
+    if (!branchId) {
+      return res.status(400).json({ message: 'Branch is required for a branch manager' });
+    }
+
+    const branch = await Branch.findOne({
+      _id: branchId,
+      academyId,
+      active: true
+    }).select('_id');
+
+    if (!branch) {
+      return res.status(400).json({ message: 'Selected branch is not available in this academy' });
+    }
+
+    resolvedBranchId = branch._id;
   }
 
   if (String(password).length < 10) {
@@ -224,6 +278,7 @@ async function createUser(req, res) {
   const passwordHash = await bcrypt.hash(String(password), 12);
   const row = await User.create({
     academyId,
+    branchId: resolvedBranchId,
     name: clean(name),
     email: normalizedEmail,
     phone: clean(phone),
@@ -237,12 +292,99 @@ async function createUser(req, res) {
     email: row.email,
     phone: row.phone,
     role: row.role,
+    branchId: row.branchId || null,
     active: row.active
   });
 }
 
+async function updateUser(req, res) {
+  const academyId = req.academyId;
+  const row = await User.findOne({
+    _id: req.params.id,
+    academyId
+  });
+
+  if (!row) return res.status(404).json({ message: 'User not found' });
+  if (row.role === 'owner') {
+    return res.status(403).json({ message: 'Owner account cannot be modified here' });
+  }
+
+  if (row.role === 'admin' && req.user.role !== 'owner') {
+    return res.status(403).json({ message: 'Only the owner can modify an admin account' });
+  }
+
+  const allowed = ['student','instructor',...STAFF_ROLES];
+  const nextRole = req.body.role !== undefined ? String(req.body.role) : row.role;
+
+  if (!allowed.includes(nextRole)) {
+    return res.status(400).json({ message: 'Invalid role' });
+  }
+
+  if (nextRole === 'admin' && req.user.role !== 'owner') {
+    return res.status(403).json({ message: 'Only the owner can grant admin access' });
+  }
+
+  let nextBranchId = null;
+  if (nextRole === 'branch_manager') {
+    const requestedBranchId = req.body.branchId || row.branchId;
+    if (!requestedBranchId) {
+      return res.status(400).json({ message: 'Branch is required for a branch manager' });
+    }
+
+    const branch = await Branch.findOne({
+      _id: requestedBranchId,
+      academyId,
+      active: true
+    }).select('_id');
+
+    if (!branch) {
+      return res.status(400).json({ message: 'Selected branch is not available in this academy' });
+    }
+
+    nextBranchId = branch._id;
+  }
+
+  if (req.body.email !== undefined) {
+    const normalizedEmail = String(req.body.email || '').trim().toLowerCase();
+    if (!normalizedEmail) return res.status(400).json({ message: 'Email is required' });
+
+    const duplicate = await User.exists({
+      academyId,
+      email: normalizedEmail,
+      _id: { $ne: row._id }
+    });
+
+    if (duplicate) return res.status(409).json({ message: 'Email is already used in this academy' });
+    row.email = normalizedEmail;
+  }
+
+  if (req.body.name !== undefined) row.name = clean(req.body.name);
+  if (req.body.phone !== undefined) row.phone = clean(req.body.phone);
+  if (req.body.active !== undefined) row.active = Boolean(req.body.active);
+
+  row.role = nextRole;
+  row.branchId = nextBranchId;
+
+  await row.save();
+
+  res.json({
+    id: row._id,
+    name: row.name,
+    email: row.email,
+    phone: row.phone,
+    role: row.role,
+    branchId: row.branchId || null,
+    active: row.active
+  });
+}
+
+
+
 async function listBranches(req, res) {
-  res.json(await Branch.find({ academyId: req.academyId }).sort({ createdAt: -1 }));
+  const query = { academyId: req.academyId };
+  if (isBranchManager(req)) query._id = req.user.branchId;
+
+  res.json(await Branch.find(query).sort({ createdAt: -1 }));
 }
 
 async function createBranch(req, res) {
@@ -268,9 +410,18 @@ async function createBranch(req, res) {
 }
 
 async function listCourses(req, res) {
-  const rows = await Course.find({ academyId: req.academyId })
+  const query = { academyId: req.academyId };
+
+  if (isBranchManager(req)) {
+    const groups = await branchGroups(req, { includeCancelled: true });
+    const courseIds = [...new Set(groups.map(row => String(row.courseId)).filter(Boolean))];
+    query._id = { $in: courseIds };
+  }
+
+  const rows = await Course.find(query)
     .populate('instructorId', 'name email')
     .sort({ createdAt: -1 });
+
   res.json(rows);
 }
 
@@ -365,7 +516,10 @@ async function createLesson(req, res) {
 }
 
 async function listGroups(req, res) {
-  const rows = await Group.find({ academyId: req.academyId })
+  const query = { academyId: req.academyId };
+  if (isBranchManager(req)) query.branchId = req.user.branchId;
+
+  const rows = await Group.find(query)
     .populate('courseId', 'title code')
     .populate('branchId', 'name code')
     .populate('instructorId', 'name')
@@ -375,11 +529,20 @@ async function listGroups(req, res) {
 
 async function createGroup(req, res) {
   const academyId = req.academyId;
-  const { courseId, branchId, instructorId, name, schedule, room, capacity, startAt, endAt, status } = req.body;
+  const { courseId, instructorId, name, schedule, room, capacity, startAt, endAt, status } = req.body;
+  let { branchId } = req.body;
 
   if (!courseId || !name) return res.status(400).json({ message: 'Course and group name are required' });
 
   await assertOwned(Course, courseId, academyId, 'Course');
+
+  if (isBranchManager(req)) {
+    if (branchId && String(branchId) !== String(req.user.branchId)) {
+      return res.status(403).json({ message: 'You can only manage groups in your assigned branch' });
+    }
+    branchId = req.user.branchId;
+  }
+
   if (branchId) await assertOwned(Branch, branchId, academyId, 'Branch');
   if (instructorId) await assertInstructor(instructorId, academyId);
 
@@ -401,7 +564,14 @@ async function createGroup(req, res) {
 }
 
 async function listEnrollments(req, res) {
-  const rows = await Enrollment.find({ academyId: req.academyId })
+  const query = { academyId: req.academyId };
+
+  if (isBranchManager(req)) {
+    const ids = await branchGroupIds(req, { includeCancelled: true });
+    query.groupId = { $in: ids };
+  }
+
+  const rows = await Enrollment.find(query)
     .populate('studentId', 'name email phone')
     .populate('courseId', 'title code')
     .populate({ path: 'groupId', match: { academyId: req.academyId }, select: 'name' })
@@ -411,7 +581,8 @@ async function listEnrollments(req, res) {
 
 async function createEnrollment(req, res) {
   const academyId = req.academyId;
-  const { studentId, courseId, groupId, status } = req.body;
+  const { studentId, courseId, status } = req.body;
+  let { groupId } = req.body;
 
   if (!studentId || !courseId) {
     return res.status(400).json({ message: 'Student and course are required' });
@@ -421,17 +592,24 @@ async function createEnrollment(req, res) {
   if (student.role !== 'student') return res.status(400).json({ message: 'Selected user is not a student' });
   await assertOwned(Course, courseId, academyId, 'Course');
 
+  if (isBranchManager(req) && !groupId) {
+    return res.status(400).json({ message: 'Branch managers must enroll students into a group in their branch' });
+  }
+
   if (groupId) {
-    const group = await Group.findOne({
+    const groupQuery = {
       _id: groupId,
       academyId,
       courseId,
       status: { $ne: 'cancelled' }
-    }).select('_id');
+    };
+    if (isBranchManager(req)) groupQuery.branchId = req.user.branchId;
+
+    const group = await Group.findOne(groupQuery).select('_id');
 
     if (!group) {
-      return res.status(400).json({
-        message: 'Selected group does not belong to this academy and course'
+      return res.status(isBranchManager(req) ? 403 : 400).json({
+        message: 'Selected group is outside your allowed branch or course'
       });
     }
   }
@@ -454,6 +632,11 @@ async function createEnrollment(req, res) {
 async function listAttendance(req, res) {
   const query = { academyId: req.academyId };
   if (req.query.courseId) query.courseId = req.query.courseId;
+
+  if (isBranchManager(req)) {
+    const ids = await branchGroupIds(req, { includeCancelled: true });
+    query.groupId = { $in: ids };
+  }
 
   const rows = await Attendance.find(query)
     .populate('studentId', 'name')
@@ -495,17 +678,36 @@ async function createAttendance(req, res) {
 
   let resolvedGroupId = enrollment.groupId || null;
 
+  if (isBranchManager(req)) {
+    if (!resolvedGroupId) {
+      return res.status(403).json({ message: 'Student is not assigned to a group in your branch' });
+    }
+
+    const allowedGroup = await Group.exists({
+      _id: resolvedGroupId,
+      academyId,
+      branchId: req.user.branchId
+    });
+
+    if (!allowedGroup) {
+      return res.status(403).json({ message: 'Student is outside your assigned branch' });
+    }
+  }
+
   if (groupId) {
-    const group = await Group.findOne({
+    const groupQuery = {
       _id: groupId,
       academyId,
       courseId,
       status: { $ne: 'cancelled' }
-    }).select('_id');
+    };
+    if (isBranchManager(req)) groupQuery.branchId = req.user.branchId;
+
+    const group = await Group.findOne(groupQuery).select('_id');
 
     if (!group) {
-      return res.status(400).json({
-        message: 'Selected group does not belong to this academy and course'
+      return res.status(isBranchManager(req) ? 403 : 400).json({
+        message: 'Selected group is outside your allowed branch or course'
       });
     }
 
