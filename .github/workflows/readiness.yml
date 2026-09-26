@@ -48,9 +48,13 @@ jobs:
           node --check scripts/monitoring-test.js
           node --check scripts/e2e-test.js
           node --check scripts/performance-smoke-test.js
+          node --check scripts/legal-readiness-test.js
 
       - name: Monitoring alert regression
         run: npm run test:monitoring
+
+      - name: Legal readiness and privacy rights
+        run: npm run test:legal
 
       - name: End-to-end academy journey
         run: npm run test:e2e
