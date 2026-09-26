@@ -251,6 +251,19 @@ async function main() {
   assert.strictEqual(instructorAttendance.body.length, 1);
   assert.strictEqual(instructorAttendance.body[0].groupId, null);
 
+  const academyAttendance = await callController(academyController.listAttendance, {
+    academyId: String(academyA._id),
+    user: {
+      sub: String(instructorA._id),
+      role: 'admin',
+      academyId: String(academyA._id)
+    },
+    query: { courseId: String(courseA._id) }
+  });
+  assert.strictEqual(academyAttendance.statusCode, 200);
+  assert.strictEqual(academyAttendance.body.length, 1);
+  assert.strictEqual(academyAttendance.body[0].groupId, null);
+
   // Student from tenant B must never be accepted as tenant A's student.
   const foreignStudentAttendance = await callController(academyController.createAttendance, {
     academyId: String(academyA._id),
