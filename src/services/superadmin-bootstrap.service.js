@@ -5,7 +5,8 @@ function normalizeUsername(value) {
   return String(value || '').trim().toLowerCase();
 }
 
-async function bootstrapSuperAdmin() {
+async function bootstrapSuperAdmin(options = {}) {
+  const resetPassword = Boolean(options.resetPassword);
   const username = normalizeUsername(process.env.SUPERADMIN_USERNAME);
   const email = String(process.env.SUPERADMIN_EMAIL || '').trim().toLowerCase();
   const password = process.env.SUPERADMIN_PASSWORD || '';
@@ -51,14 +52,24 @@ async function bootstrapSuperAdmin() {
       changed = true;
     }
 
+    if (resetPassword) {
+      existingSuperAdmin.passwordHash = await bcrypt.hash(password, 12);
+      existingSuperAdmin.active = true;
+      changed = true;
+    }
+
     if (changed) {
       await existingSuperAdmin.save();
-      console.log(`Super Admin account metadata updated: ${username}`);
+      console.log(`Super Admin account synchronized: ${username}`);
     } else {
       console.log(`Super Admin already exists: ${username}`);
     }
 
-    return { created: false, reason: 'already_exists' };
+    return {
+      created: false,
+      reason: 'already_exists',
+      passwordSynchronized: resetPassword
+    };
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
