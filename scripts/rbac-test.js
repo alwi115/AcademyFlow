@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const Academy = require('../src/models/Academy');
+const { CURRENT_LEGAL_VERSION } = require('../src/config/legal');
 const User = require('../src/models/User');
 const Course = require('../src/models/Course');
 const Branch = require('../src/models/Branch');
@@ -89,7 +90,15 @@ async function main() {
       email: role + '-' + Date.now() + '-' + Math.random().toString(16).slice(2) + '@example.test',
       passwordHash,
       role,
-      active: true
+      active: true,
+      ...(role === 'owner' ? {
+        legalAcceptance: {
+          termsVersion: CURRENT_LEGAL_VERSION,
+          privacyVersion: CURRENT_LEGAL_VERSION,
+          dpaVersion: CURRENT_LEGAL_VERSION,
+          acceptedAt: new Date()
+        }
+      } : {})
     });
   }
 
