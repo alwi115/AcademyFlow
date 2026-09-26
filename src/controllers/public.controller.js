@@ -44,6 +44,11 @@ async function legalConfig(req, res) {
     graceDays: Number(settings.defaultGraceDays ?? 5),
     supportEmail: settings.supportEmail || '',
     supportPhone: settings.supportPhone || '',
+    legalEntityName: settings.legalEntityName || '',
+    commercialRegistrationNumber: settings.commercialRegistrationNumber || '',
+    taxNumber: settings.taxNumber || '',
+    businessAddress: settings.businessAddress || '',
+    privacyOfficerEmail: settings.privacyOfficerEmail || '',
     legalVersion: CURRENT_LEGAL_VERSION,
     jurisdiction: 'Sultanate of Oman'
   });
