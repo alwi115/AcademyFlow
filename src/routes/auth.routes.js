@@ -14,8 +14,28 @@ const loginLimiter = rateLimit({
   }
 });
 
-router.post('/login', loginLimiter, login);
+function allowedRequestOrigin(req) {
+  const origin = String(req.get('origin') || '').trim();
+  if (!origin) return true;
+
+  const configured = String(process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map(value => value.trim())
+    .filter(Boolean);
+
+  const requestOrigin = `${req.protocol}://${req.get('host')}`;
+  return origin === requestOrigin || configured.includes(origin);
+}
+
+function requireTrustedOrigin(req, res, next) {
+  if (!allowedRequestOrigin(req)) {
+    return res.status(403).json({ message: 'Cross-site request blocked' });
+  }
+  next();
+}
+
+router.post('/login', requireTrustedOrigin, loginLimiter, login);
 router.get('/me', auth, me);
-router.post('/logout', logout);
+router.post('/logout', requireTrustedOrigin, logout);
 
 module.exports = router;
