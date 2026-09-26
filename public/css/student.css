@@ -61,3 +61,15 @@ body.student-app{min-width:320px;overflow-x:hidden;font-size:14px}
 .student-quiz-toast{position:fixed;left:18px;bottom:18px;z-index:400;padding:11px 13px;border:1px solid var(--line);border-radius:12px;background:var(--surface-strong);box-shadow:var(--shadow-heavy);font-size:10px;opacity:0;transform:translateY(14px);pointer-events:none;transition:.18s}.student-quiz-toast.show{opacity:1;transform:none}.student-quiz-toast.error{border-color:var(--danger)}
 @media(max-width:900px){.student-quiz-exam-layout{grid-template-columns:1fr}.student-quiz-map{order:-1}.student-quiz-map-grid{grid-template-columns:repeat(10,1fr)}}
 @media(max-width:640px){.student-quiz-grid{grid-template-columns:1fr}.student-quiz-meta{grid-template-columns:repeat(2,minmax(0,1fr))}.student-quiz-exam-head,.student-quiz-result-hero{flex-direction:column}.student-quiz-timer{width:100%}.student-quiz-map-grid{grid-template-columns:repeat(6,1fr)}.student-quiz-nav{grid-template-columns:1fr 1fr}.student-quiz-save-state{grid-column:1/-1;grid-row:1}.student-quiz-date{flex-direction:column}.student-quiz-result-score{text-align:right}}
+
+/* Video watch progress */
+.student-watch-card{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:13px;background:var(--surface-muted)}
+.student-watch-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.student-watch-head b{display:block;font-size:10.5px}
+.student-watch-head small{display:block;margin-top:3px;color:var(--text-mute);font-size:8.5px;line-height:1.6}
+.student-watch-head strong{flex:0 0 auto;color:var(--primary);font-size:13px}
+.student-watch-track{height:8px;margin-top:10px;overflow:hidden;border-radius:999px;background:var(--bg-soft)}
+.student-watch-track i{display:block;height:100%;border-radius:inherit;background:var(--primary);transition:width .25s ease}
+.student-watch-note{margin-top:8px;color:var(--text-mute);font-size:8.5px;line-height:1.65}
+.student-lesson.done .student-lesson-number{background:color-mix(in srgb,var(--success) 13%,transparent);color:var(--success)}
+@media(max-width:640px){.student-watch-head{gap:8px}.student-watch-head small{font-size:9px}.student-watch-note{font-size:9px}}

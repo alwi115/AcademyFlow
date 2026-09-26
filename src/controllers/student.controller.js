@@ -35,6 +35,53 @@ async function enrolledCourseIds(academyId, studentId) {
   return rows.map(row => row.courseId);
 }
 
+const VIDEO_COMPLETION_PERCENT = 95;
+const MAX_VIDEO_SECONDS = 12 * 60 * 60;
+
+function safeNumber(value, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function clampNumber(value, min, max) {
+  return Math.min(max, Math.max(min, safeNumber(value, min)));
+}
+
+function mergeWatchedRanges(ranges, durationSeconds = 0) {
+  const ceiling = durationSeconds > 0 ? durationSeconds : MAX_VIDEO_SECONDS;
+
+  const normalized = (Array.isArray(ranges) ? ranges : [])
+    .map(range => ({
+      start: clampNumber(range?.start, 0, ceiling),
+      end: clampNumber(range?.end, 0, ceiling)
+    }))
+    .filter(range => range.end > range.start)
+    .sort((a,b) => a.start - b.start);
+
+  const merged = [];
+
+  for (const range of normalized) {
+    const last = merged[merged.length - 1];
+
+    if (!last || range.start > last.end + 1.5) {
+      merged.push({ ...range });
+    } else {
+      last.end = Math.max(last.end, range.end);
+    }
+  }
+
+  return merged.slice(-250);
+}
+
+function watchedSecondsFromRanges(ranges) {
+  return Math.round(
+    (ranges || []).reduce(
+      (sum, range) => sum + Math.max(0, Number(range.end) - Number(range.start)),
+      0
+    ) * 10
+  ) / 10;
+}
+
 async function recalcProgress(academyId, studentId, courseId) {
   const [totalLessons, completedLessons] = await Promise.all([
     Lesson.countDocuments({ academyId, courseId, status: 'published' }),
@@ -255,12 +302,13 @@ async function courseDetails(req, res) {
     LessonProgress.find({
       academyId,
       studentId,
-      courseId,
-      completed: true
-    }).select('lessonId completedAt lastOpenedAt')
+      courseId
+    }).select(
+      'lessonId completed completedAt lastOpenedAt durationSeconds watchedSeconds watchedPercent lastPositionSeconds maxPositionSeconds'
+    )
   ]);
 
-  const completedMap = new Map(
+  const progressMap = new Map(
     progressRows.map(row => [String(row.lessonId), row])
   );
 
@@ -274,16 +322,32 @@ async function courseDetails(req, res) {
       enrolledAt: enrollment.enrolledAt,
       progress: progressInfo.progress
     },
-    lessons: lessons.map(row => ({
-      id: row._id,
-      title: row.title,
-      description: row.description,
-      order: row.order,
-      youtubeId: row.youtubeId,
-      durationMinutes: row.durationMinutes,
-      completed: completedMap.has(String(row._id)),
-      completedAt: completedMap.get(String(row._id))?.completedAt || null
-    })),
+    videoCompletionPercent: VIDEO_COMPLETION_PERCENT,
+    lessons: lessons.map(row => {
+      const saved = progressMap.get(String(row._id));
+      const completed = Boolean(saved?.completed);
+      const watchedPercent = completed && !Number(saved?.watchedPercent)
+        ? 100
+        : Math.min(100, Math.max(0, Number(saved?.watchedPercent || 0)));
+
+      return {
+        id: row._id,
+        title: row.title,
+        description: row.description,
+        order: row.order,
+        youtubeId: row.youtubeId,
+        durationMinutes: row.durationMinutes,
+        hasVideo: Boolean(row.youtubeId),
+        completed,
+        completedAt: saved?.completedAt || null,
+        watchedSeconds: Number(saved?.watchedSeconds || 0),
+        watchedPercent,
+        durationSeconds: Number(saved?.durationSeconds || 0),
+        resumePositionSeconds: completed
+          ? 0
+          : Number(saved?.lastPositionSeconds || 0)
+      };
+    }),
     progress: progressInfo
   });
 }
@@ -292,7 +356,6 @@ async function setLessonProgress(req, res) {
   const academyId = req.academyId;
   const studentId = req.user.sub;
   const lessonId = req.params.lessonId;
-  const completed = req.body.completed !== false;
 
   const lesson = await Lesson.findOne({
     _id: lessonId,
@@ -304,30 +367,188 @@ async function setLessonProgress(req, res) {
     return res.status(404).json({ message: 'Lesson not found' });
   }
 
-  const enrollment = await studentEnrollment(academyId, studentId, lesson.courseId);
+  const enrollment = await studentEnrollment(
+    academyId,
+    studentId,
+    lesson.courseId
+  );
+
   if (!enrollment) {
     return res.status(403).json({ message: 'You are not enrolled in this course' });
   }
 
-  if (completed) {
-    await LessonProgress.findOneAndUpdate(
-      { academyId, studentId, lessonId },
-      {
-        $set: {
-          courseId: lesson.courseId,
-          completed: true,
-          completedAt: new Date(),
-          lastOpenedAt: new Date()
-        }
-      },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
-  } else {
-    await LessonProgress.deleteOne({ academyId, studentId, lessonId });
+  const now = new Date();
+  let row = await LessonProgress.findOne({
+    academyId,
+    studentId,
+    lessonId
+  });
+
+  if (!row) {
+    row = new LessonProgress({
+      academyId,
+      studentId,
+      courseId: lesson.courseId,
+      lessonId,
+      completed: false,
+      completedAt: null
+    });
   }
 
-  const progress = await recalcProgress(academyId, studentId, lesson.courseId);
-  res.json(progress);
+  row.courseId = lesson.courseId;
+  row.lastOpenedAt = now;
+
+  if (!lesson.youtubeId) {
+    if (req.body.manualComplete !== true) {
+      return res.status(400).json({
+        message: 'هذا الدرس لا يحتوي على فيديو. استخدم إكمال الدرس اليدوي.'
+      });
+    }
+
+    row.completed = true;
+    row.completedAt = row.completedAt || now;
+    row.watchedPercent = 100;
+    await row.save();
+  } else {
+    const durationSeconds = clampNumber(
+      req.body.durationSeconds,
+      0,
+      MAX_VIDEO_SECONDS
+    );
+
+    const positionLimit = durationSeconds > 0
+      ? durationSeconds
+      : MAX_VIDEO_SECONDS;
+
+    const positionSeconds = clampNumber(
+      req.body.positionSeconds,
+      0,
+      positionLimit
+    );
+
+    const playerState = clampNumber(req.body.playerState, -1, 5);
+    const playbackRate = clampNumber(req.body.playbackRate, 0.25, 2);
+    const ended = req.body.ended === true;
+
+    const previousPosition = Number(row.lastPositionSeconds || 0);
+    const previousState = Number(row.lastPlayerState ?? -1);
+    const previousReportedAt = row.lastReportedAt
+      ? new Date(row.lastReportedAt)
+      : null;
+
+    if (durationSeconds > 0) {
+      row.durationSeconds = durationSeconds;
+    }
+
+    const effectiveDuration = Number(row.durationSeconds || durationSeconds || 0);
+
+    if (previousReportedAt) {
+      const elapsedSeconds = Math.max(
+        0,
+        (now.getTime() - previousReportedAt.getTime()) / 1000
+      );
+
+      const boundedElapsed = Math.min(180, elapsedSeconds);
+      const positionDelta = positionSeconds - previousPosition;
+      const maxPlausibleAdvance =
+        boundedElapsed * playbackRate * 1.35 + 2;
+
+      const wasPlaying =
+        previousState === 1 ||
+        playerState === 1 ||
+        ended;
+
+      if (
+        wasPlaying &&
+        positionDelta > 0 &&
+        positionDelta <= maxPlausibleAdvance
+      ) {
+        const ranges = [
+          ...(row.watchedRanges || []).map(range => ({
+            start: Number(range.start || 0),
+            end: Number(range.end || 0)
+          })),
+          {
+            start: previousPosition,
+            end: positionSeconds
+          }
+        ];
+
+        row.watchedRanges = mergeWatchedRanges(
+          ranges,
+          effectiveDuration
+        );
+      }
+    }
+
+    row.lastPositionSeconds = positionSeconds;
+    row.maxPositionSeconds = Math.max(
+      Number(row.maxPositionSeconds || 0),
+      positionSeconds
+    );
+    row.lastPlayerState = playerState;
+    row.lastReportedAt = now;
+
+    const mergedRanges = mergeWatchedRanges(
+      row.watchedRanges || [],
+      effectiveDuration
+    );
+
+    row.watchedRanges = mergedRanges;
+    row.watchedSeconds = watchedSecondsFromRanges(mergedRanges);
+
+    row.watchedPercent = effectiveDuration > 0
+      ? Math.min(
+          100,
+          Math.round((row.watchedSeconds / effectiveDuration) * 1000) / 10
+        )
+      : 0;
+
+    const nearEnd = effectiveDuration > 0 &&
+      positionSeconds >= effectiveDuration - Math.max(
+        8,
+        Math.min(20, effectiveDuration * 0.03)
+      );
+
+    if (
+      !row.completed &&
+      row.watchedPercent >= VIDEO_COMPLETION_PERCENT &&
+      (ended || nearEnd)
+    ) {
+      row.completed = true;
+      row.completedAt = now;
+      row.watchedPercent = Math.max(
+        VIDEO_COMPLETION_PERCENT,
+        row.watchedPercent
+      );
+    }
+
+    await row.save();
+  }
+
+  const courseProgress = await recalcProgress(
+    academyId,
+    studentId,
+    lesson.courseId
+  );
+
+  res.json({
+    lesson: {
+      id: row.lessonId,
+      completed: Boolean(row.completed),
+      completedAt: row.completedAt || null,
+      watchedSeconds: Number(row.watchedSeconds || 0),
+      watchedPercent: row.completed && !Number(row.watchedPercent)
+        ? 100
+        : Number(row.watchedPercent || 0),
+      durationSeconds: Number(row.durationSeconds || 0),
+      resumePositionSeconds: row.completed
+        ? 0
+        : Number(row.lastPositionSeconds || 0)
+    },
+    courseProgress,
+    completionThreshold: VIDEO_COMPLETION_PERCENT
+  });
 }
 
 async function liveSessions(req, res) {

@@ -397,6 +397,249 @@ const StudentPortal = (() => {
     }
   }
 
+  let youtubeApiPromise = null;
+
+  function ensureYouTubeApi() {
+    if (window.YT?.Player) return Promise.resolve(window.YT);
+    if (youtubeApiPromise) return youtubeApiPromise;
+
+    youtubeApiPromise = new Promise((resolve,reject) => {
+      const previousReady = window.onYouTubeIframeAPIReady;
+      let settled = false;
+
+      const finish = () => {
+        if (settled || !window.YT?.Player) return;
+        settled = true;
+        resolve(window.YT);
+      };
+
+      window.onYouTubeIframeAPIReady = () => {
+        try {
+          if (typeof previousReady === 'function') previousReady();
+        } catch {}
+        finish();
+      };
+
+      if (!document.querySelector('script[data-academyflow-youtube-api]')) {
+        const script = document.createElement('script');
+        script.src = 'https://www.youtube.com/iframe_api';
+        script.async = true;
+        script.dataset.academyflowYoutubeApi = '1';
+        script.onerror = () => {
+          if (!settled) {
+            settled = true;
+            youtubeApiPromise = null;
+            reject(new Error('تعذر تحميل مشغل YouTube'));
+          }
+        };
+        document.head.appendChild(script);
+      }
+
+      const check = setInterval(() => {
+        if (window.YT?.Player) {
+          clearInterval(check);
+          finish();
+        }
+      },250);
+
+      setTimeout(() => {
+        clearInterval(check);
+        if (!settled) {
+          settled = true;
+          youtubeApiPromise = null;
+          reject(new Error('استغرق تحميل مشغل YouTube وقتًا طويلًا'));
+        }
+      },12000);
+    });
+
+    return youtubeApiPromise;
+  }
+
+  function roundedWatchPercent(value) {
+    return Math.max(0,Math.min(100,Math.round(Number(value || 0))));
+  }
+
+  function createLessonVideoTracker({ lesson, onProgress, onCompleted, onError }) {
+    let player = null;
+    let heartbeat = null;
+    let destroyed = false;
+    let sending = false;
+    let queued = false;
+    let completedAnnounced = Boolean(lesson.completed);
+
+    const endpoint = '/api/student/lessons/'+encodeURIComponent(lesson.id)+'/progress';
+
+    const clearHeartbeat = () => {
+      if (heartbeat) clearInterval(heartbeat);
+      heartbeat = null;
+    };
+
+    const playerSnapshot = () => {
+      if (!player || destroyed) return null;
+
+      try {
+        return {
+          positionSeconds:Number(player.getCurrentTime() || 0),
+          durationSeconds:Number(player.getDuration() || 0),
+          playerState:Number(player.getPlayerState()),
+          playbackRate:Number(player.getPlaybackRate?.() || 1)
+        };
+      } catch {
+        return null;
+      }
+    };
+
+    const submitSnapshot = async (snapshot, ended=false, keepalive=false) => {
+      if (!snapshot) return;
+
+      const payload = {
+        ...snapshot,
+        ended:Boolean(ended)
+      };
+
+      if (keepalive) {
+        try {
+          fetch(endpoint,{
+            method:'POST',
+            credentials:'same-origin',
+            keepalive:true,
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify(payload)
+          });
+        } catch {}
+        return;
+      }
+
+      if (sending) {
+        queued = { snapshot, ended };
+        return;
+      }
+
+      sending = true;
+
+      try {
+        const result = await api(endpoint,{
+          method:'POST',
+          body:JSON.stringify(payload)
+        });
+
+        if (result?.lesson) {
+          Object.assign(lesson,{
+            completed:Boolean(result.lesson.completed),
+            completedAt:result.lesson.completedAt || null,
+            watchedSeconds:Number(result.lesson.watchedSeconds || 0),
+            watchedPercent:Number(result.lesson.watchedPercent || 0),
+            durationSeconds:Number(result.lesson.durationSeconds || 0),
+            resumePositionSeconds:Number(result.lesson.resumePositionSeconds || 0)
+          });
+
+          onProgress?.(result.lesson,result.courseProgress);
+
+          if (lesson.completed && !completedAnnounced) {
+            completedAnnounced = true;
+            onCompleted?.(result.lesson,result.courseProgress);
+          }
+        }
+      } catch (err) {
+        onError?.(err);
+      } finally {
+        sending = false;
+
+        if (queued) {
+          const next = queued;
+          queued = false;
+          submitSnapshot(next.snapshot,next.ended,false);
+        }
+      }
+    };
+
+    const flush = (ended=false, keepalive=false) => {
+      const snapshot = playerSnapshot();
+      if (!snapshot) return;
+      submitSnapshot(snapshot,ended,keepalive);
+    };
+
+    const startHeartbeat = () => {
+      clearHeartbeat();
+      heartbeat = setInterval(() => flush(false,false),10000);
+    };
+
+    ensureYouTubeApi()
+      .then(YT => {
+        if (destroyed) return;
+
+        player = new YT.Player('lessonYoutubePlayer',{
+          host:'https://www.youtube-nocookie.com',
+          width:'100%',
+          height:'100%',
+          videoId:lesson.youtubeId,
+          playerVars:{
+            rel:0,
+            playsinline:1,
+            modestbranding:1
+          },
+          events:{
+            onReady:event => {
+              if (destroyed) return;
+
+              const duration = Number(event.target.getDuration() || 0);
+              const resume = Number(lesson.resumePositionSeconds || 0);
+
+              if (
+                !lesson.completed &&
+                resume > 3 &&
+                (!duration || resume < duration - 5)
+              ) {
+                event.target.seekTo(resume,true);
+              }
+
+              setTimeout(() => flush(false,false),700);
+            },
+            onStateChange:event => {
+              if (destroyed) return;
+
+              if (event.data === YT.PlayerState.PLAYING) {
+                startHeartbeat();
+                setTimeout(() => flush(false,false),600);
+                return;
+              }
+
+              clearHeartbeat();
+
+              if (event.data === YT.PlayerState.ENDED) {
+                flush(true,false);
+              } else if (
+                event.data === YT.PlayerState.PAUSED ||
+                event.data === YT.PlayerState.CUED
+              ) {
+                flush(false,false);
+              }
+            },
+            onError:() => {
+              onError?.(new Error('تعذر تشغيل فيديو YouTube'));
+            }
+          }
+        });
+      })
+      .catch(err => onError?.(err));
+
+    return {
+      flushKeepalive(){
+        flush(false,true);
+      },
+      destroy(){
+        if (destroyed) return;
+        flush(false,true);
+        destroyed = true;
+        clearHeartbeat();
+
+        try {
+          player?.destroy();
+        } catch {}
+      }
+    };
+  }
+
   async function renderCourse() {
     const target = document.getElementById('studentPageContent');
     const courseId = new URLSearchParams(location.search).get('id');
@@ -408,24 +651,87 @@ const StudentPortal = (() => {
 
     target.innerHTML = '<div class="student-empty">جاري تحميل الدورة...</div>';
 
+    let videoTracker = null;
+
     try {
       const data = await api('/api/student/courses/'+encodeURIComponent(courseId));
       const lessons = data.lessons || [];
-      let activeId = lessons.find(x => !x.completed)?.id || lessons[0]?.id || null;
+      const completionThreshold = Number(data.videoCompletionPercent || 95);
+
+      let activeId =
+        lessons.find(x => !x.completed && Number(x.watchedPercent || 0) > 0)?.id ||
+        lessons.find(x => !x.completed)?.id ||
+        lessons[0]?.id ||
+        null;
+
+      const updateProgressUi = (lesson,courseProgress) => {
+        if (courseProgress) {
+          data.progress = courseProgress;
+          data.enrollment.progress = courseProgress.progress;
+
+          const badge = document.getElementById('courseProgressBadge');
+          if (badge) badge.textContent = courseProgress.progress+'%';
+
+          const wrap = document.getElementById('courseProgressWrap');
+          if (wrap) wrap.innerHTML = progressBar(courseProgress.progress);
+        }
+
+        const percent = roundedWatchPercent(lesson.watchedPercent);
+        const watchText = lesson.completed
+          ? 'مكتمل'
+          : percent+'% مشاهدة · غير مكتمل';
+
+        const percentNode = document.getElementById('lessonWatchPercent');
+        if (percentNode) percentNode.textContent = lesson.completed ? 'مكتمل' : percent+'%';
+
+        const fill = document.getElementById('lessonWatchFill');
+        if (fill) fill.style.width = (lesson.completed ? 100 : percent)+'%';
+
+        const state = document.getElementById('lessonWatchStatus');
+        if (state) state.textContent = watchText;
+
+        const row = document.querySelector(
+          '.student-lesson[data-lesson-id="'+CSS.escape(String(lesson.id))+'"]'
+        );
+
+        if (row) {
+          row.classList.toggle('done',Boolean(lesson.completed));
+
+          const number = row.querySelector('.student-lesson-number');
+          if (number) number.textContent = lesson.completed ? '✓' : lesson.order;
+
+          const label = row.querySelector('.student-lesson-watch');
+          if (label) {
+            label.textContent = lesson.completed
+              ? 'مكتمل'
+              : percent > 0
+                ? percent+'% مشاهدة · غير مكتمل'
+                : 'لم يبدأ';
+          }
+        }
+      };
 
       const draw = () => {
-        const active = lessons.find(x => String(x.id) === String(activeId)) || lessons[0];
+        videoTracker?.destroy();
+        videoTracker = null;
+
+        const active =
+          lessons.find(x => String(x.id) === String(activeId)) ||
+          lessons[0];
 
         target.innerHTML = `
           <section class="student-card" style="margin-bottom:11px">
             <div class="student-card-head">
-              <div><h2>${esc(data.course.title)}</h2><p>${esc(data.course.description || '')}</p></div>
+              <div>
+                <h2>${esc(data.course.title)}</h2>
+                <p>${esc(data.course.description || '')}</p>
+              </div>
               <div class="student-actions">
-                <span class="student-status good">${esc(data.progress.progress)}%</span>
+                <span class="student-status good" id="courseProgressBadge">${esc(data.progress.progress)}%</span>
                 <a class="btn ghost" href="/student/courses.html">رجوع للدورات</a>
               </div>
             </div>
-            ${progressBar(data.progress.progress)}
+            <div id="courseProgressWrap">${progressBar(data.progress.progress)}</div>
           </section>
 
           ${lessons.length ? `
@@ -433,32 +739,76 @@ const StudentPortal = (() => {
               <article class="student-player-card">
                 <div class="student-player">
                   ${active?.youtubeId
-                    ? '<iframe loading="lazy" src="https://www.youtube-nocookie.com/embed/'+encodeURIComponent(active.youtubeId)+'?rel=0" title="'+esc(active.title)+'" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>'
+                    ? '<div id="lessonYoutubePlayer"></div>'
                     : '<div class="student-player-placeholder">هذا الدرس لا يحتوي على فيديو YouTube.</div>'}
                 </div>
+
                 <div class="student-player-info">
                   <h2>${esc(active?.title || '')}</h2>
                   <p>${esc(active?.description || '')}</p>
+
                   <div class="student-meta">
                     <span>الدرس ${esc(active?.order || '')}</span>
                     <span>${esc(active?.durationMinutes || 0)} دقيقة</span>
-                    ${active?.completed ? '<span>✓ مكتمل</span>' : '<span>غير مكتمل</span>'}
+                    <span id="lessonWatchStatus">
+                      ${active?.completed
+                        ? 'مكتمل'
+                        : roundedWatchPercent(active?.watchedPercent) > 0
+                          ? roundedWatchPercent(active?.watchedPercent)+'% مشاهدة · غير مكتمل'
+                          : 'غير مكتمل'}
+                    </span>
                   </div>
-                  <div class="student-actions" style="margin-top:12px">
-                    <button class="btn ${active?.completed ? 'ghost' : 'primary'}" id="lessonCompleteButton" type="button">
-                      ${active?.completed ? 'إلغاء الإكمال' : 'تم إكمال الدرس'}
-                    </button>
-                  </div>
+
+                  ${active?.youtubeId ? `
+                    <div class="student-watch-card">
+                      <div class="student-watch-head">
+                        <div>
+                          <b>تقدم مشاهدة الفيديو</b>
+                          <small>يكتمل الدرس تلقائيًا بعد مشاهدة ${completionThreshold}% على الأقل والوصول لنهاية الفيديو.</small>
+                        </div>
+                        <strong id="lessonWatchPercent">${active.completed ? 'مكتمل' : roundedWatchPercent(active.watchedPercent)+'%'}</strong>
+                      </div>
+
+                      <div class="student-watch-track">
+                        <i id="lessonWatchFill" style="width:${active.completed ? 100 : roundedWatchPercent(active.watchedPercent)}%"></i>
+                      </div>
+
+                      <div class="student-watch-note">
+                        السحب مباشرة إلى نهاية الفيديو لا يحسب الدرس مكتملًا. يتم احتساب وقت المشاهدة الفعلي وحفظ مكان توقفك.
+                      </div>
+                    </div>
+                  ` : `
+                    <div class="student-actions" style="margin-top:12px">
+                      ${active?.completed
+                        ? '<span class="student-status good">✓ مكتمل</span>'
+                        : '<button class="btn primary" id="manualLessonComplete" type="button">إكمال هذا الدرس</button>'}
+                    </div>
+                  `}
                 </div>
               </article>
 
               <aside class="student-lessons">
-                ${lessons.map(x => `
-                  <button class="student-lesson ${String(x.id) === String(activeId) ? 'active' : ''} ${x.completed ? 'done' : ''}" data-lesson-id="${esc(x.id)}" type="button">
-                    <span class="student-lesson-number">${x.completed ? '✓' : esc(x.order)}</span>
-                    <span><b>${esc(x.title)}</b><span>${esc(x.durationMinutes || 0)} دقيقة · ${x.completed ? 'مكتمل' : 'لم يكتمل'}</span></span>
-                  </button>
-                `).join('')}
+                ${lessons.map(x => {
+                  const percent = roundedWatchPercent(x.watchedPercent);
+                  return `
+                    <button
+                      class="student-lesson ${String(x.id) === String(activeId) ? 'active' : ''} ${x.completed ? 'done' : ''}"
+                      data-lesson-id="${esc(x.id)}"
+                      type="button">
+                      <span class="student-lesson-number">${x.completed ? '✓' : esc(x.order)}</span>
+                      <span>
+                        <b>${esc(x.title)}</b>
+                        <span class="student-lesson-watch">
+                          ${x.completed
+                            ? 'مكتمل'
+                            : percent > 0
+                              ? percent+'% مشاهدة · غير مكتمل'
+                              : 'لم يبدأ'}
+                        </span>
+                      </span>
+                    </button>
+                  `;
+                }).join('')}
               </aside>
             </section>
           ` : '<div class="student-card student-empty">لم تنشر الأكاديمية دروسًا في هذه الدورة حتى الآن.</div>'}
@@ -471,37 +821,57 @@ const StudentPortal = (() => {
           };
         });
 
-        const complete = document.getElementById('lessonCompleteButton');
-        if (complete && active) {
-          complete.onclick = async () => {
-            complete.disabled = true;
-            const nextCompleted = !active.completed;
+        const manualComplete = document.getElementById('manualLessonComplete');
+
+        if (manualComplete && active && !active.youtubeId) {
+          manualComplete.onclick = async () => {
+            manualComplete.disabled = true;
+
             try {
-              const result = await api('/api/student/lessons/'+encodeURIComponent(active.id)+'/progress',{
-                method:'POST',
-                body:JSON.stringify({completed:nextCompleted})
-              });
+              const result = await api(
+                '/api/student/lessons/'+encodeURIComponent(active.id)+'/progress',
+                {
+                  method:'POST',
+                  body:JSON.stringify({manualComplete:true})
+                }
+              );
 
-              active.completed = nextCompleted;
-              data.progress = result;
-              data.enrollment.progress = result.progress;
-
-              if (nextCompleted) {
-                const next = lessons.find(x => !x.completed);
-                if (next) activeId = next.id;
-              }
-
+              Object.assign(active,result.lesson);
+              updateProgressUi(active,result.courseProgress);
               draw();
             } catch (err) {
               alert(err.message);
-              complete.disabled = false;
+              manualComplete.disabled = false;
             }
           };
         }
+
+        if (active?.youtubeId) {
+          videoTracker = createLessonVideoTracker({
+            lesson:active,
+            onProgress:(saved,courseProgress) => {
+              Object.assign(active,saved);
+              updateProgressUi(active,courseProgress);
+            },
+            onCompleted:(saved,courseProgress) => {
+              Object.assign(active,saved);
+              updateProgressUi(active,courseProgress);
+            },
+            onError:err => {
+              const note = document.querySelector('.student-watch-note');
+              if (note) note.textContent = err.message;
+            }
+          });
+        }
       };
+
+      window.addEventListener('pagehide',() => {
+        videoTracker?.flushKeepalive();
+      },{once:true});
 
       draw();
     } catch (err) {
+      videoTracker?.destroy();
       target.innerHTML = '<div class="student-card student-empty">'+esc(err.message)+'</div>';
     }
   }
