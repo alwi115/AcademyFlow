@@ -176,9 +176,16 @@ async function resolveAcademy(academyOrId) {
 }
 
 async function saveTokens(academy, tokenData) {
-  const current = academy.zoomIntegration?.tokensEncrypted
-    ? decryptTokens(academy.zoomIntegration.tokensEncrypted)
-    : {};
+  let current = {};
+
+  // A fresh authorization normally returns both tokens. Only decrypt the
+  // previous payload when Zoom omits one of them during a refresh.
+  if (
+    (!tokenData.access_token || !tokenData.refresh_token) &&
+    academy.zoomIntegration?.tokensEncrypted
+  ) {
+    current = decryptTokens(academy.zoomIntegration.tokensEncrypted);
+  }
 
   const accessToken = tokenData.access_token || current.accessToken;
   const refreshToken = tokenData.refresh_token || current.refreshToken;
