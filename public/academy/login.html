@@ -3,64 +3,38 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#0f172a">
+  <meta name="theme-color" content="#f2efe7">
   <meta name="color-scheme" content="light dark">
   <title>تسجيل الدخول | AcademyFlow</title>
   <link rel="stylesheet" href="/css/app.css">
-  <link rel="stylesheet" href="/css/academy-login.css">
+  <link rel="stylesheet" href="/css/academy-login.css?v=3">
   <script src="/js/ui.js"></script>
 </head>
 <body class="academy-login-page">
   <main class="academy-login-shell">
-    <section class="academy-login-card" aria-label="تسجيل الدخول إلى AcademyFlow">
-      <aside class="academy-login-showcase">
-        <div>
-          <a class="academy-login-brand" href="/">
-            <span class="academy-login-brand-mark">AF</span>
-            <span class="academy-login-brand-copy">
-              <b>AcademyFlow</b>
-              <span>ACADEMY &amp; STUDENT PORTAL</span>
-            </span>
-          </a>
+    <header class="academy-login-topline">
+      <a class="academy-login-brand" href="/" aria-label="AcademyFlow">
+        <span class="academy-login-brand-mark" aria-hidden="true"></span>
+        <span class="academy-login-brand-copy"><b>AcademyFlow</b><span>ACADEMY PORTAL</span></span>
+      </a>
 
-          <div class="academy-login-intro">
-            <span class="academy-login-chip">بوابة الأكاديمية والطلاب</span>
-            <h1>ادخل إلى مساحتك بأمان.</h1>
-            <p>استخدم كود الأكاديمية والبريد وكلمة المرور. النظام يتعرف على دور حسابك ويوجهك تلقائيًا إلى لوحة الإدارة أو بوابة المدرب أو بوابة الطالب.</p>
-          </div>
-        </div>
+      <span class="academy-login-route">ACCESS / ACADEMY / SECURE SESSION</span>
 
-        <div class="academy-login-features">
-          <article class="academy-login-feature">
-            <i>AF</i>
-            <b>عزل بيانات الأكاديمية</b>
-            <span>كود الأكاديمية يحدد مساحة البيانات الخاصة بالحساب.</span>
-          </article>
-          <article class="academy-login-feature">
-            <i>12H</i>
-            <b>جلسة محمية</b>
-            <span>جلسة الدخول تحفظ في Cookie آمنة لا يقرأها JavaScript.</span>
-          </article>
-          <article class="academy-login-feature">
-            <i>5X</i>
-            <b>حماية المحاولات</b>
-            <span>المحاولات الفاشلة المتكررة تؤدي إلى إيقاف مؤقت.</span>
-          </article>
-        </div>
-      </aside>
+      <div class="academy-login-tools">
+        <a class="academy-login-back" href="/"><span>الرجوع للرئيسية</span></a>
+        <button class="academy-login-theme theme-toggle" data-theme-toggle data-theme-icon type="button" aria-label="تبديل الوضع">◐</button>
+      </div>
+    </header>
 
+    <section class="academy-login-stage" aria-label="تسجيل الدخول إلى AcademyFlow">
       <section class="academy-login-panel">
-        <div class="academy-login-tools">
-          <a class="academy-login-back" href="/">العودة للرئيسية</a>
-          <button class="academy-login-theme theme-toggle" data-theme-toggle data-theme-icon type="button" aria-label="تبديل الوضع">◐</button>
-        </div>
-
         <form id="academyLoginForm" data-login-kind="academy" method="post" action="/api/auth/login" autocomplete="on">
           <input type="hidden" id="csrfToken" name="_csrf" value="">
+
           <div class="academy-login-form-head">
-            <span class="academy-login-eyebrow">SECURE SIGN IN</span>
-            <h2>تسجيل الدخول</h2>
-            <p>أدخل بيانات حسابك كما وفرتها لك الأكاديمية.</p>
+            <span class="academy-login-eyebrow">SECURE ACCESS</span>
+            <h1>ادخل لمساحة <span>أكاديميتك.</span></h1>
+            <p>ثلاث معلومات فقط. بعدها النظام يعرف دور حسابك ويوجهك تلقائيًا للمكان الصحيح.</p>
           </div>
 
           <div class="academy-login-field">
@@ -121,21 +95,55 @@
             </div>
           </div>
 
-          <button class="academy-login-submit" type="submit">دخول إلى AcademyFlow</button>
-          <p class="academy-login-message" id="msg" aria-live="polite"></p>
+          <div class="academy-login-submit-row">
+            <button class="academy-login-submit" type="submit">دخول إلى AcademyFlow</button>
+            <p class="academy-login-message" id="msg" aria-live="polite"></p>
+          </div>
         </form>
 
         <div class="academy-login-security">
           <i>✓</i>
-          <span>كلمة المرور لا تُخزن كنص صريح، والجلسة الجديدة تستخدم Cookie من نوع HttpOnly وSameSite لحماية التوكن من الوصول عبر JavaScript.</span>
+          <span>الجلسة تستخدم Cookie من نوع HttpOnly وSameSite، وكلمة المرور ما تنحفظ كنص صريح.</span>
         </div>
+
         <div class="legal-login-links">
-          <a href="/legal/privacy.html">سياسة الخصوصية</a>
-          <a href="/legal/terms.html">الشروط والأحكام</a>
+          <a href="/legal/privacy.html">الخصوصية</a>
+          <a href="/legal/terms.html">الشروط</a>
           <a href="/legal/privacy-request.html">طلب خصوصية</a>
         </div>
       </section>
+
+      <aside class="academy-login-showcase" aria-hidden="true">
+        <span class="academy-login-micro">
+          ONE CODE<br>
+          ONE ACCOUNT<br>
+          THE RIGHT SPACE
+        </span>
+
+        <div class="academy-access-orbit">
+          <span class="academy-access-line"></span>
+
+          <div class="academy-access-core">
+            <div>
+              <b>AF</b>
+              <small>ACCESS</small>
+            </div>
+          </div>
+
+          <div class="academy-access-point p1"><span><b>الكود</b><small>IDENTIFY</small></span></div>
+          <div class="academy-access-point p2"><span><b>الحساب</b><small>VERIFY</small></span></div>
+          <div class="academy-access-point p3"><span><b>الدور</b><small>ROUTE</small></span></div>
+          <div class="academy-access-point p4"><span><b>المساحة</b><small>ENTER</small></span></div>
+        </div>
+
+        <span class="academy-login-note">الدخول الصح للمكان الصح</span>
+      </aside>
     </section>
+
+    <footer class="academy-login-footer">
+      <span>AcademyFlow — بوابة واحدة، وكل مستخدم لمساحته.</span>
+      <span>SECURE SESSION / ROLE AWARE / MULTI-TENANT</span>
+    </footer>
   </main>
 
   <script src="/js/academy-login.js?v=2"></script>
