@@ -63,8 +63,21 @@ async function auth(req, res, next) {
       return res.status(401).json({ message: 'Session account is no longer active' });
     }
 
+    const currentAcademyId = user.academyId ? String(user.academyId) : null;
+    const tokenAcademyId = payload.academyId ? String(payload.academyId) : null;
+
+    // A role or tenant change is a security boundary change. Do not silently
+    // upgrade, downgrade or move an existing session: force a fresh login.
+    if (
+      payload.role !== user.role ||
+      tokenAcademyId !== currentAcademyId
+    ) {
+      clearSessionCookie(res);
+      return res.status(401).json({ message: 'Session scope changed. Sign in again.' });
+    }
+
     if (user.role === 'superadmin') {
-      if (user.academyId) {
+      if (currentAcademyId) {
         clearSessionCookie(res);
         return res.status(403).json({ message: 'Invalid superadmin account scope' });
       }
@@ -78,12 +91,12 @@ async function auth(req, res, next) {
       return next();
     }
 
-    if (!user.academyId) {
+    if (!currentAcademyId) {
       clearSessionCookie(res);
       return res.status(403).json({ message: 'Academy context missing' });
     }
 
-    const academy = await Academy.findById(user.academyId).select('_id status');
+    const academy = await Academy.findById(currentAcademyId).select('_id status');
 
     if (!academy) {
       clearSessionCookie(res);
@@ -98,7 +111,7 @@ async function auth(req, res, next) {
     req.user = {
       sub: String(user._id),
       role: user.role,
-      academyId: String(user.academyId)
+      academyId: currentAcademyId
     };
 
     return next();
