@@ -11,7 +11,7 @@
 - تسجيل دخول بكود الأكاديمية
 - أدوار أساسية
 - LiveSession model
-- تكامل Zoom Server-to-Server OAuth لإنشاء اجتماع Zoom
+- تكامل Zoom User-managed OAuth متعدد الأكاديميات؛ كل أكاديمية تربط حساب Zoom الخاص بها
 - زر الطالب/المستخدم يفتح Zoom بدل بث الفيديو داخل الموقع
 - Health endpoint
 - حماية JWT + Helmet + Rate Limiting
@@ -27,13 +27,19 @@
 النسخة الحالية تحتاج إنشاء مستخدم `superadmin` في MongoDB يدويًا أو عبر seed script في المرحلة القادمة.
 
 ## Zoom
-ضع:
-- ZOOM_ACCOUNT_ID
-- ZOOM_CLIENT_ID
-- ZOOM_CLIENT_SECRET
-- ZOOM_USER_ID
+AcademyFlow يستخدم **User-managed OAuth** حتى تربط كل أكاديمية حساب Zoom الخاص بها بشكل مستقل.
 
-النظام يستخدم REST API لإنشاء meeting ويحفظ `join_url` و`start_url` في قاعدة البيانات. الفيديو نفسه لا يمر عبر السيرفر، لذلك يبقى النظام أخف.
+ضع في Railway:
+- `ZOOM_CLIENT_ID`
+- `ZOOM_CLIENT_SECRET`
+- `ZOOM_REDIRECT_URI=https://academyflow.up.railway.app/api/zoom/callback`
+- `ZOOM_TOKEN_ENCRYPTION_KEY` (مفتاح عشوائي طويل؛ وإذا تركته فارغًا يستخدم `JWT_SECRET` كمصدر للتشفير)
+
+لا تستخدم `ZOOM_ACCOUNT_ID` أو `ZOOM_USER_ID` في هذا التدفق.
+
+بعد تسجيل دخول مالك الأكاديمية، يذهب إلى الإعدادات ثم يضغط **ربط حساب Zoom**. النظام يستخدم state موقّعًا وقصير العمر، ثم يحفظ access/refresh tokens مشفّرة داخل سجل الأكاديمية. عند انتهاء access token يتم تحديثه تلقائيًا باستخدام refresh token.
+
+النظام يستخدم Zoom REST API لإنشاء meeting ويحفظ `join_url` و`start_url` في قاعدة البيانات. الفيديو نفسه لا يمر عبر السيرفر، لذلك يبقى النظام أخف.
 
 ## المرحلة التالية المقترحة
 - Seed script للسوبر أدمن والباقات
