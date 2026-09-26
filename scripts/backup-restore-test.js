@@ -3,6 +3,7 @@ const fs = require('fs/promises');
 const path = require('path');
 const os = require('os');
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 const Academy = require('../src/models/Academy');
 const User = require('../src/models/User');
@@ -42,11 +43,13 @@ async function main() {
     subscriptionEndsAt: new Date('2030-01-02T03:04:05.000Z')
   });
 
+  const passwordHash = await bcrypt.hash('BackupRegressionPassword123!', 4);
+
   const user = await User.create({
     academyId: academy._id,
     name: 'Backup User',
     email: 'backup-user@example.test',
-    passwordHash: 'not-a-real-hash-for-test-only',
+    passwordHash,
     role: 'student',
     active: true
   });
