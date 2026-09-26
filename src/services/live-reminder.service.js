@@ -98,7 +98,7 @@ async function sendEmail({ academy, session, student, courseTitle, minutes }) {
 
   if (!mailer.configured()) {
     delivery.status = 'failed';
-    delivery.error = 'SMTP is not configured';
+    delivery.error = 'Resend is not configured';
     delivery.lastAttemptAt = new Date();
     delivery.attempts = Math.max(1, Number(delivery.attempts || 0));
     await delivery.save();

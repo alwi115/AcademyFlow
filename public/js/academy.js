@@ -1465,16 +1465,24 @@ const AF = (() => {
         <div class="academy-card-head">
           <div>
             <h2>البريد الإلكتروني والتنبيهات</h2>
-            <p>هذا القسم منفصل عن تحميل الإعدادات، لذلك أي مشكلة في SMTP لن تعطل الصفحة.</p>
+            <p>الإرسال يستخدم Resend عبر HTTPS، لذلك يناسب Railway بدون الحاجة إلى SMTP.</p>
           </div>
           <div id="academyEmailState"><span class="academy-status info">جاري فحص الإعداد...</span></div>
         </div>
 
         <div class="academy-details-grid" id="academyEmailDetails">
           <div class="academy-detail-item"><small>الحالة</small><div>جاري قراءة إعدادات البريد...</div></div>
-          <div class="academy-detail-item"><small>الخادم</small><div>—</div></div>
+          <div class="academy-detail-item"><small>مزود البريد</small><div>Resend</div></div>
           <div class="academy-detail-item"><small>البريد المرسل منه</small><div>—</div></div>
-          <div class="academy-detail-item"><small>الحماية</small><div>—</div></div>
+          <div class="academy-detail-item"><small>API Key</small><div>—</div></div>
+        </div>
+
+        <div class="academy-note" style="margin-top:12px">
+          <b>المطلوب في Railway Variables:</b>
+          <code>RESEND_API_KEY</code> +
+          <code>EMAIL_FROM</code> +
+          <code>PUBLIC_URL</code>.
+          لا تضع مفتاح Resend داخل الموقع أو ترسله لأي شخص.
         </div>
 
         <div class="academy-row-actions" style="margin-top:12px">
@@ -1508,14 +1516,14 @@ const AF = (() => {
           : '<span class="academy-status warn">غير مضبوط</span>';
 
         const reason = emailStatus.configured
-          ? 'بيانات SMTP موجودة. استخدم زر البريد التجريبي للتأكد من الاتصال والإرسال.'
+          ? 'إعدادات Resend موجودة. استخدم زر البريد التجريبي للتأكد أن المفتاح والبريد المرسل منه يعملان.'
           : 'المتغيرات الناقصة: '+((emailStatus.missing || []).join(', ') || 'غير معروفة');
 
         details.innerHTML = `
           <div class="academy-detail-item"><small>الحالة</small><div>${esc(reason)}</div></div>
-          <div class="academy-detail-item"><small>الخادم</small><div>${esc(emailStatus.host || '—')}:${esc(emailStatus.port || '—')}</div></div>
-          <div class="academy-detail-item"><small>البريد المرسل منه</small><div>${esc(emailStatus.fromEmail || '—')}</div></div>
-          <div class="academy-detail-item"><small>الحماية</small><div>${emailStatus.secure ? 'SSL/TLS مباشر' : 'STARTTLS / منفذ 587 غالبًا'}</div></div>
+          <div class="academy-detail-item"><small>مزود البريد</small><div>Resend · HTTPS API</div></div>
+          <div class="academy-detail-item"><small>البريد المرسل منه</small><div>${esc(emailStatus.from || '—')}</div></div>
+          <div class="academy-detail-item"><small>API Key</small><div>${emailStatus.apiKeyPresent ? 'موجود ومخفي' : 'غير موجود'}</div></div>
         `;
       } catch (err) {
         state.innerHTML = '<span class="academy-status bad">تعذر قراءة حالة البريد</span>';
@@ -1596,7 +1604,7 @@ const AF = (() => {
       }
     };
 
-    // Deliberately not awaited: SMTP can never block the settings page again.
+    // Deliberately not awaited: email diagnostics can never block the settings page.
     loadEmailStatus();
   }
 

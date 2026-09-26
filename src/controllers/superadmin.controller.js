@@ -359,7 +359,7 @@ async function health(req, res) {
       superAdminConfigured: Boolean(process.env.SUPERADMIN_USERNAME && process.env.SUPERADMIN_PASSWORD),
       zoomConfigured: Boolean(process.env.ZOOM_ACCOUNT_ID && process.env.ZOOM_CLIENT_ID && process.env.ZOOM_CLIENT_SECRET),
       zoomWebhookConfigured: Boolean(process.env.ZOOM_WEBHOOK_SECRET_TOKEN),
-      smtpConfigured: Boolean(process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_USER && process.env.SMTP_PASS)
+      resendConfigured: Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM)
     },
     counts: { academies, users, plans, auditLogs: logs }
   });

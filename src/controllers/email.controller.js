@@ -3,17 +3,14 @@ const User = require('../models/User');
 const mailer = require('../services/mailer.service');
 
 async function status(req, res) {
-  // This endpoint must stay instant. Never open an SMTP connection while
-  // loading the academy settings page.
   const info = mailer.configStatus();
 
   res.json({
+    provider: info.provider,
     configured: info.configured,
     missing: info.missing,
-    host: info.host || '',
-    port: info.port,
-    secure: info.secure,
-    fromEmail: info.fromEmail || ''
+    from: info.from || '',
+    apiKeyPresent: Boolean(info.apiKeyPresent)
   });
 }
 
@@ -37,7 +34,7 @@ async function test(req, res) {
 
   if (!info.configured) {
     return res.status(409).json({
-      message: 'إعدادات SMTP غير مكتملة',
+      message: 'إعدادات Resend غير مكتملة',
       missing: info.missing
     });
   }
@@ -50,16 +47,17 @@ async function test(req, res) {
 
     res.json({
       ok: true,
+      provider: 'resend',
       to: user.email,
       messageId: result?.messageId || ''
     });
   } catch (err) {
-    console.error('[smtp test]', err.message);
+    console.error('[resend test]', err.message);
 
     res.status(502).json({
-      message: 'فشل إرسال البريد التجريبي',
-      error: String(err.message || 'SMTP error').slice(0,500),
-      code: String(err.code || '').slice(0,80)
+      message: 'فشل إرسال البريد التجريبي عبر Resend',
+      error: String(err.message || 'Resend error').slice(0,500),
+      code: String(err.code || '').slice(0,120)
     });
   }
 }
