@@ -66,6 +66,16 @@ window.InstructorPortal = (() => {
       : d.toLocaleDateString('ar-OM',{dateStyle:'medium'});
   }
 
+  function inputDate(value, withTime=false) {
+    if (!value) return '';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '';
+    const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+    return withTime
+      ? local.toISOString().slice(0,16)
+      : local.toISOString().slice(0,10);
+  }
+
   function fmtDuration(seconds) {
     seconds = Number(seconds || 0);
     if (!seconds) return '—';
@@ -292,6 +302,26 @@ window.InstructorPortal = (() => {
     };
   }
 
+  function openDetails({title,subtitle='',items=[]}) {
+    const modal = document.getElementById('instructorModal');
+    const form = document.getElementById('instructorModalForm');
+
+    document.getElementById('instructorModalTitle').textContent = title || 'التفاصيل';
+    document.getElementById('instructorModalSubtitle').textContent = subtitle;
+
+    form.innerHTML =
+      '<div class="instructor-details-grid full">'+
+      items.map(item =>
+        '<div class="instructor-detail-item"><small>'+esc(item[0])+'</small><div>'+esc(item[1] ?? '—')+'</div></div>'
+      ).join('')+
+      '</div>'+
+      '<div class="instructor-form-actions full"><button class="btn primary" id="instructorDetailsClose" type="button">تم</button></div>';
+
+    modal.hidden = false;
+    document.getElementById('instructorDetailsClose').onclick = () => modal.hidden = true;
+    form.onsubmit = e => e.preventDefault();
+  }
+
   function kpi(label,value) {
     return '<article class="instructor-kpi"><small>'+esc(label)+'</small><strong>'+esc(value ?? 0)+'</strong></article>';
   }
@@ -334,29 +364,243 @@ window.InstructorPortal = (() => {
 
   async function renderCourses() {
     const target=document.getElementById('pageContent');
-    target.innerHTML='<div class="instructor-empty">جاري تحميل الدورات...</div>';
-    try{
-      const rows=await api('/api/instructor/courses');
-      target.innerHTML=rows.length?'<div class="instructor-course-grid">'+rows.map(c=>`
-        <article class="instructor-course">
-          <h3>${esc(c.title)}</h3>
-          <p>${esc(c.description||'بدون وصف.')}</p>
-          <div class="instructor-meta"><span>${esc(c.code||'بدون كود')}</span><span>${esc(c.deliveryType)}</span><span>${esc(c.studentCount)} طالب</span><span>${esc(c.lessonCount)} درس</span></div>
-          ${progress(c.averageProgress)}
-        </article>
-      `).join('')+'</div>':'<div class="instructor-card instructor-empty">لا توجد دورات مسندة لك.</div>';
-    }catch(err){target.innerHTML='<div class="instructor-card instructor-empty">'+esc(err.message)+'</div>';}
+
+    const load=async()=>{
+      target.innerHTML='<div class="instructor-empty">جاري تحميل الدورات...</div>';
+
+      try{
+        const rows=await api('/api/instructor/courses');
+        const userId=String(user.id || user._id || '');
+
+        target.innerHTML=rows.length
+          ? '<div class="instructor-course-grid">'+rows.map((course,index)=>{
+              const direct=String(course.instructorId || '')===userId;
+
+              return `
+                <article class="instructor-course">
+                  <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
+                    <div><h3>${esc(course.title)}</h3><p>${esc(course.description||'بدون وصف.')}</p></div>
+                    ${status(course.status)}
+                  </div>
+
+                  <div class="instructor-meta">
+                    <span>${esc(course.code||'بدون كود')}</span>
+                    <span>${esc(course.deliveryType)}</span>
+                    <span>${esc(course.studentCount)} طالب</span>
+                    <span>${esc(course.lessonCount)} درس</span>
+                  </div>
+
+                  ${progress(course.averageProgress)}
+
+                  <div class="instructor-actions" style="margin-top:10px">
+                    <button class="btn soft course-action" data-action="details" data-index="${index}" type="button">تفاصيل</button>
+                    ${direct?'<button class="btn soft course-action" data-action="edit" data-index="'+index+'" type="button">تعديل</button>':''}
+                    ${direct?'<button class="btn soft course-action" data-action="extend" data-index="'+index+'" type="button">تمديد</button>':''}
+                  </div>
+                </article>
+              `;
+            }).join('')+'</div>'
+          : '<div class="instructor-card instructor-empty">لا توجد دورات مسندة لك.</div>';
+
+        document.querySelectorAll('.course-action').forEach(btn=>{
+          btn.onclick=()=>{
+            const course=rows[Number(btn.dataset.index)];
+            if(!course)return;
+
+            if(btn.dataset.action==='details'){
+              return openDetails({
+                title:course.title,
+                subtitle:'تفاصيل الدورة',
+                items:[
+                  ['الكود',course.code||'—'],
+                  ['التصنيف',course.category||'عام'],
+                  ['نوع الدورة',course.deliveryType],
+                  ['الحالة',course.status],
+                  ['تاريخ البداية',fmtDate(course.startAt)],
+                  ['تاريخ النهاية',fmtDate(course.endAt)],
+                  ['الطلاب',course.studentCount],
+                  ['الدروس',course.lessonCount],
+                  ['متوسط التقدم',(course.averageProgress||0)+'%']
+                ]
+              });
+            }
+
+            if(btn.dataset.action==='edit'){
+              return openForm({
+                title:'تعديل الدورة',
+                subtitle:'عدّل بيانات الدورة المسندة لك.',
+                values:{
+                  title:course.title,
+                  description:course.description||'',
+                  category:course.category||'',
+                  deliveryType:course.deliveryType,
+                  startAt:inputDate(course.startAt),
+                  endAt:inputDate(course.endAt),
+                  status:course.status
+                },
+                fields:[
+                  {name:'title',label:'اسم الدورة',required:true},
+                  {name:'category',label:'التصنيف'},
+                  {name:'deliveryType',label:'نوع الدورة',type:'select',required:true,options:[['recorded','مسجلة'],['live','مباشرة'],['in_person','حضورية'],['hybrid','هجينة']]},
+                  {name:'status',label:'الحالة',type:'select',required:true,options:[['draft','مسودة'],['active','نشطة']]},
+                  {name:'startAt',label:'تاريخ البداية',type:'date'},
+                  {name:'endAt',label:'تاريخ النهاية',type:'date'},
+                  {name:'description',label:'الوصف',type:'textarea',full:true}
+                ],
+                submitLabel:'حفظ التعديلات',
+                onSubmit:async data=>{
+                  await api('/api/instructor/courses/'+encodeURIComponent(course._id),{method:'PATCH',body:JSON.stringify(data)});
+                  toast('تم تعديل الدورة');
+                  await load();
+                }
+              });
+            }
+
+            if(btn.dataset.action==='extend'){
+              return openForm({
+                title:'تمديد الدورة',
+                subtitle:'غيّر تاريخ نهاية الدورة فقط.',
+                values:{endAt:inputDate(course.endAt)},
+                fields:[{name:'endAt',label:'تاريخ النهاية الجديد',type:'date',required:true}],
+                submitLabel:'حفظ التمديد',
+                onSubmit:async data=>{
+                  await api('/api/instructor/courses/'+encodeURIComponent(course._id),{method:'PATCH',body:JSON.stringify(data)});
+                  toast('تم تمديد الدورة');
+                  await load();
+                }
+              });
+            }
+          };
+        });
+      }catch(err){
+        target.innerHTML='<div class="instructor-card instructor-empty">'+esc(err.message)+'</div>';
+      }
+    };
+
+    await load();
   }
 
   async function renderGroups() {
     const target=document.getElementById('pageContent');
-    target.innerHTML='<div class="instructor-empty">جاري تحميل المجموعات...</div>';
-    try{
-      const rows=await api('/api/instructor/groups');
-      target.innerHTML='<section class="instructor-card"><div class="instructor-card-head"><div><h2>مجموعاتي</h2><p>المجموعات التابعة لدوراتك.</p></div></div><div class="instructor-list">'+
-        (rows.length?rows.map(g=>'<div class="instructor-list-row"><div><b>'+esc(g.name)+'</b><span>'+esc(g.courseId?.title||'')+' · '+esc(g.schedule||'بدون جدول')+' · '+esc(g.room||'بدون قاعة')+'</span></div>'+status(g.status)+'</div>').join(''):'<div class="instructor-empty">لا توجد مجموعات.</div>')+
-        '</div></section>';
-    }catch(err){target.innerHTML='<div class="instructor-card instructor-empty">'+esc(err.message)+'</div>';}
+
+    const load=async()=>{
+      target.innerHTML='<div class="instructor-empty">جاري تحميل المجموعات...</div>';
+
+      try{
+        const rows=await api('/api/instructor/groups');
+
+        target.innerHTML=
+          '<section class="instructor-card">'+
+            '<div class="instructor-card-head"><div><h2>مجموعاتي</h2><p>التعديل والتمديد والإلغاء من نفس الصفحة.</p></div></div>'+
+            '<div class="instructor-list">'+
+              (rows.length?rows.map((g,index)=>`
+                <div class="instructor-list-row">
+                  <div>
+                    <b>${esc(g.name)}</b>
+                    <span>${esc(g.courseId?.title||'')} · ${esc(g.schedule||'بدون جدول')} · ${esc(g.room||'بدون قاعة')}</span>
+                  </div>
+
+                  <div class="instructor-actions">
+                    ${status(g.status)}
+                    <button class="btn soft group-action" data-action="details" data-index="${index}" type="button">تفاصيل</button>
+                    <button class="btn soft group-action" data-action="edit" data-index="${index}" type="button">تعديل</button>
+                    ${g.status!=='cancelled'?'<button class="btn soft group-action" data-action="extend" data-index="'+index+'" type="button">تمديد</button>':''}
+                    <button class="btn ${g.status==='cancelled'?'primary':'ghost'} group-action" data-action="${g.status==='cancelled'?'reopen':'cancel'}" data-index="${index}" type="button">${g.status==='cancelled'?'إعادة التفعيل':'إلغاء'}</button>
+                  </div>
+                </div>
+              `).join(''):'<div class="instructor-empty">لا توجد مجموعات.</div>')+
+            '</div>'+
+          '</section>';
+
+        document.querySelectorAll('.group-action').forEach(btn=>{
+          btn.onclick=async()=>{
+            const group=rows[Number(btn.dataset.index)];
+            if(!group)return;
+
+            if(btn.dataset.action==='details'){
+              return openDetails({
+                title:group.name,
+                subtitle:'تفاصيل المجموعة',
+                items:[
+                  ['الدورة',group.courseId?.title||'—'],
+                  ['الفرع',group.branchId?.name||'—'],
+                  ['الجدول',group.schedule||'—'],
+                  ['القاعة',group.room||'—'],
+                  ['السعة',group.capacity||0],
+                  ['البداية',fmtDate(group.startAt)],
+                  ['النهاية',fmtDate(group.endAt)],
+                  ['الحالة',group.status]
+                ]
+              });
+            }
+
+            if(btn.dataset.action==='edit'){
+              return openForm({
+                title:'تعديل المجموعة',
+                values:{
+                  name:group.name,
+                  schedule:group.schedule||'',
+                  room:group.room||'',
+                  capacity:group.capacity||20,
+                  startAt:inputDate(group.startAt),
+                  endAt:inputDate(group.endAt),
+                  status:group.status
+                },
+                fields:[
+                  {name:'name',label:'اسم المجموعة',required:true},
+                  {name:'schedule',label:'الجدول'},
+                  {name:'room',label:'القاعة'},
+                  {name:'capacity',label:'السعة',type:'number',min:1},
+                  {name:'startAt',label:'تاريخ البداية',type:'date'},
+                  {name:'endAt',label:'تاريخ النهاية',type:'date'},
+                  {name:'status',label:'الحالة',type:'select',required:true,options:[['planned','مخططة'],['active','نشطة'],['completed','مكتملة'],['cancelled','ملغاة']]}
+                ],
+                submitLabel:'حفظ التعديلات',
+                onSubmit:async data=>{
+                  await api('/api/instructor/groups/'+encodeURIComponent(group._id),{method:'PATCH',body:JSON.stringify(data)});
+                  toast('تم تعديل المجموعة');
+                  await load();
+                }
+              });
+            }
+
+            if(btn.dataset.action==='extend'){
+              return openForm({
+                title:'تمديد المجموعة',
+                values:{endAt:inputDate(group.endAt)},
+                fields:[{name:'endAt',label:'تاريخ النهاية الجديد',type:'date',required:true}],
+                submitLabel:'حفظ التمديد',
+                onSubmit:async data=>{
+                  await api('/api/instructor/groups/'+encodeURIComponent(group._id),{method:'PATCH',body:JSON.stringify(data)});
+                  toast('تم تمديد المجموعة');
+                  await load();
+                }
+              });
+            }
+
+            const next=btn.dataset.action==='cancel'?'cancelled':'active';
+            const label=next==='cancelled'?'إلغاء المجموعة':'إعادة تفعيل المجموعة';
+
+            if(!confirm(label+'؟'))return;
+
+            try{
+              await api('/api/instructor/groups/'+encodeURIComponent(group._id),{
+                method:'PATCH',
+                body:JSON.stringify({status:next})
+              });
+              toast(next==='cancelled'?'تم إلغاء المجموعة':'تمت إعادة تفعيل المجموعة');
+              await load();
+            }catch(err){
+              toast(err.message,'error');
+            }
+          };
+        });
+      }catch(err){
+        target.innerHTML='<div class="instructor-card instructor-empty">'+esc(err.message)+'</div>';
+      }
+    };
+
+    await load();
   }
 
   async function renderStudents() {
@@ -498,6 +742,6 @@ window.InstructorPortal = (() => {
   document.addEventListener('DOMContentLoaded',init);
 
   return {
-    api,getOptions,openForm,toast,esc,fmtDate,fmtDuration,status,progress,user
+    api,getOptions,openForm,openDetails,toast,esc,fmtDate,inputDate,fmtDuration,status,progress,user
   };
 })();

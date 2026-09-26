@@ -424,6 +424,54 @@ window.AcademyQuizAdmin = (() => {
     };
   }
 
+  function openQuizExtend(quiz,onDone) {
+    const {modal,title,subtitle,form}=modalElements();
+
+    title.textContent='تمديد موعد الاختبار';
+    subtitle.textContent=quiz.title;
+    form.innerHTML=`
+      <div class="field full">
+        <label>آخر موعد جديد</label>
+        <input name="dueAt" type="datetime-local" value="${esc(localDateTime(quiz.dueAt))}" required>
+      </div>
+      <div class="academy-form-message" id="quizExtendMessage"></div>
+      <div class="academy-form-actions">
+        <button class="btn ghost" id="quizExtendCancel" type="button">إلغاء</button>
+        <button class="btn primary" type="submit">حفظ التمديد</button>
+      </div>
+    `;
+
+    modal.hidden=false;
+    document.getElementById('quizExtendCancel').onclick=closeModal;
+
+    form.onsubmit=async e=>{
+      e.preventDefault();
+      const button=form.querySelector('button[type="submit"]');
+      const message=document.getElementById('quizExtendMessage');
+      const original=button.textContent;
+      const dueAt=new FormData(form).get('dueAt');
+
+      button.disabled=true;
+      button.textContent='جاري الحفظ...';
+      message.textContent='';
+
+      try{
+        await api('/api/academy/quizzes/'+quiz._id,{
+          method:'PATCH',
+          body:JSON.stringify({dueAt})
+        });
+        closeModal();
+        toast('تم تمديد موعد الاختبار');
+        await onDone();
+      }catch(err){
+        message.textContent=err.message;
+      }finally{
+        button.disabled=false;
+        button.textContent=original;
+      }
+    };
+  }
+
   async function updateStatus(quiz,next,onDone) {
     try{
       await api('/api/academy/quizzes/'+quiz._id,{
@@ -571,6 +619,7 @@ window.AcademyQuizAdmin = (() => {
               <div class="academy-actions quiz-builder-actions">
                 ${status(quiz.status)}
                 <button class="btn soft" id="quizEditSettings" type="button">الإعدادات</button>
+                <button class="btn soft" id="quizExtendDate" type="button">تمديد الموعد</button>
                 ${quiz.status==='draft'
                   ? '<button class="btn primary" id="quizStatusAction" data-status="published" type="button">نشر الاختبار</button>'
                   : quiz.status==='published'
@@ -644,6 +693,7 @@ window.AcademyQuizAdmin = (() => {
         `;
 
         document.getElementById('quizEditSettings').onclick=()=>openQuizForm(quiz,load);
+        document.getElementById('quizExtendDate').onclick=()=>openQuizExtend(quiz,load);
 
         const statusBtn=document.getElementById('quizStatusAction');
         if(statusBtn) statusBtn.onclick=()=>updateStatus(quiz,statusBtn.dataset.status,load);

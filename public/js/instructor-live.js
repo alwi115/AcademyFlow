@@ -53,7 +53,11 @@ window.InstructorLive = (() => {
                   </div>
 
                   <div class="instructor-actions" style="margin-top:11px">
-                    <button class="btn primary live-start" data-index="${i}" type="button" ${!s.hostReady?'disabled':''}>بدء Zoom</button>
+                    <button class="btn soft live-details" data-index="${i}" type="button">تفاصيل</button>
+                    <button class="btn soft live-edit" data-index="${i}" type="button">تعديل</button>
+                    ${s.status!=='cancelled'?'<button class="btn soft live-extend" data-index="'+i+'" type="button">تمديد</button>':''}
+                    <button class="btn ${s.status==='cancelled'?'primary':'ghost'} live-status" data-index="${i}" data-next="${s.status==='cancelled'?'scheduled':'cancelled'}" type="button">${s.status==='cancelled'?'إعادة الجدولة':'إلغاء'}</button>
+                    <button class="btn primary live-start" data-index="${i}" type="button" ${!s.hostReady||s.status==='cancelled'?'disabled':''}>بدء Zoom</button>
                     <button class="btn soft live-attendance" data-index="${i}" type="button">سجل الحضور</button>
                   </div>
                 </article>
@@ -70,6 +74,26 @@ window.InstructorLive = (() => {
         document.querySelectorAll('.live-attendance').forEach(btn=>{
           btn.onclick=()=>openAttendance(rows[Number(btn.dataset.index)],load);
         });
+
+        document.querySelectorAll('.live-details').forEach(btn=>{
+          btn.onclick=()=>openSessionDetails(rows[Number(btn.dataset.index)]);
+        });
+
+        document.querySelectorAll('.live-edit').forEach(btn=>{
+          btn.onclick=()=>openCreate(opts,load,rows[Number(btn.dataset.index)]);
+        });
+
+        document.querySelectorAll('.live-extend').forEach(btn=>{
+          btn.onclick=()=>extendSession(rows[Number(btn.dataset.index)],load);
+        });
+
+        document.querySelectorAll('.live-status').forEach(btn=>{
+          btn.onclick=()=>changeSessionStatus(
+            rows[Number(btn.dataset.index)],
+            btn.dataset.next,
+            load
+          );
+        });
       }catch(err){
         target.innerHTML='<div class="instructor-card instructor-empty">'+P().esc(err.message)+'</div>';
       }
@@ -78,11 +102,22 @@ window.InstructorLive = (() => {
     await load();
   }
 
-  function openCreate(opts,onDone){
+  function openCreate(opts,onDone,row=null){
     P().openForm({
-      title:'محاضرة Zoom جديدة',
-      subtitle:'يتم إنشاء رابط الطالب ورابط المضيف تلقائيًا عند تفعيل Zoom.',
-      values:{
+      title:row?'تعديل المحاضرة':'محاضرة Zoom جديدة',
+      subtitle:row
+        ? 'يمكنك تعديل الموعد والمدة وإعدادات الحضور من نفس المكان.'
+        : 'يتم إنشاء رابط الطالب ورابط المضيف تلقائيًا عند تفعيل Zoom.',
+      values:row?{
+        courseId:row.course?._id||row.course,
+        title:row.title,
+        startAt:P().inputDate(row.startAt,true),
+        durationMinutes:row.durationMinutes,
+        lateAfterMinutes:row.lateAfterMinutes,
+        joinWindowBeforeMinutes:row.joinWindowBeforeMinutes,
+        description:row.description||'',
+        attendanceEnabled:Boolean(row.attendanceEnabled)
+      }:{
         durationMinutes:60,
         attendanceEnabled:true,
         lateAfterMinutes:10,
@@ -98,13 +133,70 @@ window.InstructorLive = (() => {
         {name:'description',label:'الوصف',type:'textarea',full:true},
         {name:'attendanceEnabled',label:'تفعيل التحضير التلقائي عند دخول الطالب من AcademyFlow',type:'checkbox',full:true}
       ],
-      submitLabel:'إنشاء المحاضرة',
+      submitLabel:row?'حفظ التعديلات':'إنشاء المحاضرة',
       onSubmit:async data=>{
-        await P().api('/api/instructor/live',{method:'POST',body:JSON.stringify(data)});
-        P().toast('تم إنشاء المحاضرة');
+        await P().api(
+          row?'/api/instructor/live/'+encodeURIComponent(row.id):'/api/instructor/live',
+          {method:row?'PATCH':'POST',body:JSON.stringify(data)}
+        );
+        P().toast(row?'تم تعديل المحاضرة':'تم إنشاء المحاضرة');
         await onDone();
       }
     });
+  }
+
+  function openSessionDetails(session){
+    P().openDetails({
+      title:session.title,
+      subtitle:'تفاصيل المحاضرة المباشرة',
+      items:[
+        ['الدورة',session.course?.title||'—'],
+        ['موعد البداية',P().fmtDate(session.startAt,true)],
+        ['المدة',session.durationMinutes+' دقيقة'],
+        ['الحالة',session.status],
+        ['التحضير',session.attendanceEnabled?'مفعل':'متوقف'],
+        ['التأخير بعد',session.lateAfterMinutes+' دقيقة'],
+        ['فتح الدخول قبل',session.joinWindowBeforeMinutes+' دقيقة'],
+        ['Zoom',session.zoomReady?'جاهز':'غير مربوط'],
+        ['الوصف',session.description||'—']
+      ]
+    });
+  }
+
+  function extendSession(session,onDone){
+    P().openForm({
+      title:'تمديد المحاضرة',
+      subtitle:'حدد المدة الجديدة كاملة بالدقائق، وستتزامن مع Zoom إذا كان مربوطًا.',
+      values:{durationMinutes:session.durationMinutes},
+      fields:[
+        {name:'durationMinutes',label:'المدة الجديدة بالدقائق',type:'number',required:true,min:1}
+      ],
+      submitLabel:'حفظ التمديد',
+      onSubmit:async data=>{
+        await P().api(
+          '/api/instructor/live/'+encodeURIComponent(session.id),
+          {method:'PATCH',body:JSON.stringify(data)}
+        );
+        P().toast('تم تمديد المحاضرة');
+        await onDone();
+      }
+    });
+  }
+
+  async function changeSessionStatus(session,next,onDone){
+    const label=next==='cancelled'?'إلغاء المحاضرة':'إعادة جدولة المحاضرة';
+    if(!confirm(label+'؟'))return;
+
+    try{
+      await P().api(
+        '/api/instructor/live/'+encodeURIComponent(session.id),
+        {method:'PATCH',body:JSON.stringify({status:next})}
+      );
+      P().toast(next==='cancelled'?'تم إلغاء المحاضرة':'تمت إعادة جدولة المحاضرة');
+      await onDone();
+    }catch(err){
+      P().toast(err.message,'error');
+    }
   }
 
   async function startSession(session){

@@ -3,6 +3,7 @@ const { auth, allowRoles } = require('../middleware/auth');
 const tenant = require('../middleware/tenant');
 const c = require('../controllers/academy.controller');
 const q = require('../controllers/academy-quiz.controller');
+const ops = require('../controllers/academy-operations.controller');
 
 const ACADEMY_ROLES = ['owner','admin','branch_manager','instructor','accountant','reception','content_manager','support'];
 const QUIZ_MANAGERS = ['owner','admin','instructor','content_manager'];
@@ -20,12 +21,14 @@ router.post('/branches', allowRoles('owner','admin','branch_manager'), c.createB
 
 router.get('/courses', c.listCourses);
 router.post('/courses', allowRoles('owner','admin','content_manager','instructor'), c.createCourse);
+router.patch('/courses/:id', allowRoles('owner','admin','content_manager'), ops.updateCourse);
 
 router.get('/lessons', c.listLessons);
 router.post('/lessons', allowRoles('owner','admin','content_manager','instructor'), c.createLesson);
 
 router.get('/groups', c.listGroups);
 router.post('/groups', allowRoles('owner','admin','branch_manager'), c.createGroup);
+router.patch('/groups/:id', allowRoles('owner','admin','branch_manager'), ops.updateGroup);
 
 router.get('/enrollments', c.listEnrollments);
 router.post('/enrollments', allowRoles('owner','admin','reception','branch_manager'), c.createEnrollment);
@@ -35,6 +38,7 @@ router.post('/attendance', allowRoles('owner','admin','instructor','reception','
 
 router.get('/assessments', c.listAssessments);
 router.post('/assessments', allowRoles('owner','admin','instructor','content_manager'), c.createAssessment);
+router.patch('/assessments/:id', allowRoles('owner','admin','content_manager'), ops.updateAssignment);
 
 router.get('/quizzes', allowRoles(...QUIZ_MANAGERS), q.listQuizzes);
 router.post('/quizzes', allowRoles(...QUIZ_MANAGERS), q.createQuiz);

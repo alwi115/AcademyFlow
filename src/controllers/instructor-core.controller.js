@@ -298,11 +298,128 @@ async function gradebook(req, res) {
   res.json(result);
 }
 
+
+async function updateCourse(req, res) {
+  const row = await Course.findOne({
+    _id: req.params.id,
+    academyId: req.academyId,
+    instructorId: req.user.sub
+  });
+
+  if (!row) {
+    return res.status(404).json({
+      message: 'الدورة غير موجودة أو ليست مسندة لك مباشرة'
+    });
+  }
+
+  for (const key of ['title','description','category']) {
+    if (req.body[key] !== undefined) {
+      row[key] = typeof req.body[key] === 'string'
+        ? req.body[key].trim()
+        : req.body[key];
+    }
+  }
+
+  if (req.body.deliveryType !== undefined) {
+    if (!['recorded','live','in_person','hybrid'].includes(req.body.deliveryType)) {
+      return res.status(400).json({ message: 'نوع الدورة غير صحيح' });
+    }
+    row.deliveryType = req.body.deliveryType;
+  }
+
+  if (req.body.startAt !== undefined) row.startAt = req.body.startAt || null;
+  if (req.body.endAt !== undefined) row.endAt = req.body.endAt || null;
+
+  if (row.startAt && row.endAt && new Date(row.endAt) < new Date(row.startAt)) {
+    return res.status(400).json({
+      message: 'تاريخ نهاية الدورة يجب أن يكون بعد تاريخ البداية'
+    });
+  }
+
+  if (req.body.status !== undefined) {
+    if (!['draft','active'].includes(req.body.status)) {
+      return res.status(400).json({
+        message: 'المدرب يمكنه استخدام مسودة أو نشطة فقط'
+      });
+    }
+    row.status = req.body.status;
+  }
+
+  await row.save();
+  res.json(row);
+}
+
+async function updateGroup(req, res) {
+  const group = await Group.findOne({
+    _id: req.params.id,
+    academyId: req.academyId
+  });
+
+  if (!group) {
+    return res.status(404).json({ message: 'المجموعة غير موجودة' });
+  }
+
+  const course = await Course.findOne({
+    _id: group.courseId,
+    academyId: req.academyId
+  }).select('instructorId');
+
+  const canManage =
+    String(group.instructorId || '') === String(req.user.sub) ||
+    String(course?.instructorId || '') === String(req.user.sub);
+
+  if (!canManage) {
+    return res.status(403).json({ message: 'لا تملك صلاحية تعديل هذه المجموعة' });
+  }
+
+  for (const key of ['name','schedule','room']) {
+    if (req.body[key] !== undefined) {
+      group[key] = typeof req.body[key] === 'string'
+        ? req.body[key].trim()
+        : req.body[key];
+    }
+  }
+
+  if (req.body.capacity !== undefined) {
+    const capacity = Number(req.body.capacity);
+    if (!Number.isFinite(capacity) || capacity < 1) {
+      return res.status(400).json({ message: 'سعة المجموعة غير صحيحة' });
+    }
+    group.capacity = capacity;
+  }
+
+  if (req.body.startAt !== undefined) group.startAt = req.body.startAt || null;
+  if (req.body.endAt !== undefined) group.endAt = req.body.endAt || null;
+
+  if (group.startAt && group.endAt && new Date(group.endAt) < new Date(group.startAt)) {
+    return res.status(400).json({
+      message: 'تاريخ نهاية المجموعة يجب أن يكون بعد تاريخ البداية'
+    });
+  }
+
+  if (req.body.status !== undefined) {
+    if (!['planned','active','completed','cancelled'].includes(req.body.status)) {
+      return res.status(400).json({ message: 'حالة المجموعة غير صحيحة' });
+    }
+    group.status = req.body.status;
+  }
+
+  await group.save();
+  await group.populate([
+    { path:'courseId', select:'title code' },
+    { path:'branchId', select:'name code' }
+  ]);
+
+  res.json(group);
+}
+
 module.exports = {
   options,
   dashboard,
   courses,
+  updateCourse,
   groups,
+  updateGroup,
   students,
   gradebook
 };

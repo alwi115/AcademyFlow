@@ -382,7 +382,19 @@ const AF = (() => {
     },
     courses: {
       endpoint:'/api/academy/courses',
+      updateEndpoint:'/api/academy/courses/:id',
       createRoles:['owner','admin','content_manager','instructor'],
+      manageRoles:['owner','admin','content_manager'],
+      actions:{
+        details:true,
+        edit:true,
+        extendField:'endAt',
+        extendLabel:'تمديد الدورة',
+        cancelStatus:'archived',
+        cancelLabel:'أرشفة الدورة',
+        reopenStatus:'active',
+        reopenLabel:'إعادة التفعيل'
+      },
       title:'إضافة دورة',
       view:'cards',
       fields:[
@@ -409,7 +421,19 @@ const AF = (() => {
     },
     groups: {
       endpoint:'/api/academy/groups',
+      updateEndpoint:'/api/academy/groups/:id',
       createRoles:['owner','admin','branch_manager'],
+      manageRoles:['owner','admin','branch_manager'],
+      actions:{
+        details:true,
+        edit:true,
+        extendField:'endAt',
+        extendLabel:'تمديد المجموعة',
+        cancelStatus:'cancelled',
+        cancelLabel:'إلغاء المجموعة',
+        reopenStatus:'active',
+        reopenLabel:'إعادة التفعيل'
+      },
       title:'إضافة مجموعة',
       fields:[
         ['name','اسم المجموعة','text',true],['courseId','الدورة','dynamicSelect',true,'courses'],
@@ -515,9 +539,21 @@ const AF = (() => {
     return {
       endpoint:'/api/academy/assessments?type='+type,
       createEndpoint:'/api/academy/assessments',
+      updateEndpoint:'/api/academy/assessments/:id',
       createRoles:['owner','admin','instructor','content_manager'],
+      manageRoles:['owner','admin','content_manager'],
       title:isQuiz ? 'إضافة اختبار' : 'إضافة واجب',
       extra:{ type },
+      actions:isQuiz ? null : {
+        details:true,
+        edit:true,
+        extendField:'dueAt',
+        extendLabel:'تمديد التسليم',
+        cancelStatus:'closed',
+        cancelLabel:'إغلاق الواجب',
+        reopenStatus:'published',
+        reopenLabel:'إعادة فتح الواجب'
+      },
       fields:[
         ['courseId','الدورة','dynamicSelect',true,'courses'],['title',isQuiz ? 'عنوان الاختبار' : 'عنوان الواجب','text',true],
         ['dueAt',isQuiz ? 'موعد الاختبار' : 'آخر موعد للتسليم','datetime-local',false],
@@ -532,19 +568,40 @@ const AF = (() => {
     };
   }
 
-  async function fieldHtml(field) {
+  function inputValue(value, type) {
+    if (value === null || value === undefined) return '';
+
+    if (type === 'date' || type === 'datetime-local') {
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return '';
+
+      const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+      return type === 'date'
+        ? local.toISOString().slice(0,10)
+        : local.toISOString().slice(0,16);
+    }
+
+    if (typeof value === 'object') {
+      return value._id || value.id || '';
+    }
+
+    return value;
+  }
+
+  async function fieldHtml(field, currentValue = '') {
     const [name,label,type,required,source] = field;
     const req = required ? 'required' : '';
     const full = type === 'textarea' ? ' full' : '';
+    const current = inputValue(currentValue, type);
 
     if (type === 'textarea') {
-      return '<div class="field'+full+'"><label>'+esc(label)+'</label><textarea name="'+esc(name)+'" '+req+'></textarea></div>';
+      return '<div class="field'+full+'"><label>'+esc(label)+'</label><textarea name="'+esc(name)+'" '+req+'>'+esc(current)+'</textarea></div>';
     }
 
     if (type === 'select') {
       const options = staticOptions[source] || [];
       return '<div class="field"><label>'+esc(label)+'</label><select name="'+esc(name)+'" '+req+'><option value="">اختر...</option>'+
-        options.map(x => '<option value="'+esc(x[0])+'">'+esc(x[1])+'</option>').join('')+
+        options.map(x => '<option value="'+esc(x[0])+'" '+(String(x[0])===String(current)?'selected':'')+'>'+esc(x[1])+'</option>').join('')+
         '</select></div>';
     }
 
@@ -555,28 +612,34 @@ const AF = (() => {
         rows.map(x => {
           const labelText = x.name || x.title || x.code || x.email || 'Item';
           const extra = x.code ? ' · '+x.code : x.email ? ' · '+x.email : '';
-          return '<option value="'+esc(x._id)+'">'+esc(labelText+extra)+'</option>';
+          return '<option value="'+esc(x._id)+'" '+(String(x._id)===String(current)?'selected':'')+'>'+esc(labelText+extra)+'</option>';
         }).join('')+
         '</select></div>';
     }
 
-    return '<div class="field"><label>'+esc(label)+'</label><input name="'+esc(name)+'" type="'+esc(type)+'" '+req+'></div>';
+    return '<div class="field"><label>'+esc(label)+'</label><input name="'+esc(name)+'" type="'+esc(type)+'" value="'+esc(current)+'" '+req+'></div>';
   }
 
-  async function openForm(config, onSaved) {
+  async function openForm(config, onSaved, row = null) {
     const modal = document.getElementById('academyModal');
-    document.getElementById('academyModalTitle').textContent = config.title || 'إضافة';
-    document.getElementById('academyModalSubtitle').textContent = config.modalSubtitle || 'أدخل البيانات المطلوبة ثم احفظ.';
-    const form = document.getElementById('academyModalForm');
+    const editing = Boolean(row);
+    document.getElementById('academyModalTitle').textContent =
+      editing ? (config.editTitle || 'تعديل البيانات') : (config.title || 'إضافة');
+    document.getElementById('academyModalSubtitle').textContent =
+      editing ? 'عدّل البيانات المطلوبة ثم احفظ التغييرات.' : (config.modalSubtitle || 'أدخل البيانات المطلوبة ثم احفظ.');
 
+    const form = document.getElementById('academyModalForm');
     const fields = [];
-    for (const field of config.fields || []) fields.push(await fieldHtml(field));
+
+    for (const field of config.fields || []) {
+      fields.push(await fieldHtml(field, editing ? val(row, field[0]) : ''));
+    }
 
     form.innerHTML = fields.join('') + `
       <div class="academy-form-message" id="academyFormMessage"></div>
       <div class="academy-form-actions">
         <button class="btn ghost" type="button" id="academyFormCancel">إلغاء</button>
-        <button class="btn primary" type="submit">حفظ</button>
+        <button class="btn primary" type="submit">${editing ? 'حفظ التعديلات' : 'حفظ'}</button>
       </div>
     `;
 
@@ -585,9 +648,11 @@ const AF = (() => {
 
     form.onsubmit = async e => {
       e.preventDefault();
+
       const btn = form.querySelector('button[type="submit"]');
       const msg = document.getElementById('academyFormMessage');
       const original = btn.textContent;
+
       btn.disabled = true;
       btn.textContent = 'جاري الحفظ...';
       msg.textContent = '';
@@ -600,10 +665,23 @@ const AF = (() => {
       }
 
       try {
-        await api(config.createEndpoint || config.endpoint.split('?')[0], {
-          method:'POST',
+        let endpoint;
+        let method;
+
+        if (editing) {
+          if (!config.updateEndpoint) throw new Error('التعديل غير متاح لهذا السجل');
+          endpoint = config.updateEndpoint.replace(':id', encodeURIComponent(row._id || row.id));
+          method = 'PATCH';
+        } else {
+          endpoint = config.createEndpoint || config.endpoint.split('?')[0];
+          method = 'POST';
+        }
+
+        await api(endpoint, {
+          method,
           body:JSON.stringify(payload)
         });
+
         modal.hidden = true;
         optionsCache.value = null;
         await onSaved();
@@ -616,25 +694,191 @@ const AF = (() => {
     };
   }
 
-  function renderTable(rows, columns) {
+  function detailsValue(field, row) {
+    const [name,,type] = field;
+    const value = val(row,name);
+
+    if (value === null || value === undefined || value === '') return '—';
+    if (type === 'date') return fmtDate(value);
+    if (type === 'datetime-local') return fmtDate(value,true);
+
+    if (typeof value === 'object') {
+      return value.name || value.title || value.code || value.email || value._id || '—';
+    }
+
+    if (name === 'status') return value;
+    return String(value);
+  }
+
+  function openDetails(config, row) {
+    const modal = document.getElementById('academyModal');
+    const form = document.getElementById('academyModalForm');
+
+    document.getElementById('academyModalTitle').textContent =
+      row.title || row.name || 'التفاصيل';
+    document.getElementById('academyModalSubtitle').textContent =
+      'كل المعلومات المسجلة لهذا العنصر.';
+
+    const items = (config.fields || []).map(field => {
+      const raw = val(row, field[0]);
+      const rendered = field[0] === 'status'
+        ? status(raw)
+        : esc(detailsValue(field,row));
+
+      return '<div class="academy-detail-item"><small>'+esc(field[1])+'</small><div>'+rendered+'</div></div>';
+    }).join('');
+
+    form.innerHTML =
+      '<div class="academy-details-grid full">'+items+'</div>'+
+      '<div class="academy-form-actions full"><button class="btn primary" id="academyDetailsClose" type="button">تم</button></div>';
+
+    modal.hidden = false;
+    document.getElementById('academyDetailsClose').onclick = () => modal.hidden = true;
+    form.onsubmit = e => e.preventDefault();
+  }
+
+  async function openExtend(config, row, onSaved) {
+    const fieldName = config.actions?.extendField;
+    const field = (config.fields || []).find(x => x[0] === fieldName);
+
+    if (!field || !config.updateEndpoint) return;
+
+    const modal = document.getElementById('academyModal');
+    const form = document.getElementById('academyModalForm');
+
+    document.getElementById('academyModalTitle').textContent =
+      config.actions.extendLabel || 'تمديد';
+    document.getElementById('academyModalSubtitle').textContent =
+      'حدد الموعد الجديد ثم احفظ.';
+
+    form.innerHTML =
+      await fieldHtml(field, val(row,fieldName)) +
+      '<div class="academy-form-message" id="academyFormMessage"></div>'+
+      '<div class="academy-form-actions"><button class="btn ghost" id="academyExtendCancel" type="button">إلغاء</button><button class="btn primary" type="submit">حفظ التمديد</button></div>';
+
+    modal.hidden = false;
+    document.getElementById('academyExtendCancel').onclick = () => modal.hidden = true;
+
+    form.onsubmit = async e => {
+      e.preventDefault();
+      const btn = form.querySelector('button[type="submit"]');
+      const msg = document.getElementById('academyFormMessage');
+      const value = new FormData(form).get(fieldName);
+
+      btn.disabled = true;
+      msg.textContent = '';
+
+      try {
+        await api(
+          config.updateEndpoint.replace(':id',encodeURIComponent(row._id || row.id)),
+          {
+            method:'PATCH',
+            body:JSON.stringify({ [fieldName]: value || null })
+          }
+        );
+
+        modal.hidden = true;
+        await onSaved();
+      } catch (err) {
+        msg.textContent = err.message;
+      } finally {
+        btn.disabled = false;
+      }
+    };
+  }
+
+  async function changeRecordStatus(config, row, nextStatus, label, onSaved) {
+    if (!config.updateEndpoint) return;
+
+    if (!confirm((label || 'تنفيذ الإجراء')+'؟')) return;
+
+    try {
+      await api(
+        config.updateEndpoint.replace(':id',encodeURIComponent(row._id || row.id)),
+        {
+          method:'PATCH',
+          body:JSON.stringify({ status:nextStatus })
+        }
+      );
+      await onSaved();
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  function actionButtons(config, row, index) {
+    if (!config.actions) return '';
+
+    const canManage = allowed(config.manageRoles);
+    const cancelled = row.status === config.actions.cancelStatus;
+
+    return '<div class="academy-row-actions">'+
+      (config.actions.details ? '<button class="btn soft entity-action" data-action="details" data-index="'+index+'" type="button">تفاصيل</button>' : '')+
+      (canManage && config.actions.edit ? '<button class="btn soft entity-action" data-action="edit" data-index="'+index+'" type="button">تعديل</button>' : '')+
+      (canManage && config.actions.extendField ? '<button class="btn soft entity-action" data-action="extend" data-index="'+index+'" type="button">تمديد</button>' : '')+
+      (canManage && config.actions.cancelStatus
+        ? '<button class="btn '+(cancelled?'primary':'ghost')+' entity-action" data-action="'+(cancelled?'reopen':'cancel')+'" data-index="'+index+'" type="button">'+
+            esc(cancelled ? (config.actions.reopenLabel || 'إعادة فتح') : (config.actions.cancelLabel || 'إلغاء'))+
+          '</button>'
+        : '')+
+      '</div>';
+  }
+
+  function bindEntityActions(config, visibleRows, onSaved) {
+    document.querySelectorAll('.entity-action').forEach(btn => {
+      btn.onclick = () => {
+        const row = visibleRows[Number(btn.dataset.index)];
+        if (!row) return;
+
+        if (btn.dataset.action === 'details') return openDetails(config,row);
+        if (btn.dataset.action === 'edit') return openForm(config,onSaved,row);
+        if (btn.dataset.action === 'extend') return openExtend(config,row,onSaved);
+
+        if (btn.dataset.action === 'cancel') {
+          return changeRecordStatus(
+            config,row,
+            config.actions.cancelStatus,
+            config.actions.cancelLabel,
+            onSaved
+          );
+        }
+
+        if (btn.dataset.action === 'reopen') {
+          return changeRecordStatus(
+            config,row,
+            config.actions.reopenStatus,
+            config.actions.reopenLabel,
+            onSaved
+          );
+        }
+      };
+    });
+  }
+
+  function renderTable(rows, columns, config = null) {
     if (!rows.length) return '<div class="academy-empty">ما فيه بيانات مضافة حتى الآن.</div>';
+
+    const hasActions = Boolean(config?.actions);
 
     return '<div class="academy-table-wrap"><table class="academy-table"><thead><tr>'+
       columns.map(c => '<th>'+esc(c[0])+'</th>').join('')+
+      (hasActions ? '<th>الإجراءات</th>' : '')+
       '</tr></thead><tbody>'+
-      rows.map(row => '<tr>'+
+      rows.map((row,index) => '<tr>'+
         columns.map(c => {
           const value = val(row,c[1]);
           const rendered = c[2] ? c[2](value,row) : esc(value || '—');
           return '<td>'+rendered+'</td>';
         }).join('')+
+        (hasActions ? '<td>'+actionButtons(config,row,index)+'</td>' : '')+
       '</tr>').join('')+
       '</tbody></table></div>';
   }
 
-  function renderCourses(rows) {
+  function renderCourses(rows, config = null) {
     if (!rows.length) return '<div class="academy-empty">ابدأ بإضافة أول دورة للأكاديمية.</div>';
-    return '<div class="academy-entity-grid">'+rows.map(row => `
+
+    return '<div class="academy-entity-grid">'+rows.map((row,index) => `
       <article class="academy-entity-card">
         <div class="academy-entity-cover">
           ${row.thumbnailUrl ? '<img src="'+esc(row.thumbnailUrl)+'" alt="">' : esc((row.title || 'C').slice(0,2))}
@@ -649,6 +893,7 @@ const AF = (() => {
             <span>${fmtMoney(row.price || 0)}</span>
           </div>
           <div style="margin-top:12px">${status(row.status)}</div>
+          ${config?.actions ? '<div style="margin-top:12px">'+actionButtons(config,row,index)+'</div>' : ''}
         </div>
       </article>
     `).join('')+'</div>';
@@ -686,6 +931,7 @@ const AF = (() => {
     }
 
     const canCreate = allowed(config.createRoles);
+
     target.innerHTML = `
       <section class="academy-card">
         <div class="academy-card-head">
@@ -700,14 +946,19 @@ const AF = (() => {
     `;
 
     let rows = [];
+    let visibleRows = [];
 
     const draw = () => {
       const q = (document.getElementById('academySearch').value || '').trim().toLowerCase();
-      const filtered = q ? rows.filter(x => JSON.stringify(x).toLowerCase().includes(q)) : rows;
+      visibleRows = q ? rows.filter(x => JSON.stringify(x).toLowerCase().includes(q)) : rows;
+
       const box = document.getElementById('academyRows');
-      if (config.view === 'cards') box.innerHTML = renderCourses(filtered);
-      else if (config.view === 'videos') box.innerHTML = renderLessons(filtered);
-      else box.innerHTML = renderTable(filtered, config.columns || []);
+
+      if (config.view === 'cards') box.innerHTML = renderCourses(visibleRows,config);
+      else if (config.view === 'videos') box.innerHTML = renderLessons(visibleRows);
+      else box.innerHTML = renderTable(visibleRows,config.columns || [],config);
+
+      bindEntityActions(config,visibleRows,load);
     };
 
     const load = async () => {
@@ -715,12 +966,17 @@ const AF = (() => {
         rows = await api(config.endpoint);
         draw();
       } catch (err) {
-        document.getElementById('academyRows').innerHTML = '<div class="academy-empty">'+esc(err.message)+'</div>';
+        document.getElementById('academyRows').innerHTML =
+          '<div class="academy-empty">'+esc(err.message)+'</div>';
       }
     };
 
-    document.getElementById('academySearch').addEventListener('input', draw);
-    if (canCreate) document.getElementById('academyAdd').onclick = () => openForm(config, load);
+    document.getElementById('academySearch').addEventListener('input',draw);
+
+    if (canCreate) {
+      document.getElementById('academyAdd').onclick = () => openForm(config,load);
+    }
+
     await load();
   }
 
@@ -791,9 +1047,23 @@ const AF = (() => {
 
   async function renderLive() {
     const target = document.getElementById('pageContent');
+
     const config = {
       title:'جدولة محاضرة Zoom',
-      createRoles:['owner','admin','instructor'],
+      editTitle:'تعديل المحاضرة',
+      createRoles:['owner','admin'],
+      manageRoles:['owner','admin'],
+      updateEndpoint:'/api/live-sessions/:id',
+      actions:{
+        details:true,
+        edit:true,
+        extendField:'durationMinutes',
+        extendLabel:'تمديد مدة المحاضرة',
+        cancelStatus:'cancelled',
+        cancelLabel:'إلغاء المحاضرة',
+        reopenStatus:'scheduled',
+        reopenLabel:'إعادة جدولة المحاضرة'
+      },
       fields:[
         ['title','عنوان المحاضرة','text',true],
         ['courseId','الدورة','dynamicSelect',false,'courses'],
@@ -808,32 +1078,91 @@ const AF = (() => {
     target.innerHTML = `
       <section class="academy-card">
         <div class="academy-card-head">
-          <div><h2>جلسات Zoom</h2><p>أنشئ الموعد من AcademyFlow، وإذا تم ضبط Zoom على السيرفر ينشأ الاجتماع تلقائيًا.</p></div>
+          <div>
+            <h2>جلسات Zoom</h2>
+            <p>تعديل الموعد والمدة والإلغاء يتم من نفس الصفحة، وتتم مزامنة التغييرات مع Zoom عند تفعيل التكامل.</p>
+          </div>
           ${allowed(config.createRoles) ? '<button class="btn primary" id="academyAddLive">+ محاضرة</button>' : ''}
         </div>
-        <div class="academy-note" style="margin-bottom:14px">رابط بدء الاجتماع الخاص بالمدرب لا يتم عرضه للطلاب. رابط الانضمام فقط هو الذي يظهر في الواجهة العامة للمحاضرة.</div>
+
+        <div class="academy-note" style="margin-bottom:14px">
+          الإلغاء لا يحذف السجل؛ يحتفظ النظام بالتفاصيل والحضور، ويمكن إعادة جدولة المحاضرة لاحقًا.
+        </div>
+
         <div id="liveRows"><div class="academy-empty">جاري التحميل...</div></div>
       </section>
     `;
 
+    let rows = [];
+
     const load = async () => {
       try {
-        const rows = await api('/api/live-sessions');
-        document.getElementById('liveRows').innerHTML = rows.length ? '<div class="academy-list">'+rows.map(x => `
-          <div class="academy-list-row">
-            <div><b>${esc(x.title)}</b><span>${fmtDate(x.startAt,true)} · ${esc(x.durationMinutes || 60)} دقيقة</span></div>
-            <div style="display:flex;gap:8px;align-items:center">
-              ${status(x.status)}
-              ${x.zoomJoinUrl ? '<a class="btn soft" target="_blank" rel="noopener" href="'+esc(x.zoomJoinUrl)+'">فتح Zoom</a>' : ''}
-            </div>
-          </div>
-        `).join('')+'</div>' : '<div class="academy-empty">لا توجد محاضرات مجدولة.</div>';
+        rows = await api('/api/live-sessions');
+
+        document.getElementById('liveRows').innerHTML = rows.length
+          ? '<div class="academy-list">'+rows.map((x,index) => `
+              <div class="academy-list-row">
+                <div>
+                  <b>${esc(x.title)}</b>
+                  <span>
+                    ${fmtDate(x.startAt,true)} ·
+                    ${esc(x.durationMinutes || 60)} دقيقة ·
+                    ${esc(x.courseId?.title || 'بدون دورة')} ·
+                    ${esc(x.instructorId?.name || 'بدون مدرب')}
+                  </span>
+                </div>
+
+                <div class="academy-row-actions">
+                  ${status(x.status)}
+                  <button class="btn soft live-action" data-action="details" data-index="${index}" type="button">تفاصيل</button>
+                  ${allowed(config.manageRoles) ? '<button class="btn soft live-action" data-action="edit" data-index="'+index+'" type="button">تعديل</button>' : ''}
+                  ${allowed(config.manageRoles) && x.status !== 'cancelled' ? '<button class="btn soft live-action" data-action="extend" data-index="'+index+'" type="button">تمديد</button>' : ''}
+                  ${allowed(config.manageRoles)
+                    ? '<button class="btn '+(x.status==='cancelled'?'primary':'ghost')+' live-action" data-action="'+(x.status==='cancelled'?'reopen':'cancel')+'" data-index="'+index+'" type="button">'+
+                        (x.status==='cancelled'?'إعادة الجدولة':'إلغاء')+
+                      '</button>'
+                    : ''}
+                  ${x.zoomJoinUrl && x.status !== 'cancelled'
+                    ? '<a class="btn soft" target="_blank" rel="noopener" href="'+esc(x.zoomJoinUrl)+'">Zoom</a>'
+                    : ''}
+                </div>
+              </div>
+            `).join('')+'</div>'
+          : '<div class="academy-empty">لا توجد محاضرات مجدولة.</div>';
+
+        document.querySelectorAll('.live-action').forEach(btn => {
+          btn.onclick = () => {
+            const row = rows[Number(btn.dataset.index)];
+            if (!row) return;
+
+            if (btn.dataset.action === 'details') return openDetails(config,row);
+            if (btn.dataset.action === 'edit') return openForm(config,load,row);
+            if (btn.dataset.action === 'extend') return openExtend(config,row,load);
+
+            if (btn.dataset.action === 'cancel') {
+              return changeRecordStatus(
+                config,row,'cancelled','إلغاء المحاضرة',load
+              );
+            }
+
+            if (btn.dataset.action === 'reopen') {
+              return changeRecordStatus(
+                config,row,'scheduled','إعادة جدولة المحاضرة',load
+              );
+            }
+          };
+        });
       } catch (err) {
-        document.getElementById('liveRows').innerHTML = '<div class="academy-empty">'+esc(err.message)+'</div>';
+        document.getElementById('liveRows').innerHTML =
+          '<div class="academy-empty">'+esc(err.message)+'</div>';
       }
     };
 
-    if (allowed(config.createRoles)) document.getElementById('academyAddLive').onclick = () => openForm(config, load);
+    if (allowed(config.createRoles)) {
+      document.getElementById('academyAddLive').onclick =
+        () => openForm(config,load);
+    }
+
     await load();
   }
 

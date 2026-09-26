@@ -225,9 +225,145 @@ async function updateLiveAttendance(req, res) {
   res.json(row);
 }
 
+
+async function updateLiveSession(req, res) {
+  const row = await LiveSession.findOne({
+    _id: req.params.id,
+    academyId: req.academyId,
+    instructorId: req.user.sub
+  });
+
+  if (!row) {
+    return res.status(404).json({ message: 'المحاضرة غير موجودة أو لا تملك صلاحيتها' });
+  }
+
+  const academy = await Academy.findById(req.academyId).select('timezone');
+
+  let nextCourseId = row.courseId;
+
+  if (req.body.courseId !== undefined) {
+    if (!req.body.courseId) {
+      return res.status(400).json({ message: 'يجب تحديد دورة للمحاضرة' });
+    }
+
+    const course = await assertCourse(req, req.body.courseId);
+    nextCourseId = course._id;
+  }
+
+  const previousStatus = row.status;
+  const nextStatus = req.body.status !== undefined
+    ? String(req.body.status)
+    : row.status;
+
+  if (!['scheduled','live','ended','cancelled'].includes(nextStatus)) {
+    return res.status(400).json({ message: 'حالة المحاضرة غير صحيحة' });
+  }
+
+  const nextTitle = req.body.title !== undefined
+    ? clean(req.body.title)
+    : row.title;
+
+  const nextStartAt = req.body.startAt !== undefined
+    ? req.body.startAt
+    : row.startAt;
+
+  const nextDuration = req.body.durationMinutes !== undefined
+    ? Math.max(1, Number(req.body.durationMinutes || 1))
+    : Number(row.durationMinutes || 60);
+
+  if (!nextTitle || !nextStartAt) {
+    return res.status(400).json({ message: 'العنوان وموعد البداية مطلوبان' });
+  }
+
+  if (!Number.isFinite(nextDuration) || nextDuration < 1) {
+    return res.status(400).json({ message: 'مدة المحاضرة غير صحيحة' });
+  }
+
+  if (nextStatus === 'cancelled' && previousStatus !== 'cancelled') {
+    await zoom.deleteMeeting(row.zoomMeetingId);
+    row.zoomMeetingId = '';
+    row.zoomJoinUrl = '';
+    row.zoomStartUrl = '';
+    row.zoomPassword = '';
+  } else if (previousStatus === 'cancelled' && nextStatus === 'scheduled') {
+    if (zoom.configured()) {
+      const meeting = await zoom.createMeeting({
+        topic: nextTitle,
+        startTime: nextStartAt,
+        duration: nextDuration,
+        timezone: academy?.timezone || 'Asia/Muscat'
+      });
+
+      row.zoomMeetingId = meeting.meetingId;
+      row.zoomJoinUrl = meeting.joinUrl;
+      row.zoomStartUrl = meeting.startUrl;
+      row.zoomPassword = meeting.password;
+    }
+  } else if (
+    row.zoomMeetingId &&
+    (
+      req.body.title !== undefined ||
+      req.body.startAt !== undefined ||
+      req.body.durationMinutes !== undefined
+    )
+  ) {
+    await zoom.updateMeeting(row.zoomMeetingId, {
+      topic: nextTitle,
+      startTime: nextStartAt,
+      duration: nextDuration,
+      timezone: academy?.timezone || 'Asia/Muscat'
+    });
+  }
+
+  row.title = nextTitle;
+  row.startAt = nextStartAt;
+  row.durationMinutes = nextDuration;
+  row.courseId = nextCourseId;
+  row.status = nextStatus;
+
+  if (req.body.description !== undefined) {
+    row.description = clean(req.body.description);
+  }
+
+  if (req.body.attendanceEnabled !== undefined) {
+    row.attendanceEnabled = Boolean(req.body.attendanceEnabled);
+  }
+
+  if (req.body.lateAfterMinutes !== undefined) {
+    row.lateAfterMinutes = Math.max(0, Number(req.body.lateAfterMinutes || 0));
+  }
+
+  if (req.body.joinWindowBeforeMinutes !== undefined) {
+    row.joinWindowBeforeMinutes = Math.max(
+      0,
+      Number(req.body.joinWindowBeforeMinutes || 0)
+    );
+  }
+
+  await row.save();
+  await row.populate('courseId', 'title code');
+
+  res.json({
+    id: row._id,
+    title: row.title,
+    description: row.description,
+    course: row.courseId,
+    startAt: row.startAt,
+    durationMinutes: row.durationMinutes,
+    attendanceEnabled: row.attendanceEnabled,
+    lateAfterMinutes: row.lateAfterMinutes,
+    joinWindowBeforeMinutes: row.joinWindowBeforeMinutes,
+    zoomMeetingId: row.zoomMeetingId,
+    zoomReady: Boolean(row.zoomJoinUrl),
+    hostReady: Boolean(row.zoomStartUrl),
+    status: row.status
+  });
+}
+
 module.exports = {
   liveSessions,
   createLiveSession,
+  updateLiveSession,
   liveStart,
   liveAttendance,
   updateLiveAttendance

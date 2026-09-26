@@ -130,8 +130,11 @@ window.InstructorTeaching = (() => {
                   <p>${P().esc(a.courseId?.title||'')} · التسليم ${P().fmtDate(a.dueAt,true)}</p>
                   <div class="instructor-meta"><span>${P().esc(a.submissionCount)} تسليم</span><span>${P().esc(a.pendingCount)} تحتاج تصحيح</span><span>${P().esc(a.gradedCount)} مصححة</span></div>
                   <div class="instructor-actions" style="margin-top:10px">
+                    <button class="btn soft assignment-details" data-index="${i}" type="button">تفاصيل</button>
                     <button class="btn soft assignment-edit" data-index="${i}" type="button">تعديل</button>
-                    <button class="btn ${a.pendingCount?'primary':'soft'} assignment-open" data-index="${i}" type="button">عرض التسليمات</button>
+                    ${a.status!=='closed'?'<button class="btn soft assignment-extend" data-index="'+i+'" type="button">تمديد</button>':''}
+                    <button class="btn ${a.status==='closed'?'primary':'ghost'} assignment-status" data-index="${i}" data-next="${a.status==='closed'?'published':'closed'}" type="button">${a.status==='closed'?'إعادة فتح':'إغلاق'}</button>
+                    <button class="btn ${a.pendingCount?'primary':'soft'} assignment-open" data-index="${i}" type="button">التسليمات</button>
                   </div>
                 </article>
               `).join(''):'<div class="instructor-empty">لا توجد واجبات.</div>'}
@@ -144,6 +147,61 @@ window.InstructorTeaching = (() => {
         });
         document.querySelectorAll('.assignment-edit').forEach(btn=>{
           btn.onclick=()=>openAssignmentForm(opts,load,rows[Number(btn.dataset.index)]);
+        });
+
+        document.querySelectorAll('.assignment-details').forEach(btn=>{
+          btn.onclick=()=>{
+            const a=rows[Number(btn.dataset.index)];
+            P().openDetails({
+              title:a.title,
+              subtitle:'تفاصيل الواجب',
+              items:[
+                ['الدورة',a.courseId?.title||'—'],
+                ['الحالة',a.status],
+                ['الدرجة الكاملة',a.totalMarks],
+                ['درجة النجاح',a.passingMark],
+                ['آخر موعد',P().fmtDate(a.dueAt,true)],
+                ['عدد التسليمات',a.submissionCount],
+                ['بانتظار التصحيح',a.pendingCount],
+                ['تم التصحيح',a.gradedCount],
+                ['التعليمات',a.description||'—']
+              ]
+            });
+          };
+        });
+
+        document.querySelectorAll('.assignment-extend').forEach(btn=>{
+          btn.onclick=()=>{
+            const a=rows[Number(btn.dataset.index)];
+            P().openForm({
+              title:'تمديد موعد الواجب',
+              values:{dueAt:P().inputDate(a.dueAt,true)},
+              fields:[{name:'dueAt',label:'آخر موعد جديد',type:'datetime-local',required:true}],
+              submitLabel:'حفظ التمديد',
+              onSubmit:async data=>{
+                await P().api('/api/instructor/assignments/'+a._id,{method:'PATCH',body:JSON.stringify(data)});
+                P().toast('تم تمديد موعد الواجب');
+                await load();
+              }
+            });
+          };
+        });
+
+        document.querySelectorAll('.assignment-status').forEach(btn=>{
+          btn.onclick=async()=>{
+            const a=rows[Number(btn.dataset.index)];
+            const next=btn.dataset.next;
+            const label=next==='closed'?'إغلاق الواجب':'إعادة فتح الواجب';
+            if(!confirm(label+'؟'))return;
+
+            try{
+              await P().api('/api/instructor/assignments/'+a._id,{method:'PATCH',body:JSON.stringify({status:next})});
+              P().toast(next==='closed'?'تم إغلاق الواجب':'تمت إعادة فتح الواجب');
+              await load();
+            }catch(err){
+              P().toast(err.message,'error');
+            }
+          };
         });
       }catch(err){target.innerHTML='<div class="instructor-card instructor-empty">'+P().esc(err.message)+'</div>';}
     };

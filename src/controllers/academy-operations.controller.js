@@ -1,0 +1,280 @@
+const Course = require('../models/Course');
+const Group = require('../models/Group');
+const Assessment = require('../models/Assessment');
+const Branch = require('../models/Branch');
+const User = require('../models/User');
+const AssignmentSubmission = require('../models/AssignmentSubmission');
+
+function clean(value) {
+  return typeof value === 'string' ? value.trim() : value;
+}
+
+async function assertInstructor(id, academyId) {
+  if (!id) return null;
+
+  const user = await User.findOne({
+    _id: id,
+    academyId,
+    role: 'instructor',
+    active: true
+  });
+
+  if (!user) {
+    const err = new Error('المدرب المحدد غير موجود أو غير نشط');
+    err.status = 400;
+    throw err;
+  }
+
+  return user;
+}
+
+function validateRange(startAt, endAt, label) {
+  if (!startAt || !endAt) return;
+
+  if (new Date(endAt).getTime() < new Date(startAt).getTime()) {
+    const err = new Error(`تاريخ نهاية ${label} يجب أن يكون بعد تاريخ البداية`);
+    err.status = 400;
+    throw err;
+  }
+}
+
+async function updateCourse(req, res) {
+  const row = await Course.findOne({
+    _id: req.params.id,
+    academyId: req.academyId
+  });
+
+  if (!row) {
+    return res.status(404).json({ message: 'الدورة غير موجودة' });
+  }
+
+  if (req.body.code !== undefined) {
+    const code = clean(req.body.code)
+      ? String(req.body.code).trim().toUpperCase()
+      : undefined;
+
+    if (
+      code &&
+      await Course.exists({
+        academyId: req.academyId,
+        code,
+        _id: { $ne: row._id }
+      })
+    ) {
+      return res.status(409).json({ message: 'كود الدورة مستخدم مسبقًا' });
+    }
+
+    row.code = code;
+  }
+
+  if (req.body.instructorId !== undefined) {
+    if (req.body.instructorId) {
+      await assertInstructor(req.body.instructorId, req.academyId);
+      row.instructorId = req.body.instructorId;
+    } else {
+      row.instructorId = null;
+    }
+  }
+
+  const textFields = ['title','description','category','thumbnailUrl'];
+  for (const key of textFields) {
+    if (req.body[key] !== undefined) row[key] = clean(req.body[key]);
+  }
+
+  if (req.body.deliveryType !== undefined) {
+    if (!['recorded','live','in_person','hybrid'].includes(req.body.deliveryType)) {
+      return res.status(400).json({ message: 'نوع الدورة غير صحيح' });
+    }
+    row.deliveryType = req.body.deliveryType;
+  }
+
+  if (req.body.price !== undefined) {
+    const price = Number(req.body.price);
+    if (!Number.isFinite(price) || price < 0) {
+      return res.status(400).json({ message: 'سعر الدورة غير صحيح' });
+    }
+    row.price = price;
+  }
+
+  if (req.body.startAt !== undefined) row.startAt = req.body.startAt || null;
+  if (req.body.endAt !== undefined) row.endAt = req.body.endAt || null;
+
+  if (req.body.status !== undefined) {
+    if (!['draft','active','archived'].includes(req.body.status)) {
+      return res.status(400).json({ message: 'حالة الدورة غير صحيحة' });
+    }
+    row.status = req.body.status;
+  }
+
+  validateRange(row.startAt, row.endAt, 'الدورة');
+
+  await row.save();
+  await row.populate('instructorId', 'name email');
+
+  res.json(row);
+}
+
+async function updateGroup(req, res) {
+  const row = await Group.findOne({
+    _id: req.params.id,
+    academyId: req.academyId
+  });
+
+  if (!row) {
+    return res.status(404).json({ message: 'المجموعة غير موجودة' });
+  }
+
+  if (req.body.courseId !== undefined) {
+    const course = await Course.findOne({
+      _id: req.body.courseId,
+      academyId: req.academyId
+    });
+
+    if (!course) {
+      return res.status(400).json({ message: 'الدورة المحددة غير موجودة' });
+    }
+
+    row.courseId = course._id;
+  }
+
+  if (req.body.branchId !== undefined) {
+    if (req.body.branchId) {
+      const branch = await Branch.findOne({
+        _id: req.body.branchId,
+        academyId: req.academyId
+      });
+
+      if (!branch) {
+        return res.status(400).json({ message: 'الفرع المحدد غير موجود' });
+      }
+
+      row.branchId = branch._id;
+    } else {
+      row.branchId = null;
+    }
+  }
+
+  if (req.body.instructorId !== undefined) {
+    if (req.body.instructorId) {
+      await assertInstructor(req.body.instructorId, req.academyId);
+      row.instructorId = req.body.instructorId;
+    } else {
+      row.instructorId = null;
+    }
+  }
+
+  for (const key of ['name','schedule','room']) {
+    if (req.body[key] !== undefined) row[key] = clean(req.body[key]);
+  }
+
+  if (req.body.capacity !== undefined) {
+    const capacity = Number(req.body.capacity);
+    if (!Number.isFinite(capacity) || capacity < 1) {
+      return res.status(400).json({ message: 'سعة المجموعة غير صحيحة' });
+    }
+    row.capacity = capacity;
+  }
+
+  if (req.body.startAt !== undefined) row.startAt = req.body.startAt || null;
+  if (req.body.endAt !== undefined) row.endAt = req.body.endAt || null;
+
+  if (req.body.status !== undefined) {
+    if (!['planned','active','completed','cancelled'].includes(req.body.status)) {
+      return res.status(400).json({ message: 'حالة المجموعة غير صحيحة' });
+    }
+    row.status = req.body.status;
+  }
+
+  validateRange(row.startAt, row.endAt, 'المجموعة');
+
+  await row.save();
+  await row.populate([
+    { path:'courseId', select:'title code' },
+    { path:'branchId', select:'name code' },
+    { path:'instructorId', select:'name email' }
+  ]);
+
+  res.json(row);
+}
+
+async function updateAssignment(req, res) {
+  const row = await Assessment.findOne({
+    _id: req.params.id,
+    academyId: req.academyId,
+    type: 'assignment'
+  });
+
+  if (!row) {
+    return res.status(404).json({ message: 'الواجب غير موجود' });
+  }
+
+  const hasSubmissions = await AssignmentSubmission.exists({
+    academyId: req.academyId,
+    assessmentId: row._id
+  });
+
+  if (req.body.courseId !== undefined && String(req.body.courseId) !== String(row.courseId)) {
+    if (hasSubmissions) {
+      return res.status(409).json({
+        message: 'لا يمكن تغيير الدورة بعد وجود تسليمات'
+      });
+    }
+
+    const course = await Course.findOne({
+      _id: req.body.courseId,
+      academyId: req.academyId
+    });
+
+    if (!course) {
+      return res.status(400).json({ message: 'الدورة المحددة غير موجودة' });
+    }
+
+    row.courseId = course._id;
+  }
+
+  if (req.body.title !== undefined) row.title = clean(req.body.title);
+  if (req.body.description !== undefined) row.description = clean(req.body.description);
+  if (req.body.dueAt !== undefined) row.dueAt = req.body.dueAt || null;
+
+  if (req.body.totalMarks !== undefined) {
+    const total = Number(req.body.totalMarks);
+
+    if (!Number.isFinite(total) || total < 1) {
+      return res.status(400).json({ message: 'الدرجة الكاملة غير صحيحة' });
+    }
+
+    if (hasSubmissions && total !== Number(row.totalMarks)) {
+      return res.status(409).json({
+        message: 'لا يمكن تغيير الدرجة الكاملة بعد وجود تسليمات'
+      });
+    }
+
+    row.totalMarks = total;
+  }
+
+  if (req.body.passingMark !== undefined) {
+    const passing = Number(req.body.passingMark);
+    if (!Number.isFinite(passing) || passing < 0) {
+      return res.status(400).json({ message: 'درجة النجاح غير صحيحة' });
+    }
+    row.passingMark = passing;
+  }
+
+  if (req.body.status !== undefined) {
+    if (!['draft','published','closed'].includes(req.body.status)) {
+      return res.status(400).json({ message: 'حالة الواجب غير صحيحة' });
+    }
+    row.status = req.body.status;
+  }
+
+  await row.save();
+  await row.populate('courseId', 'title code');
+
+  res.json(row);
+}
+
+module.exports = {
+  updateCourse,
+  updateGroup,
+  updateAssignment
+};

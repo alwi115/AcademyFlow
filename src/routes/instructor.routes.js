@@ -11,7 +11,9 @@ router.use(auth, tenant, allowRoles('instructor'));
 router.get('/options', core.options);
 router.get('/dashboard', core.dashboard);
 router.get('/courses', core.courses);
+router.patch('/courses/:id', core.updateCourse);
 router.get('/groups', core.groups);
+router.patch('/groups/:id', core.updateGroup);
 router.get('/students', core.students);
 router.get('/gradebook', core.gradebook);
 
@@ -33,6 +35,7 @@ router.post('/notifications', teaching.createNotification);
 
 router.get('/live', live.liveSessions);
 router.post('/live', live.createLiveSession);
+router.patch('/live/:id', live.updateLiveSession);
 router.get('/live/:id/start', live.liveStart);
 router.get('/live/:id/attendance', live.liveAttendance);
 router.patch('/live/:id/attendance/:studentId', live.updateLiveAttendance);
