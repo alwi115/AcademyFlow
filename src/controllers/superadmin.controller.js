@@ -5,6 +5,9 @@ const User = require('../models/User');
 const Plan = require('../models/Plan');
 const AuditLog = require('../models/AuditLog');
 const SystemSetting = require('../models/SystemSetting');
+const SystemError = require('../models/SystemError');
+const backupService = require('../services/backup.service');
+const mailer = require('../services/mailer.service');
 
 async function platformSettings() {
   return SystemSetting.findOneAndUpdate(
@@ -329,40 +332,227 @@ async function health(req, res) {
   };
 
   const memory = process.memoryUsage();
-  const [academies, users, plans, logs] = await Promise.all([
+  const now = new Date();
+  const in24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  const dbStarted = Date.now();
+
+  let dbPingMs = null;
+  let dbPingOk = false;
+
+  try {
+    await mongoose.connection.db.command({ ping: 1 });
+    dbPingOk = true;
+    dbPingMs = Date.now() - dbStarted;
+  } catch {}
+
+  const [
+    academies,
+    users,
+    plans,
+    logs,
+    backups,
+    storage,
+    recentErrors,
+    connectedZoomAcademies,
+    expiringZoomAcademies,
+    academyIssues
+  ] = await Promise.all([
     Academy.countDocuments(),
     User.countDocuments(),
     Plan.countDocuments(),
-    AuditLog.countDocuments()
+    AuditLog.countDocuments(),
+    backupService.listBackups().catch(() => []),
+    backupService.storageStatus(),
+    SystemError.find()
+      .populate('academyId', 'name code')
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .lean(),
+    Academy.countDocuments({ 'zoomIntegration.connected': true }),
+    Academy.countDocuments({
+      'zoomIntegration.connected': true,
+      'zoomIntegration.accessTokenExpiresAt': { $lte: in24Hours }
+    }),
+    Academy.find({
+      $or: [
+        { status: { $in: ['frozen','suspended'] } },
+        {
+          status: { $in: ['active','grace'] },
+          subscriptionEndsAt: { $lt: now }
+        },
+        {
+          'zoomIntegration.connected': true,
+          'zoomIntegration.accessTokenExpiresAt': { $lte: now }
+        }
+      ]
+    })
+      .select('name code status subscriptionEndsAt zoomIntegration.connected zoomIntegration.accessTokenExpiresAt')
+      .sort({ updatedAt: -1 })
+      .limit(25)
+      .lean()
   ]);
 
+  const email = mailer.configStatus();
+  const latestBackup = backups[0] || null;
+  const backupAgeHours = latestBackup?.createdAt
+    ? Math.round(((Date.now() - new Date(latestBackup.createdAt).getTime()) / 3600000) * 10) / 10
+    : null;
+
+  const zoomOAuthConfigured = Boolean(
+    process.env.ZOOM_CLIENT_ID &&
+    process.env.ZOOM_CLIENT_SECRET &&
+    process.env.ZOOM_REDIRECT_URI
+  );
+
+  const backupAutoEnabled =
+    process.env.AUTO_BACKUP_ENABLED !== 'false' &&
+    backupService.explicitStorageConfigured();
+
+  const critical =
+    !dbPingOk ||
+    !storage.writable ||
+    !process.env.JWT_SECRET ||
+    process.env.JWT_SECRET.length < 64;
+
+  const degraded =
+    !critical && (
+      !storage.explicitlyConfigured ||
+      !latestBackup ||
+      !email.configured ||
+      !zoomOAuthConfigured ||
+      recentErrors.length > 0 ||
+      academyIssues.length > 0
+    );
+
   res.json({
-    ok: mongoose.connection.readyState === 1,
-    checkedAt: new Date().toISOString(),
+    ok: !critical,
+    status: critical ? 'critical' : degraded ? 'degraded' : 'healthy',
+    checkedAt: now.toISOString(),
     database: {
       state: dbStateMap[mongoose.connection.readyState] || 'unknown',
-      name: mongoose.connection.name || ''
+      name: mongoose.connection.name || '',
+      pingOk: dbPingOk,
+      pingMs: dbPingMs
     },
     server: {
       uptimeSeconds: Math.round(process.uptime()),
       node: process.version,
+      environment: process.env.NODE_ENV || 'development',
       memoryMb: {
         rss: Math.round(memory.rss / 1024 / 1024),
         heapUsed: Math.round(memory.heapUsed / 1024 / 1024),
         heapTotal: Math.round(memory.heapTotal / 1024 / 1024)
       }
     },
+    storage: {
+      ...storage,
+      freeMb: storage.freeBytes == null ? null : Math.round(storage.freeBytes / 1024 / 1024),
+      totalMb: storage.totalBytes == null ? null : Math.round(storage.totalBytes / 1024 / 1024)
+    },
+    backups: {
+      count: backups.length,
+      latest: latestBackup,
+      latestAgeHours: backupAgeHours,
+      automaticEnabled: backupAutoEnabled,
+      intervalHours: Number(process.env.BACKUP_INTERVAL_HOURS || 24),
+      retentionCount: Number(process.env.BACKUP_RETENTION_COUNT || 14),
+      busy: backupService.isBusy(),
+      operation: backupService.operation(),
+      productionRestoreEnabled:
+        process.env.NODE_ENV !== 'production' ||
+        process.env.ENABLE_PRODUCTION_RESTORE === 'true'
+    },
+    email: {
+      provider: email.provider,
+      configured: email.configured,
+      missing: email.missing,
+      fromEmailConfigured: Boolean(email.fromEmail)
+    },
+    zoom: {
+      configured: zoomOAuthConfigured,
+      webhookConfigured: Boolean(process.env.ZOOM_WEBHOOK_SECRET_TOKEN),
+      tokenEncryptionKeyConfigured: Boolean(process.env.ZOOM_TOKEN_ENCRYPTION_KEY),
+      connectedAcademies: connectedZoomAcademies,
+      expiringWithin24Hours: expiringZoomAcademies
+    },
     configuration: {
       jwtConfigured: Boolean(process.env.JWT_SECRET && process.env.JWT_SECRET.length >= 64),
       mongoConfigured: Boolean(process.env.MONGODB_URI),
       allowedOriginsConfigured: Boolean(process.env.ALLOWED_ORIGINS),
       superAdminConfigured: Boolean(process.env.SUPERADMIN_USERNAME && process.env.SUPERADMIN_PASSWORD),
-      zoomConfigured: Boolean(process.env.ZOOM_ACCOUNT_ID && process.env.ZOOM_CLIENT_ID && process.env.ZOOM_CLIENT_SECRET),
+      zoomConfigured: zoomOAuthConfigured,
       zoomWebhookConfigured: Boolean(process.env.ZOOM_WEBHOOK_SECRET_TOKEN),
-      sendgridConfigured: Boolean(process.env.SENDGRID_API_KEY && process.env.SENDGRID_FROM_EMAIL)
+      zoomTokenEncryptionConfigured: Boolean(process.env.ZOOM_TOKEN_ENCRYPTION_KEY),
+      sendgridConfigured: email.configured,
+      backupDirectoryConfigured: storage.explicitlyConfigured
     },
-    counts: { academies, users, plans, auditLogs: logs }
+    counts: { academies, users, plans, auditLogs: logs },
+    recentErrors,
+    academyIssues
   });
+}
+
+async function listBackups(req, res) {
+  const [rows, storage] = await Promise.all([
+    backupService.listBackups(),
+    backupService.storageStatus()
+  ]);
+
+  res.json({
+    rows,
+    storage,
+    automaticEnabled:
+      process.env.AUTO_BACKUP_ENABLED !== 'false' &&
+      backupService.explicitStorageConfigured(),
+    productionRestoreEnabled:
+      process.env.NODE_ENV !== 'production' ||
+      process.env.ENABLE_PRODUCTION_RESTORE === 'true'
+  });
+}
+
+async function createBackup(req, res) {
+  const row = await backupService.createBackup({ reason: 'manual' });
+
+  await audit(req, 'backup.create', 'backup', row.id, row.id, {
+    sizeBytes: row.sizeBytes,
+    documentCount: row.documentCount,
+    collectionCount: row.collectionCount
+  });
+
+  res.status(201).json(row);
+}
+
+async function validateBackup(req, res) {
+  const result = await backupService.validateBackup(req.params.id);
+
+  await audit(req, 'backup.validate', 'backup', result.metadata.id, result.metadata.id, {
+    sha256: result.metadata.sha256
+  });
+
+  res.json({
+    ok: true,
+    backup: result.metadata
+  });
+}
+
+async function restoreBackup(req, res) {
+  const expected = `RESTORE ${req.params.id}`;
+
+  if (String(req.body?.confirmation || '') !== expected) {
+    return res.status(400).json({
+      message: `Confirmation must exactly match: ${expected}`
+    });
+  }
+
+  const result = await backupService.restoreBackup(req.params.id);
+
+  await audit(req, 'backup.restore', 'backup', result.restored.id, result.restored.id, {
+    safetyBackupId: result.safetyBackup.id,
+    restoredCollections: result.restoredCollections,
+    restoredDocuments: result.restoredDocuments
+  });
+
+  res.json(result);
 }
 
 async function listAudit(req, res) {
@@ -411,6 +601,10 @@ module.exports = {
   togglePlan,
   subscriptions,
   health,
+  listBackups,
+  createBackup,
+  validateBackup,
+  restoreBackup,
   listAudit,
   getSettings,
   updateSettings
