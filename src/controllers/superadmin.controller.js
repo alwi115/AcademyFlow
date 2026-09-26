@@ -21,20 +21,18 @@ async function platformSettings() {
   );
 }
 
-async function audit(req, action, targetType, targetId, targetLabel, details = {}) {
-  try {
-    await AuditLog.create({
-      actorId: req.user?.sub || null,
-      actorRole: req.user?.role || 'superadmin',
-      action,
-      targetType,
-      targetId: targetId ? String(targetId) : '',
-      targetLabel: targetLabel || '',
-      details
-    });
-  } catch (err) {
-    console.error('[audit]', err.message);
-  }
+async function audit(req, action, targetType, targetId, targetLabel, details = {}, before = null, after = null) {
+  return auditService.record(req, {
+    action,
+    targetType,
+    targetId,
+    targetLabel,
+    details,
+    before,
+    after,
+    statusCode: 200,
+    source: 'controller'
+  });
 }
 
 async function stats(req, res) {
