@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const Academy = require('../src/models/Academy');
+const { CURRENT_LEGAL_VERSION } = require('../src/config/legal');
 const User = require('../src/models/User');
 const AuditLog = require('../src/models/AuditLog');
 
@@ -73,7 +74,13 @@ async function main() {
     email: 'owner-e2e@example.test',
     passwordHash,
     role: 'owner',
-    active: true
+    active: true,
+    legalAcceptance: {
+      termsVersion: CURRENT_LEGAL_VERSION,
+      privacyVersion: CURRENT_LEGAL_VERSION,
+      dpaVersion: CURRENT_LEGAL_VERSION,
+      acceptedAt: new Date()
+    }
   });
 
   const app = express();
