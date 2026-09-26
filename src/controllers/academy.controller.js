@@ -358,7 +358,21 @@ async function createEnrollment(req, res) {
   const student = await assertOwned(User, studentId, academyId, 'Student');
   if (student.role !== 'student') return res.status(400).json({ message: 'Selected user is not a student' });
   await assertOwned(Course, courseId, academyId, 'Course');
-  if (groupId) await assertOwned(Group, groupId, academyId, 'Group');
+
+  if (groupId) {
+    const group = await Group.findOne({
+      _id: groupId,
+      academyId,
+      courseId,
+      status: { $ne: 'cancelled' }
+    }).select('_id');
+
+    if (!group) {
+      return res.status(400).json({
+        message: 'Selected group does not belong to this academy and course'
+      });
+    }
+  }
 
   if (await Enrollment.exists({ academyId, studentId, courseId })) {
     return res.status(409).json({ message: 'Student is already enrolled in this course' });
@@ -400,7 +414,37 @@ async function createAttendance(req, res) {
   const student = await assertOwned(User, studentId, academyId, 'Student');
   if (student.role !== 'student') return res.status(400).json({ message: 'Selected user is not a student' });
   await assertOwned(Course, courseId, academyId, 'Course');
-  if (groupId) await assertOwned(Group, groupId, academyId, 'Group');
+
+  if (groupId) {
+    const group = await Group.findOne({
+      _id: groupId,
+      academyId,
+      courseId,
+      status: { $ne: 'cancelled' }
+    }).select('_id');
+
+    if (!group) {
+      return res.status(400).json({
+        message: 'Selected group does not belong to this academy and course'
+      });
+    }
+
+    const enrollment = await Enrollment.findOne({
+      academyId,
+      studentId,
+      courseId,
+      status: { $in: ['active','paused','completed'] }
+    }).select('groupId');
+
+    if (
+      enrollment?.groupId &&
+      String(enrollment.groupId) !== String(group._id)
+    ) {
+      return res.status(400).json({
+        message: 'Student is not enrolled in the selected group'
+      });
+    }
+  }
 
   const row = await Attendance.create({
     academyId,
