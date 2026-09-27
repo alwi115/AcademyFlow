@@ -3,199 +3,277 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#f4f4f0">
+  <meta name="theme-color" content="#f2f0e8">
   <meta name="color-scheme" content="light dark">
-  <meta name="description" content="AcademyFlow منصة متكاملة لإدارة الأكاديميات والطلاب والمدربين والدورات والمحاضرات المباشرة.">
-  <title>AcademyFlow | شغّل أكاديميتك من مكان واحد</title>
+  <meta name="description" content="AcademyFlow منصة تشغيل متكاملة للأكاديميات ومراكز التدريب: الطلاب، المدربين، الفروع، الحضور، المدفوعات، Zoom والتقارير في نظام واحد.">
+  <meta property="og:title" content="AcademyFlow | إدارة الأكاديمية من مكان واحد">
+  <meta property="og:description" content="شغّل الطلاب والدورات والحضور والمالية والفروع ومحاضرات Zoom من منصة واحدة واضحة.">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+  <title>AcademyFlow | إدارة الأكاديمية من مكان واحد</title>
   <link rel="stylesheet" href="/css/app.css">
-  <link rel="stylesheet" href="/css/academy-home.css?v=5">
+  <link rel="stylesheet" href="/css/academy-home.css?v=10">
   <script src="/js/ui.js"></script>
 </head>
 <body class="academy-public-page">
-  <div class="af-site">
-    <header class="af-nav af-container">
+  <a class="af-skip" href="#mainContent">انتقل للمحتوى</a>
+
+  <header class="af-header" id="afHeader">
+    <div class="af-shell af-header-inner">
       <a class="af-brand" href="/" aria-label="AcademyFlow">
-        <span class="af-logo">AF</span>
-        <span class="af-brand-text"><b>AcademyFlow</b><small>ACADEMY OPERATING SYSTEM</small></span>
+        <span class="af-brand-mark">AF</span>
+        <span class="af-brand-copy"><b>AcademyFlow</b><small>ACADEMY OPERATING SYSTEM</small></span>
       </a>
-
-      <nav class="af-nav-links" aria-label="التنقل الرئيسي">
-        <a href="#product">المنصة</a>
-        <a href="#workflow">طريقة العمل</a>
-        <a href="#roles">المستخدمين</a>
-        <a href="#security">الأمان</a>
+      <nav class="af-desktop-nav" aria-label="التنقل الرئيسي">
+        <a href="#platform">المنصة</a><a href="#solutions">الحلول</a><a href="#branches">الفروع</a><a href="#pricing">الباقات</a><a href="#faq">الأسئلة</a>
       </nav>
-
-      <div class="af-nav-actions">
-        <button class="af-icon-btn theme-toggle" data-theme-toggle data-theme-icon type="button" aria-label="تبديل الوضع">◐</button>
-        <a class="af-text-btn" href="/academy/login.html">تسجيل الدخول</a>
-        <a class="af-primary-btn af-nav-cta" href="/academy/login.html">دخول الأكاديمية <span>↗</span></a>
+      <div class="af-header-actions">
+        <button class="af-control af-lang-toggle" type="button" data-lang-toggle aria-label="Switch language">EN</button>
+        <button class="af-control theme-toggle" data-theme-toggle data-theme-icon type="button" aria-label="تبديل المظهر">◐</button>
+        <a class="af-login-link" href="/academy/login.html">تسجيل الدخول</a>
+        <a class="af-button af-button-primary af-header-cta" href="/academy/login.html">ابدأ تجربة 15 يوم <span>↗</span></a>
+        <button class="af-menu-button" type="button" data-mobile-menu-button aria-expanded="false" aria-controls="mobileMenu" aria-label="فتح القائمة"><i></i><i></i></button>
       </div>
-    </header>
+    </div>
+    <div class="af-mobile-menu" id="mobileMenu" data-mobile-menu aria-hidden="true">
+      <div class="af-mobile-menu-inner">
+        <div class="af-mobile-menu-head"><span>استكشف AcademyFlow</span><button type="button" data-mobile-menu-close aria-label="إغلاق">×</button></div>
+        <nav aria-label="قائمة الجوال">
+          <a href="#platform"><span>01</span><b>المنصة</b></a><a href="#solutions"><span>02</span><b>الحلول</b></a>
+          <a href="#branches"><span>03</span><b>الفروع</b></a><a href="#pricing"><span>04</span><b>الباقات</b></a><a href="#faq"><span>05</span><b>الأسئلة</b></a>
+        </nav>
+        <div class="af-mobile-menu-foot"><a href="/academy/login.html">تسجيل الدخول</a><a class="af-button af-button-primary" href="/academy/login.html">ابدأ تجربة 15 يوم</a></div>
+      </div>
+    </div>
+  </header>
 
-    <main>
-      <section class="af-hero af-container">
-        <div class="af-hero-copy">
-          <div class="af-status"><span></span> إدارة أكاديميتك صارت أوضح</div>
-          <h1>كل تفاصيل أكاديميتك،<br><em>في تدفّق واحد.</em></h1>
-          <p>من الطلاب والمدربين إلى الدورات والحضور والاختبارات ومحاضرات Zoom. AcademyFlow يجمع كل عمليات الأكاديمية في مساحة مرتبة وسريعة.</p>
-
-          <div class="af-hero-actions">
-            <a class="af-primary-btn af-large-btn" href="/academy/login.html">ابدأ من لوحة الأكاديمية <span>←</span></a>
-            <a class="af-ghost-btn af-large-btn" href="#product">استكشف المنصة</a>
-          </div>
-
-          <div class="af-proof-points">
-            <span>عزل بيانات لكل أكاديمية</span>
-            <span>صلاحيات حسب الدور</span>
-            <span>ربط Zoom مستقل</span>
-          </div>
+  <main id="mainContent">
+    <section class="af-hero af-shell">
+      <div class="af-hero-copy" data-reveal>
+        <div class="af-eyebrow"><span class="af-live-dot"></span> نظام تشغيل للأكاديميات ومراكز التدريب</div>
+        <h1>خلّ أكاديميتك تشتغل كنظام واحد، <em>مو كأدوات متفرقة.</em></h1>
+        <p>AcademyFlow يربط الطلاب والمدربين والدورات والحضور والمدفوعات والفروع ومحاضرات Zoom في مساحة تشغيل واحدة واضحة للإدارة والفريق.</p>
+        <div class="af-hero-actions">
+          <a class="af-button af-button-primary af-button-lg" href="/academy/login.html">ابدأ تجربة 15 يوم <span>←</span></a>
+          <a class="af-button af-button-quiet af-button-lg" href="#platform">استكشف AcademyFlow</a>
         </div>
+        <div class="af-hero-proof">
+          <div><b>15</b><span>يوم تجربة</span></div><div><b>1</b><span>مساحة مستقلة لكل أكاديمية</span></div><div><b>24/7</b><span>متابعة صحة النظام</span></div>
+        </div>
+      </div>
 
-        <div class="af-visual-wrap" aria-label="معاينة AcademyFlow">
-          <div class="af-visual-ring"></div>
-          <div class="af-dashboard-card">
-            <div class="af-dash-top">
-              <div class="af-dash-brand"><i>AF</i><span></span></div>
-              <div class="af-dash-dots"><i></i><i></i><i></i></div>
-            </div>
-            <div class="af-dash-layout">
-              <aside class="af-mini-side">
-                <span class="active"></span><span></span><span></span><span></span><span></span>
-              </aside>
-              <div class="af-dash-main">
-                <div class="af-dash-heading"><div><small>نظرة عامة</small><b>صباح الخير 👋</b></div><button>+ إضافة</button></div>
-                <div class="af-stats">
-                  <article><small>الطلاب</small><b>1,284</b><em>+12%</em></article>
-                  <article><small>الحضور</small><b>92%</b><em>ممتاز</em></article>
-                  <article><small>الدورات</small><b>24</b><em>6 نشطة</em></article>
-                </div>
-                <div class="af-dash-bottom">
-                  <article class="af-chart">
-                    <div class="af-card-label"><b>نمو التسجيل</b><small>7 أشهر</small></div>
-                    <div class="af-line-chart"><span></span><i></i><i></i><i></i><i></i><i></i></div>
-                  </article>
-                  <article class="af-next-class">
-                    <div class="af-card-label"><b>القادم</b><small>اليوم</small></div>
-                    <div class="af-class-row"><i></i><div><b>الأمن السيبراني</b><span>06:00 م • Zoom</span></div></div>
-                    <div class="af-class-row"><i></i><div><b>برمجة الويب</b><span>08:30 م • Zoom</span></div></div>
-                  </article>
-                </div>
+      <div class="af-hero-product" data-reveal>
+        <div class="af-product-frame">
+          <div class="af-product-topbar">
+            <div class="af-product-brand"><span>AF</span><div><b>AcademyFlow</b><small>الفرع الرئيسي</small></div></div>
+            <div class="af-product-toolbar"><span>الأحد، 27 سبتمبر</span><i></i><i></i></div>
+          </div>
+          <div class="af-product-layout">
+            <aside class="af-product-sidebar" aria-hidden="true"><span class="is-active">⌂</span><span>◎</span><span>▦</span><span>↗</span></aside>
+            <div class="af-product-main">
+              <div class="af-product-heading"><div><span>نظرة تشغيلية</span><h2>صباح الخير، فريق الإدارة</h2></div><button type="button" tabindex="-1">+ إضافة طالب</button></div>
+              <div class="af-metrics-grid">
+                <article><span>إجمالي الطلاب</span><strong>1,284</strong><small>+38 هذا الشهر</small></article>
+                <article><span>المدربين النشطين</span><strong>42</strong><small>6 فروع</small></article>
+                <article><span>حصص اليوم</span><strong>18</strong><small>5 Zoom</small></article>
+                <article><span>نسبة الحضور</span><strong>92.4%</strong><small>+2.1%</small></article>
+              </div>
+              <div class="af-product-content">
+                <section class="af-schedule-panel">
+                  <div class="af-panel-head"><div><b>محاضرات اليوم</b><span>جدول الفرع الرئيسي</span></div><small>عرض الكل</small></div>
+                  <div class="af-class-list">
+                    <div class="af-class-item"><time>10:00</time><i></i><div><b>أساسيات الأمن السيبراني</b><small>أ. سالم · قاعة 2</small></div><em>حضوري</em></div>
+                    <div class="af-class-item"><time>12:30</time><i class="zoom"></i><div><b>الإنجليزية للأعمال</b><small>أ. مريم · Zoom</small></div><em class="zoom">Zoom</em></div>
+                    <div class="af-class-item"><time>16:00</time><i></i><div><b>Excel للمحاسبة</b><small>أ. خالد · قاعة 1</small></div><em>حضوري</em></div>
+                  </div>
+                </section>
+                <aside class="af-revenue-panel">
+                  <div class="af-panel-head"><div><b>إيرادات الشهر</b><span>كل الفروع</span></div><strong>+8.6%</strong></div>
+                  <div class="af-revenue-number">8,460 <small>OMR</small></div>
+                  <div class="af-mini-bars" aria-hidden="true"><i style="--h:42%"></i><i style="--h:55%"></i><i style="--h:48%"></i><i style="--h:66%"></i><i style="--h:61%"></i><i style="--h:75%"></i><i style="--h:88%"></i></div>
+                  <div class="af-payment-status"><span><i></i><b>مدفوع</b><small>7,140 OMR</small></span><span><i class="due"></i><b>مستحق</b><small>1,320 OMR</small></span></div>
+                </aside>
               </div>
             </div>
           </div>
-
-          <div class="af-floating-note af-note-one">
-            <span class="af-note-icon">✓</span>
-            <div><b>تم تسجيل الحضور</b><small>بشكل تلقائي من الجلسة</small></div>
-          </div>
-          <div class="af-floating-note af-note-two">
-            <strong>92%</strong><span>متوسط الحضور</span>
-          </div>
         </div>
-      </section>
-
-      <section class="af-trust-strip">
-        <div class="af-container af-trust-inner">
-          <small>منصة واحدة تدير</small>
-          <div><b>الطلاب</b><b>المدربين</b><b>الدورات</b><b>Zoom</b><b>الحضور</b><b>الواجبات</b><b>الاختبارات</b></div>
-        </div>
-      </section>
-
-      <section class="af-section af-container" id="product">
-        <div class="af-section-intro">
-          <span class="af-kicker">01 — المنصة</span>
-          <h2>واجهة هادية،<br>وشغل كثير يصير وراها.</h2>
-          <p>صممنا AcademyFlow عشان كل مستخدم يشوف اللي يحتاجه فقط، بدون قوائم مزدحمة أو خطوات زايدة.</p>
-        </div>
-
-        <div class="af-feature-showcase">
-          <article class="af-feature-big">
-            <div class="af-feature-copy">
-              <span class="af-feature-number">01</span>
-              <h3>لوحة إدارة تعرف وش المهم</h3>
-              <p>تابع الأرقام الأساسية، الدورات النشطة، المحاضرات القادمة، والحضور من أول شاشة.</p>
-            </div>
-            <div class="af-feature-ui">
-              <div class="af-fui-head"><span></span><button></button></div>
-              <div class="af-fui-grid"><i></i><i></i><i></i></div>
-              <div class="af-fui-chart"><span></span></div>
-            </div>
-          </article>
-
-          <article class="af-feature-compact">
-            <span class="af-feature-number">02</span>
-            <div class="af-feature-icon">↗</div>
-            <h3>Zoom لكل أكاديمية</h3>
-            <p>كل أكاديمية تربط حساب Zoom الخاص فيها وتدير جلساتها بدون خلط بين الشركات.</p>
-          </article>
-
-          <article class="af-feature-compact accent-card">
-            <span class="af-feature-number">03</span>
-            <div class="af-feature-icon">✓</div>
-            <h3>حضور ومتابعة</h3>
-            <p>تتبع الحضور المرتبط بالمحاضرات مع سجل واضح وسهل للمراجعة.</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="af-section af-dark-section" id="workflow">
-        <div class="af-container">
-          <div class="af-section-intro light">
-            <span class="af-kicker">02 — طريقة العمل</span>
-            <h2>من تسجيل الطالب<br>إلى آخر درجة.</h2>
-            <p>كل مرحلة مربوطة باللي بعدها عشان فريقك ما يكرر نفس الشغل مرتين.</p>
-          </div>
-
-          <div class="af-timeline">
-            <article><span>01</span><div><h3>جهّز الأكاديمية</h3><p>أضف المستخدمين والصلاحيات والإعدادات الأساسية.</p></div></article>
-            <article><span>02</span><div><h3>ابنِ الدورات</h3><p>رتّب المجموعات والمدربين والطلاب والمحتوى.</p></div></article>
-            <article><span>03</span><div><h3>جدول المحاضرات</h3><p>اربط Zoom وحدد المواعيد والجلسات.</p></div></article>
-            <article><span>04</span><div><h3>تابع الأداء</h3><p>الحضور والواجبات والاختبارات والدرجات في نفس السياق.</p></div></article>
-          </div>
-        </div>
-      </section>
-
-      <section class="af-section af-container" id="roles">
-        <div class="af-section-split">
-          <div class="af-section-intro">
-            <span class="af-kicker">03 — المستخدمين</span>
-            <h2>نفس النظام،<br>واجهة تناسب كل دور.</h2>
-          </div>
-          <p class="af-side-copy">المالك والإداري والمدرب والطالب، كل واحد يدخل لنفس المنصة لكن يشوف الأدوات والبيانات المسموح له فيها فقط.</p>
-        </div>
-
-        <div class="af-role-list">
-          <article><span>01</span><h3>المالك والإدارة</h3><p>تحكم كامل بالأكاديمية، المستخدمين، الدورات، الجلسات، والإعدادات.</p><i>إدارة</i></article>
-          <article><span>02</span><h3>المدرب</h3><p>دوراته وطلابه ودروسه وواجباته واختباراته وجلساته المباشرة.</p><i>تدريس</i></article>
-          <article><span>03</span><h3>الطالب</h3><p>وصول مباشر للدورات والمحتوى والجلسات والإشعارات المرتبطة بدراسته.</p><i>تعلّم</i></article>
-        </div>
-      </section>
-
-      <section class="af-section af-container" id="security">
-        <div class="af-final-cta">
-          <div class="af-final-copy">
-            <span>جاهز تدخل؟</span>
-            <h2>أكاديميتك أقرب<br>من ما تتوقع.</h2>
-            <p>استخدم كود الأكاديمية وبيانات حسابك، والنظام بيوجهك تلقائيًا للوحة المناسبة حسب صلاحياتك.</p>
-          </div>
-          <a class="af-final-button" href="/academy/login.html"><span>دخول AcademyFlow</span><i>←</i></a>
-        </div>
-      </section>
-    </main>
-
-    <footer class="af-footer af-container">
-      <div class="af-footer-main">
-        <a class="af-brand" href="/"><span class="af-logo">AF</span><span class="af-brand-text"><b>AcademyFlow</b><small>ACADEMY OPERATING SYSTEM</small></span></a>
-        <nav>
-          <a href="/legal/privacy.html">الخصوصية</a>
-          <a href="/legal/terms.html">الشروط</a>
-          <a href="/legal/refund.html">الاسترداد</a>
-          <a href="/legal/support.html">الدعم</a>
-        </nav>
+        <div class="af-context-card af-context-attendance"><span>✓</span><div><b>تم تسجيل الحضور</b><small>جلسة Zoom · 24 طالب</small></div></div>
+        <div class="af-context-card af-context-branch"><small>أفضل فرع اليوم</small><b>الفرع الرئيسي</b><span>94.8%</span></div>
       </div>
-      <div class="af-footer-bottom"><span>© AcademyFlow</span><span>Built for modern academies</span></div>
-    </footer>
-  </div>
+    </section>
+
+    <section class="af-signal-strip">
+      <div class="af-shell af-signal-grid">
+        <div><span>01</span><b>الطلاب والدورات</b><small>من التسجيل إلى التخرج</small></div><div><span>02</span><b>المالية والتحصيل</b><small>مدفوعات مرتبطة بالطالب</small></div>
+        <div><span>03</span><b>إدارة الفروع</b><small>تشغيل مركزي بصلاحيات واضحة</small></div><div><span>04</span><b>Zoom والحضور</b><small>الجلسة داخل سياق الدورة</small></div>
+      </div>
+    </section>
+
+    <section class="af-section af-shell" id="platform">
+      <div class="af-editorial-head" data-reveal>
+        <div><span class="af-section-index">01 / PLATFORM</span><h2>المعلومة ما تضيع بين الأنظمة. كل خطوة تكمل اللي قبلها.</h2></div>
+        <p>بدل ملفات منفصلة للجداول والحضور والمدفوعات، AcademyFlow يبني رحلة تشغيل مترابطة من أول تسجيل الطالب إلى التقارير.</p>
+      </div>
+      <div class="af-operations-grid" data-reveal>
+        <div class="af-operation-story">
+          <span class="af-story-label">رحلة تشغيل واحدة</span>
+          <article><span>01</span><div><h3>تسجيل الطالب</h3><p>ملف موحد، بيانات اتصال، فرع، وحالة التسجيل.</p></div></article>
+          <article><span>02</span><div><h3>الالتحاق بالدورة</h3><p>الدورة والمجموعة والمدرب ترتبط مباشرة بالطالب.</p></div></article>
+          <article><span>03</span><div><h3>الجدول والحضور</h3><p>كل محاضرة لها موعد وسجل حضور مستقل.</p></div></article>
+          <article><span>04</span><div><h3>الدفع والمتابعة</h3><p>الاستحقاقات والمدفوعات تظهر في نفس سياق الطالب.</p></div></article>
+          <article><span>05</span><div><h3>التقرير</h3><p>الإدارة تشوف الصورة بدون تجميع يدوي للبيانات.</p></div></article>
+        </div>
+        <div class="af-activity-console">
+          <div class="af-console-head"><span>LIVE OPERATIONS</span><i></i></div>
+          <div class="af-console-student"><div class="af-avatar">س</div><div><b>سارة أحمد</b><small>ST-02841 · الفرع الرئيسي</small></div><em>نشط</em></div>
+          <div class="af-console-events">
+            <div><span>09:14</span><i></i><p><b>تم تسجيلها في دورة الإنجليزية للأعمال</b><small>مجموعة B · المدربة مريم</small></p></div>
+            <div><span>10:02</span><i></i><p><b>تم تسجيل دفعة 45 OMR</b><small>بطاقة · إيصال #1048</small></p></div>
+            <div><span>12:28</span><i></i><p><b>انضمت لمحاضرة Zoom</b><small>تم التحقق من المشاركة</small></p></div>
+            <div><span>13:34</span><i></i><p><b>اكتمل سجل الحضور</b><small>مدة المشاركة 58 دقيقة</small></p></div>
+          </div>
+          <div class="af-console-footer"><span>نفس البيانات تغذي التقارير والمالية والحضور</span><strong>↗</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="af-section af-feature-story" id="solutions">
+      <div class="af-shell">
+        <div class="af-story-split" data-reveal>
+          <div class="af-story-copy">
+            <span class="af-section-index">02 / ACADEMIC OPS</span><h2>الدورات والجداول والحضور في نفس مساحة التشغيل.</h2>
+            <p>المدرب يعرف وش عليه اليوم، والإدارة تعرف من حضر، والطالب يوصل للجلسة من نفس سياق الدورة. بدون روابط متناثرة أو جداول منفصلة.</p>
+            <ul class="af-check-list"><li>دورات ومجموعات ومدربين وطلاب مترابطين</li><li>جداول متكررة وتنبيهات قبل المحاضرة</li><li>حضور حضوري ومباشر مرتبط بكل جلسة</li></ul>
+          </div>
+          <div class="af-roster-ui">
+            <div class="af-roster-head"><div><span>أساسيات الأمن السيبراني</span><b>المجموعة A · 28 طالب</b></div><em>قيد التنفيذ</em></div>
+            <div class="af-roster-summary"><span><small>حضور اليوم</small><b>26/28</b></span><span><small>متوسط الحضور</small><b>93.2%</b></span><span><small>الحصة القادمة</small><b>Tue 10:00</b></span></div>
+            <div class="af-roster-table">
+              <div class="head"><span>الطالب</span><span>الحضور</span><span>الدفع</span><span>الحالة</span></div>
+              <div><span><i>س</i><b>سارة أحمد</b></span><span>96%</span><span>مدفوع</span><em>نشط</em></div>
+              <div><span><i>م</i><b>محمد علي</b></span><span>91%</span><span>مدفوع</span><em>نشط</em></div>
+              <div><span><i>ن</i><b>نور خالد</b></span><span>87%</span><span>جزئي</span><em>نشط</em></div>
+              <div><span><i>ع</i><b>عمر سالم</b></span><span>94%</span><span>مستحق</span><em class="warn">متابعة</em></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="af-finance-band" data-reveal>
+          <div class="af-finance-copy"><span class="af-section-index">03 / FINANCE</span><h2>المالية ما تكون جزيرة بعيدة عن التشغيل.</h2><p>شوف التحصيل والاستحقاقات والإيرادات من نفس بيانات التسجيل والدورات، واعرف وين يحتاج الفريق يتابع قبل ما تتراكم التفاصيل.</p><a href="#pricing" class="af-inline-link">شوف الباقات <b>↗</b></a></div>
+          <div class="af-finance-ledger">
+            <div class="af-ledger-top"><div><small>إيرادات هذا الشهر</small><strong>8,460 <span>OMR</span></strong></div><div><small>نسبة التحصيل</small><strong>86.5%</strong></div></div>
+            <div class="af-ledger-chart"><svg viewBox="0 0 500 150" role="img" aria-label="اتجاه الإيرادات"><path class="area" d="M0 130 C60 118 70 105 120 110 C180 116 200 72 250 78 C310 84 330 50 380 57 C430 61 450 30 500 22 L500 150 L0 150 Z"/><path class="line" d="M0 130 C60 118 70 105 120 110 C180 116 200 72 250 78 C310 84 330 50 380 57 C430 61 450 30 500 22"/></svg></div>
+            <div class="af-ledger-row"><span><i class="green"></i><b>محصل</b></span><strong>7,140 OMR</strong><small>84.4%</small></div>
+            <div class="af-ledger-row"><span><i class="amber"></i><b>مستحق قريبًا</b></span><strong>920 OMR</strong><small>10.9%</small></div>
+            <div class="af-ledger-row"><span><i class="red"></i><b>متأخر</b></span><strong>400 OMR</strong><small>4.7%</small></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="af-section af-branches-section" id="branches">
+      <div class="af-shell">
+        <div class="af-editorial-head is-light" data-reveal><div><span class="af-section-index">04 / MULTI-BRANCH</span><h2>كل فرع يشتغل باستقلاله. والإدارة تشوف الصورة كاملة.</h2></div><p>صلاحيات على مستوى الفروع، أداء مستقل، وإدارة مركزية تقارن الحضور والإيرادات والتسجيل بدون خلط بيانات التشغيل.</p></div>
+        <div class="af-branch-board" data-reveal>
+          <div class="af-branch-board-top"><div><span>شبكة الأكاديمية</span><b>6 فروع نشطة</b></div><div><span>الفترة</span><b>هذا الشهر</b></div></div>
+          <div class="af-branch-table">
+            <div class="head"><span>الفرع</span><span>الطلاب</span><span>الحضور</span><span>الإيراد</span><span>الأداء</span></div>
+            <div><span><i>01</i><b>الفرع الرئيسي</b></span><strong>384</strong><strong>94.8%</strong><strong>3,240 OMR</strong><em><i style="--score:95%"></i></em></div>
+            <div><span><i>02</i><b>فرع الشرق</b></span><strong>246</strong><strong>91.7%</strong><strong>1,860 OMR</strong><em><i style="--score:87%"></i></em></div>
+            <div><span><i>03</i><b>فرع الغرب</b></span><strong>218</strong><strong>93.1%</strong><strong>1,690 OMR</strong><em><i style="--score:89%"></i></em></div>
+            <div><span><i>04</i><b>فرع الشمال</b></span><strong>186</strong><strong>89.4%</strong><strong>1,120 OMR</strong><em><i style="--score:78%"></i></em></div>
+          </div>
+          <div class="af-branch-board-foot"><div><span>إدارة مركزية</span><b>تقارير موحدة عبر كل الفروع</b></div><div><span>صلاحيات محددة</span><b>مدير الفرع يشوف نطاقه فقط</b></div><div><span>تشغيل مستقل</span><b>كل فرع يحتفظ بسياق عمله</b></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="af-section af-shell">
+      <div class="af-integration-grid" data-reveal>
+        <div class="af-zoom-workflow">
+          <div class="af-zoom-head"><div><span>Z</span><div><b>Zoom</b><small>حساب الأكاديمية متصل</small></div></div><em>متصل</em></div>
+          <div class="af-next-session"><span>الجلسة المباشرة القادمة</span><h3>الإنجليزية للأعمال — المجموعة B</h3><div><span>12:30 PM</span><span>60 min</span><span>26 طالب</span></div></div>
+          <div class="af-session-flow"><div><span>1</span><p><b>جدولة الجلسة</b><small>من داخل الدورة</small></p></div><i></i><div><span>2</span><p><b>دخول الطلاب</b><small>رابط واحد واضح</small></p></div><i></i><div><span>3</span><p><b>تسجيل الحضور</b><small>مرتبط بالجلسة</small></p></div></div>
+          <div class="af-participation"><div><span><i>س</i><b>سارة أحمد</b></span><em>58 min</em><strong>✓</strong></div><div><span><i>م</i><b>محمد علي</b></span><em>60 min</em><strong>✓</strong></div><div><span><i>ن</i><b>نور خالد</b></span><em>52 min</em><strong>✓</strong></div></div>
+        </div>
+        <div class="af-integration-copy"><span class="af-section-index">05 / ZOOM</span><h2>Zoom جزء من سير العمل، مب رابط منفصل عنه.</h2><p>كل أكاديمية تربط حسابها الخاص، وتدير الجلسات من داخل الدورات والجداول. دخول الطالب والحضور يظلون مرتبطين بنفس السجل.</p><dl><div><dt>حساب مستقل</dt><dd>كل أكاديمية تربط Zoom الخاص فيها.</dd></div><div><dt>جلسات مجدولة</dt><dd>جلسة منفصلة لكل موعد مع سجلها.</dd></div><div><dt>حضور مرتبط</dt><dd>المشاركة تبقى داخل سياق الدورة.</dd></div></dl></div>
+      </div>
+    </section>
+
+    <section class="af-section af-roles-section">
+      <div class="af-shell af-role-layout" data-reveal>
+        <div class="af-role-nav">
+          <span class="af-section-index">06 / ROLE-BASED</span><h2>كل شخص يشوف اللي يحتاجه. ولا أكثر.</h2>
+          <div class="af-role-tabs" role="tablist" aria-label="أدوار المستخدمين">
+            <button class="is-active" type="button" role="tab" aria-selected="true" data-role-tab="owner"><span>01</span><b>المالك</b></button>
+            <button type="button" role="tab" aria-selected="false" data-role-tab="manager"><span>02</span><b>المدير</b></button>
+            <button type="button" role="tab" aria-selected="false" data-role-tab="teacher"><span>03</span><b>المدرب</b></button>
+            <button type="button" role="tab" aria-selected="false" data-role-tab="finance"><span>04</span><b>المالية</b></button>
+            <button type="button" role="tab" aria-selected="false" data-role-tab="staff"><span>05</span><b>الإدارة</b></button>
+          </div>
+        </div>
+        <div class="af-role-stage">
+          <article class="is-active" data-role-panel="owner"><span>OWNER VIEW</span><h3>صورة كاملة عن الأكاديمية بدون الدخول في كل تفصيلة.</h3><p>الفروع، الإيرادات، التسجيل، الحضور، صحة النظام والمشاكل اللي تحتاج قرار.</p><div><span><small>إيرادات الشهر</small><b>8,460 OMR</b></span><span><small>طلاب نشطين</small><b>1,284</b></span></div></article>
+          <article data-role-panel="manager" hidden><span>MANAGER VIEW</span><h3>تشغيل يومي واضح للفروع والفريق والجداول.</h3><p>متابعة الحصص، المدربين، الطلاب والإجراءات اللي تحتاج تدخل اليوم.</p><div><span><small>محاضرات اليوم</small><b>18</b></span><span><small>مهام مفتوحة</small><b>7</b></span></div></article>
+          <article data-role-panel="teacher" hidden><span>TEACHER VIEW</span><h3>الدورات والطلاب والجلسات اللي تخص المدرب فقط.</h3><p>وصول للحضور والواجبات والاختبارات ومحاضرات Zoom بدون أدوات إدارية ما يحتاجها.</p><div><span><small>دوراتي</small><b>4</b></span><span><small>طلابي</small><b>96</b></span></div></article>
+          <article data-role-panel="finance" hidden><span>FINANCE VIEW</span><h3>التحصيل والاستحقاقات والتقارير المالية بصلاحيات محددة.</h3><p>متابعة المدفوعات والاشتراكات والتقارير، مع فصل واضح عن بقية صلاحيات الإدارة.</p><div><span><small>مستحق</small><b>1,320 OMR</b></span><span><small>نسبة التحصيل</small><b>86.5%</b></span></div></article>
+          <article data-role-panel="staff" hidden><span>ADMIN STAFF</span><h3>الأعمال اليومية في واجهة ما تضيع الوقت.</h3><p>تسجيل الطلاب، تحديث البيانات، متابعة الجداول والإشعارات حسب الصلاحية.</p><div><span><small>تسجيلات جديدة</small><b>38</b></span><span><small>إشعارات</small><b>12</b></span></div></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="af-section af-security-section">
+      <div class="af-shell af-security-layout" data-reveal>
+        <div class="af-security-copy"><span class="af-section-index">07 / TRUST</span><h2>بيانات الأكاديمية تحتاج نظام يتعامل معها بجدية.</h2><p>الحماية في AcademyFlow جزء من التشغيل: جلسات آمنة، صلاحيات حسب الدور، عزل بيانات الأكاديميات، ومراقبة مستمرة لصحة النظام.</p></div>
+        <div class="af-security-list">
+          <article><span>01</span><div><h3>دخول آمن</h3><p>جلسات HttpOnly وحماية من المحاولات المتكررة.</p></div><i>✓</i></article>
+          <article><span>02</span><div><h3>صلاحيات حسب الدور</h3><p>كل مستخدم يشوف ويعدل ضمن نطاقه فقط.</p></div><i>✓</i></article>
+          <article><span>03</span><div><h3>عزل بيانات الأكاديميات</h3><p>كل أكاديمية تشتغل داخل مساحة بيانات مستقلة.</p></div><i>✓</i></article>
+          <article><span>04</span><div><h3>Backup وصحة النظام</h3><p>متابعة قاعدة البيانات والبريد والتخزين والنسخ الاحتياطية.</p></div><i>✓</i></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="af-section af-shell" id="pricing">
+      <div class="af-pricing-head" data-reveal><div><span class="af-section-index">08 / PRICING</span><h2>الباقات اللي عندك في النظام، تظهر هنا مباشرة.</h2></div><p>الأسعار والمميزات تُسحب من خطط AcademyFlow الفعلية، عشان صفحة الزوار ما تعرض معلومات قديمة.</p></div>
+      <div class="af-pricing-layout" id="pricingPlans" data-reveal aria-live="polite">
+        <div class="af-plan-skeleton"></div><div class="af-plan-skeleton"></div><div class="af-plan-skeleton"></div>
+      </div>
+    </section>
+
+    <section class="af-section af-shell" id="faq">
+      <div class="af-faq-layout" data-reveal>
+        <div class="af-faq-intro"><span class="af-section-index">09 / FAQ</span><h2>أسئلة قبل ما تبدأ.</h2><p>إجابات مختصرة على الأشياء اللي عادة تهم صاحب الأكاديمية قبل التجربة.</p></div>
+        <div class="af-faq-list">
+          <details><summary>هل كل أكاديمية تشوف بياناتها فقط؟ <span>+</span></summary><p>هيه. AcademyFlow مبني كـ multi-tenant، وكل مستخدم يشتغل داخل سياق الأكاديمية وصلاحياته.</p></details>
+          <details><summary>هل نقدر نربط حساب Zoom الخاص بالأكاديمية؟ <span>+</span></summary><p>هيه. كل أكاديمية تقدر تربط حساب Zoom الخاص فيها بشكل مستقل وتدير الجلسات من داخل النظام.</p></details>
+          <details><summary>هل فيه تجربة مجانية؟ <span>+</span></summary><p>الإعداد الافتراضي للنظام هو 15 يوم تجربة، وبعدها فترة سماح حسب إعدادات المنصة.</p></details>
+          <details><summary>هل يدعم أكثر من فرع؟ <span>+</span></summary><p>هيه، مع صلاحيات وتقارير وتشغيل منفصل لكل فرع ضمن نفس الأكاديمية.</p></details>
+          <details><summary>هل النظام مناسب للمدربين والإدارة والمالية؟ <span>+</span></summary><p>كل دور يشوف واجهته وصلاحياته، بدون إظهار أدوات ما يحتاجها.</p></details>
+        </div>
+      </div>
+    </section>
+
+    <section class="af-final-section">
+      <div class="af-shell af-final-cta" data-reveal>
+        <div><span>ACADEMYFLOW / START</span><h2>ابدأ من تشغيل واضح. وخله يكبر مع أكاديميتك.</h2><p>جرّب AcademyFlow وشوف كيف تتجمع التفاصيل اليومية في مساحة واحدة مرتبة.</p></div>
+        <a class="af-final-action" href="/academy/login.html"><span>ابدأ تجربة 15 يوم</span><b>↗</b></a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="af-footer">
+    <div class="af-shell">
+      <div class="af-footer-main">
+        <div class="af-footer-brand"><a class="af-brand" href="/"><span class="af-brand-mark">AF</span><span class="af-brand-copy"><b>AcademyFlow</b><small>ACADEMY OPERATING SYSTEM</small></span></a><p>منصة تشغيل للأكاديميات ومراكز التدريب.</p></div>
+        <div class="af-footer-group"><b>المنتج</b><a href="#platform">المنصة</a><a href="#solutions">الحلول</a><a href="#pricing">الباقات</a></div>
+        <div class="af-footer-group"><b>الحساب</b><a href="/academy/login.html">تسجيل الدخول</a><a href="/academy/login.html">ابدأ التجربة</a></div>
+        <div class="af-footer-group"><b>قانوني</b><a href="/legal/privacy.html">الخصوصية</a><a href="/legal/terms.html">الشروط</a><a href="/legal/refund.html">الاسترداد</a><a href="/legal/support.html">الدعم</a></div>
+      </div>
+      <div class="af-footer-bottom"><span>© AcademyFlow</span><span>Built for serious academy operations.</span></div>
+    </div>
+  </footer>
+
+  <script src="/js/landing.js?v=10"></script>
 </body>
 </html>
