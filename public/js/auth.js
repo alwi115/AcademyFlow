@@ -9,9 +9,11 @@ async function academyFlowLogin(event, kind){
   const originalText = button ? button.textContent : '';
 
   form.dataset.submitting = '1';
+  form.setAttribute('aria-busy', 'true');
 
   if (message) {
     message.textContent = '';
+    message.classList.remove('success');
   }
 
   if (button) {
@@ -19,11 +21,21 @@ async function academyFlowLogin(event, kind){
     button.textContent = 'جاري التحقق...';
   }
 
+  async function request(url, options) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 20000);
+    try { return await fetch(url, { ...options, signal: controller.signal }); }
+    catch (error) {
+      if (error.name === 'AbortError') throw new Error('الاتصال أخذ وقت طويل، حاول مرة ثانية.');
+      throw error;
+    } finally { clearTimeout(timer); }
+  }
+
   try {
     let csrfInput = form.querySelector('input[name="_csrf"]');
 
     if (!csrfInput || !csrfInput.value) {
-      const csrfResponse = await fetch('/api/auth/csrf', {
+      const csrfResponse = await request('/api/auth/csrf', {
         method: 'GET',
         credentials: 'same-origin',
         cache: 'no-store',
@@ -32,7 +44,7 @@ async function academyFlowLogin(event, kind){
       const csrfData = await csrfResponse.json().catch(() => ({}));
 
       if (!csrfResponse.ok || !csrfData.csrfToken) {
-        throw new Error('Unable to initialize CSRF protection');
+        throw new Error('تعذّر تجهيز الدخول الآمن، حدّث الصفحة وحاول مرة ثانية.');
       }
 
       if (!csrfInput) {
@@ -52,7 +64,7 @@ async function academyFlowLogin(event, kind){
       delete body.email;
     }
 
-    const response = await fetch('/api/auth/login', {
+    const response = await request('/api/auth/login', {
       method: 'POST',
       credentials: 'same-origin',
       cache: 'no-store',
@@ -66,16 +78,19 @@ async function academyFlowLogin(event, kind){
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
+      if (response.status === 403 && csrfInput) csrfInput.value = '';
       if (message) {
         message.textContent = data.message || 'تعذر تسجيل الدخول';
       }
       return;
     }
 
-    localStorage.removeItem('af_token');
-    localStorage.setItem('af_user', JSON.stringify(data.user));
+    try {
+      localStorage.removeItem('af_token');
+      localStorage.setItem('af_user', JSON.stringify(data.user));
+    } catch {}
 
-    const verifyResponse = await fetch('/api/auth/me', {
+    const verifyResponse = await request('/api/auth/me', {
       method: 'GET',
       credentials: 'same-origin',
       cache: 'no-store',
@@ -84,14 +99,18 @@ async function academyFlowLogin(event, kind){
     const verified = await verifyResponse.json().catch(() => ({}));
 
     if (!verifyResponse.ok || !verified.user) {
-      localStorage.removeItem('af_user');
+      try { localStorage.removeItem('af_user'); } catch {}
       throw new Error(
         verified.message ||
         'تم قبول بيانات الدخول لكن المتصفح لم يحتفظ بالجلسة. حدّث الصفحة وحاول مرة أخرى.'
       );
     }
 
-    localStorage.setItem('af_user', JSON.stringify(verified.user));
+    try { localStorage.setItem('af_user', JSON.stringify(verified.user)); } catch {}
+    if (message) {
+      message.classList.add('success');
+      message.textContent = 'تم الدخول، بنفتح مساحتك الحين…';
+    }
 
     if (verified.user.role === 'owner' && verified.user.legalAcceptanceRequired) {
       location.replace('/academy/legal-acceptance.html');
@@ -112,6 +131,7 @@ async function academyFlowLogin(event, kind){
     }
   } finally {
     form.dataset.submitting = '0';
+    form.setAttribute('aria-busy', 'false');
 
     if (button) {
       button.disabled = false;
