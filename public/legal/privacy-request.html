@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#0f172a">
+  <meta name="theme-color" content="#132e40">
   <meta name="color-scheme" content="light dark">
   <title>طلب خصوصية | AcademyFlow</title>
   <style>
@@ -11,79 +11,79 @@
 @import url('https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap');
 
 :root {
-  --font-display: 'Alexandria', 'IBM Plex Sans Arabic', system-ui, sans-serif;
+  --font-display: 'IBM Plex Sans Arabic', 'Alexandria', system-ui, sans-serif;
   --font-body: 'IBM Plex Sans Arabic', 'Alexandria', system-ui, sans-serif;
 
-  --radius-sm: 12px;
-  --radius-md: 18px;
-  --radius-lg: 26px;
-  --radius-xl: 34px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
 
-  --shadow-soft: 0 18px 50px rgba(15, 23, 42, 0.10);
-  --shadow-card: 0 16px 40px rgba(15, 23, 42, 0.10);
-  --shadow-heavy: 0 24px 70px rgba(15, 23, 42, 0.14);
+  --shadow-soft: 0 10px 30px rgba(19, 46, 64, 0.06);
+  --shadow-card: 0 8px 24px rgba(19, 46, 64, 0.07);
+  --shadow-heavy: 0 18px 52px rgba(19, 46, 64, 0.11);
 
   --ease: 220ms ease;
 }
 
 :root,
 html[data-theme='light'] {
-  --bg: #f5f7fb;
+  --bg: #f6f8fc;
   --bg-elevated: #ffffff;
-  --bg-soft: #eef2f7;
-  --surface: rgba(255,255,255,.82);
+  --bg-soft: #eaf0f8;
+  --surface: rgba(255,255,255,.94);
   --surface-strong: #ffffff;
-  --surface-muted: #f8fafc;
-  --surface-contrast: #0f172a;
-  --text: #0f172a;
-  --text-soft: #42526b;
-  --text-mute: #72829c;
-  --line: rgba(15, 23, 42, 0.08);
-  --line-strong: rgba(15, 23, 42, 0.12);
-  --primary: #0f766e;
-  --primary-strong: #115e59;
-  --primary-soft: rgba(15, 118, 110, 0.10);
-  --accent: #d4a373;
-  --accent-soft: rgba(212, 163, 115, 0.15);
-  --success: #16a34a;
-  --warning: #d97706;
-  --danger: #dc2626;
-  --sidebar: #fcfdfd;
-  --sidebar-active: rgba(15, 118, 110, 0.10);
-  --hero-grad-1: rgba(15,118,110,0.12);
-  --hero-grad-2: rgba(212,163,115,0.18);
-  --grid-line: rgba(15, 23, 42, 0.03);
+  --surface-muted: #f3f6fb;
+  --surface-contrast: #132e40;
+  --text: #132e40;
+  --text-soft: #254758;
+  --text-mute: #64758a;
+  --line: rgba(19, 46, 64, 0.10);
+  --line-strong: rgba(19, 46, 64, 0.17);
+  --primary: #3262c8;
+  --primary-strong: #244b9b;
+  --primary-soft: rgba(50, 98, 200, 0.10);
+  --accent: #3262c8;
+  --accent-soft: rgba(169, 196, 255, 0.28);
+  --success: #23845d;
+  --warning: #b67825;
+  --danger: #c45151;
+  --sidebar: #fbfcff;
+  --sidebar-active: rgba(50, 98, 200, 0.10);
+  --hero-grad-1: rgba(50,98,200,0.04);
+  --hero-grad-2: rgba(169,196,255,0.06);
+  --grid-line: rgba(19, 46, 64, 0.025);
 }
 
 html[data-theme='dark'] {
-  --bg: #08111d;
-  --bg-elevated: #0d1726;
-  --bg-soft: #111c2d;
-  --surface: rgba(13, 23, 38, 0.82);
-  --surface-strong: #0f1b2d;
-  --surface-muted: #132236;
-  --surface-contrast: #f8fafc;
-  --text: #eef4fb;
-  --text-soft: #c8d6e8;
-  --text-mute: #8ea2bb;
-  --line: rgba(255,255,255,0.08);
-  --line-strong: rgba(255,255,255,0.12);
-  --primary: #2cb6ad;
-  --primary-strong: #5ce0d6;
-  --primary-soft: rgba(44, 182, 173, 0.14);
-  --accent: #e0b788;
-  --accent-soft: rgba(224, 183, 136, 0.14);
-  --success: #4ade80;
-  --warning: #fb923c;
-  --danger: #fb7185;
-  --sidebar: #0d1726;
-  --sidebar-active: rgba(44,182,173,0.12);
-  --hero-grad-1: rgba(44,182,173,0.10);
-  --hero-grad-2: rgba(224,183,136,0.10);
-  --grid-line: rgba(255,255,255,0.03);
-  --shadow-soft: 0 18px 50px rgba(2, 8, 23, 0.45);
-  --shadow-card: 0 18px 42px rgba(2, 8, 23, 0.42);
-  --shadow-heavy: 0 26px 80px rgba(2, 8, 23, 0.50);
+  --bg: #101b29;
+  --bg-elevated: #122033;
+  --bg-soft: #172638;
+  --surface: rgba(18, 32, 51, .94);
+  --surface-strong: #172638;
+  --surface-muted: #19334b;
+  --surface-contrast: #f6f8fc;
+  --text: #f2f6fb;
+  --text-soft: #d5dfec;
+  --text-mute: #9aadc2;
+  --line: rgba(213, 226, 237, 0.10);
+  --line-strong: rgba(213, 226, 237, 0.17);
+  --primary: #7aa7ff;
+  --primary-strong: #a9c4ff;
+  --primary-soft: rgba(122, 167, 255, 0.14);
+  --accent: #a9c4ff;
+  --accent-soft: rgba(169, 196, 255, 0.14);
+  --success: #62c592;
+  --warning: #e2a85e;
+  --danger: #ef8585;
+  --sidebar: #101b29;
+  --sidebar-active: rgba(122,167,255,0.13);
+  --hero-grad-1: rgba(122,167,255,0.04);
+  --hero-grad-2: rgba(169,196,255,0.04);
+  --grid-line: rgba(255,255,255,0.025);
+  --shadow-soft: 0 12px 34px rgba(0,0,0,.22);
+  --shadow-card: 0 10px 28px rgba(0,0,0,.24);
+  --shadow-heavy: 0 22px 60px rgba(0,0,0,.32);
 }
 
 * { box-sizing: border-box; }
@@ -1704,6 +1704,101 @@ body {
   justify-content:center;
   margin-top:14px;
   font-size:11px;
+}
+
+
+/* ===== AcademyFlow Blue System · site-wide visual alignment ===== */
+body{
+  background:var(--bg);
+}
+body::before{opacity:.42}
+.h1,h1,h2,h3,h4{font-weight:600;letter-spacing:-.018em}
+.topbar{
+  border-radius:12px;
+  backdrop-filter:none;
+  box-shadow:none;
+  background:var(--surface-strong);
+}
+.brand-badge{
+  border-radius:50%;
+  background:var(--primary);
+  box-shadow:none;
+  font-weight:700;
+}
+.nav-links a{border-radius:5px}
+.theme-toggle,.mobile-toggle,.icon-btn{
+  border-radius:7px;
+  box-shadow:none;
+}
+.btn{
+  border-radius:5px;
+  font-weight:600;
+  box-shadow:none!important;
+}
+.btn.primary{background:var(--primary)}
+.btn.primary:hover{background:var(--primary-strong)}
+.btn.secondary,.btn.ghost,.btn.soft{background:var(--surface-strong)}
+:is(.surface-card,.feature-card,.hero-card,.card-panel,.stat-card,.table-panel,.auth-card,.modal-card){
+  border-radius:12px;
+  box-shadow:var(--shadow-card);
+}
+:is(input,select,textarea){
+  border-radius:6px!important;
+}
+.field input,.field select,.field textarea{
+  background:var(--surface-strong);
+}
+table{
+  border-color:var(--line)!important;
+}
+table thead th{
+  background:var(--bg-soft)!important;
+  color:var(--text-soft)!important;
+}
+.status{border-radius:999px}
+.sidebar,
+.academy-sidebar,
+.instructor-sidebar,
+.student-sidebar,
+.sa-sidebar{
+  backdrop-filter:none!important;
+  background:var(--sidebar)!important;
+}
+:is(.side-nav a,.academy-nav a,.instructor-nav a,.student-nav a,.sa-nav a){
+  border-radius:6px!important;
+}
+:is(.side-nav a.active,.academy-nav a.active,.instructor-nav a.active,.student-nav a.active,.sa-nav a.active){
+  background:var(--primary-soft)!important;
+  color:var(--primary)!important;
+}
+:is(.academy-nav-icon,.instructor-nav-icon,.student-nav-icon,.sa-nav-icon){
+  border-radius:6px!important;
+}
+:is(.academy-user,.instructor-user,.student-user,.sa-user){
+  border-radius:8px!important;
+  box-shadow:none!important;
+}
+:is(.academy-user-avatar,.instructor-avatar,.student-avatar,.sa-avatar){
+  border-radius:50%!important;
+  background:var(--primary)!important;
+}
+:is(.academy-kpi,.instructor-kpi,.student-kpi,.sa-kpi){
+  border-radius:10px!important;
+  box-shadow:var(--shadow-card)!important;
+}
+:is(.academy-card,.instructor-card,.student-card,.sa-card,.academy-panel,.instructor-panel,.student-panel,.sa-panel){
+  border-radius:12px!important;
+  box-shadow:var(--shadow-card)!important;
+}
+:is(.academy-sidebar-footer,.instructor-sidebar-card,.student-sidebar-card,.sa-sidebar-foot){
+  border-radius:8px!important;
+}
+html[data-theme='dark'] .brand-badge,
+html[data-theme='dark'] :is(.academy-user-avatar,.instructor-avatar,.student-avatar,.sa-avatar){
+  color:#101b29!important;
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important}
 }
 
 </style>
