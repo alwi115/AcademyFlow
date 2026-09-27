@@ -1934,6 +1934,39 @@ body.instructor-app{font-size:15px;background:var(--bg)}
 @media(max-width:760px){.instructor-main{padding:16px 14px 34px}.instructor-kpis{grid-template-columns:1fr 1fr}}
 @media(max-width:480px){.instructor-kpis{grid-template-columns:1fr}}
 
+
+/* Instructor clarity pass */
+body.instructor-app{font-size:15px;background:var(--bg)}
+.instructor-layout{grid-template-columns:250px minmax(0,1fr)}
+.instructor-sidebar{padding:18px 12px;background:var(--sidebar);backdrop-filter:none}
+.instructor-sidebar .brand{padding:4px 8px 18px}
+.instructor-nav-title{margin:17px 10px 7px;font-size:10px}
+.instructor-nav{gap:4px}
+.instructor-nav a{min-height:44px;padding:0 11px;border-radius:7px;font-size:12.5px}
+.instructor-nav a.active{position:relative;background:var(--primary-soft);color:var(--primary)}
+.instructor-nav a.active:before{content:"";position:absolute;inset-inline-start:0;width:3px;height:22px;border-radius:99px;background:var(--primary)}
+.instructor-nav-icon{width:29px;height:29px;border-radius:6px;font-size:10px}
+.instructor-main{padding:24px 30px 42px}
+.instructor-content{max-width:1540px}
+.instructor-topbar{min-height:72px;margin-bottom:24px;padding-bottom:17px;border-bottom:1px solid var(--line)}
+.instructor-heading h1{font-size:clamp(29px,2.8vw,38px);font-weight:700}
+.instructor-heading p{font-size:13px;line-height:1.7}
+.instructor-eyebrow{font-size:10px}
+.instructor-user{border-radius:8px;padding:6px 9px}
+.instructor-avatar{width:34px;height:34px;border-radius:50%}
+.instructor-kpis{gap:12px;margin-bottom:14px}
+.instructor-kpi{min-height:132px;padding:18px;border-radius:10px;box-shadow:none}
+.instructor-kpi small{font-size:11px}
+.instructor-kpi strong{font-size:32px;margin-top:13px}
+.instructor-card{padding:20px;border-radius:12px;box-shadow:0 8px 24px rgba(19,46,64,.055)}
+.instructor-card-head{margin-bottom:18px}
+.instructor-card-head h2{font-size:18px}
+.instructor-card-head p{font-size:12px;line-height:1.7}
+.instructor-list-row{padding:13px 14px;border-radius:8px}
+.instructor-search{min-height:44px;border-radius:7px;background:var(--surface-strong);font-size:12px}
+@media(max-width:760px){.instructor-main{padding:16px 14px 34px}.instructor-kpis{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.instructor-kpis{grid-template-columns:1fr}}
+
 </style>
   <script>
 /* ===== INLINED FROM /js/ui.js ===== */
