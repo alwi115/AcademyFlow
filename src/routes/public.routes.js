@@ -25,6 +25,7 @@ const privacyLimiter = rateLimit({
 });
 
 router.get('/legal-config', c.legalConfig);
+router.get('/plans', c.listPlans);
 router.post('/privacy-requests', requireSameOrigin, privacyLimiter, c.createPrivacyRequest);
 
 module.exports = router;
