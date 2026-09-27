@@ -3300,6 +3300,52 @@ body.academy-app {
 @media(max-width:640px){.academy-weekdays{grid-template-columns:repeat(4,minmax(0,1fr))}.academy-weekdays span{font-size:10px}}
 
 
+
+/* Interactive academy calendar */
+.academy-calendar-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.academy-calendar-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.academy-calendar-month{min-width:190px;font-family:var(--font-display);font-size:20px;font-weight:800;color:var(--text)}
+.academy-calendar-shell{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(280px,.75fr);gap:16px;align-items:start}
+.academy-calendar-board{min-width:0}
+.academy-calendar-scroll{overflow-x:auto;padding-bottom:4px;overscroll-behavior-inline:contain}
+.academy-calendar-grid{min-width:720px;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface-strong)}
+.academy-calendar-weekday{min-height:42px;display:grid;place-items:center;padding:8px;border-left:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--surface-muted);color:var(--text-mute);font-size:11px;font-weight:700}
+.academy-calendar-weekday:nth-child(7){border-left:0}
+.academy-calendar-day{position:relative;min-height:112px;padding:10px;border:0;border-left:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--surface-strong);color:var(--text);text-align:right;cursor:pointer;transition:background .16s,border-color .16s,box-shadow .16s}
+.academy-calendar-day:nth-child(7n){border-left:0}
+.academy-calendar-day:hover{background:var(--surface-muted)}
+.academy-calendar-day.is-outside{background:color-mix(in srgb,var(--surface-muted) 55%,transparent);color:var(--text-mute)}
+.academy-calendar-day.is-selected{background:var(--primary-soft);box-shadow:inset 0 0 0 2px var(--primary)}
+.academy-calendar-day.is-today .academy-calendar-date{background:var(--primary);color:#fff}
+.academy-calendar-date{width:30px;height:30px;display:grid;place-items:center;border-radius:9px;font-size:11px;font-weight:800}
+.academy-calendar-count{position:absolute;top:10px;left:10px;min-width:23px;height:23px;padding:0 6px;display:grid;place-items:center;border-radius:999px;background:var(--surface-muted);border:1px solid var(--line);color:var(--primary);font-size:9px;font-weight:800}
+.academy-calendar-day.is-selected .academy-calendar-count{background:var(--surface-strong)}
+.academy-calendar-preview{display:grid;gap:4px;margin-top:9px}
+.academy-calendar-preview span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px;border-right:2px solid var(--primary);color:var(--text-soft);font-size:8.5px;line-height:1.5}
+.academy-calendar-more{margin-top:4px;color:var(--text-mute)!important;border-right:0!important;padding-right:0!important}
+.academy-calendar-agenda{position:sticky;top:86px;min-width:0}
+.academy-calendar-agenda-title{margin:0;font-size:18px}
+.academy-calendar-agenda-date{display:block;margin-top:5px;color:var(--text-mute);font-size:10px}
+.academy-calendar-events{display:grid;gap:9px;margin-top:14px}
+.academy-calendar-event{padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-muted)}
+.academy-calendar-event-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.academy-calendar-event h3{margin:0;font-size:12px;line-height:1.7}
+.academy-calendar-event-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;color:var(--text-mute);font-size:9px}
+.academy-calendar-event-meta span{padding:5px 7px;border:1px solid var(--line);border-radius:8px;background:var(--surface-strong)}
+.academy-calendar-event-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.academy-calendar-event-actions .btn{min-height:34px;padding:0 10px;font-size:9px}
+.academy-calendar-empty{padding:22px 10px;text-align:center;color:var(--text-mute);font-size:10.5px;line-height:1.8}
+@media(max-width:980px){.academy-calendar-shell{grid-template-columns:1fr}.academy-calendar-agenda{position:static}}
+@media(max-width:640px){
+  .academy-calendar-toolbar{align-items:flex-start}
+  .academy-calendar-month{min-width:0;width:100%;font-size:17px}
+  .academy-calendar-nav{width:100%}
+  .academy-calendar-nav .btn{flex:1;min-height:40px;padding:0 10px;font-size:10px}
+  .academy-calendar-grid{min-width:650px}
+  .academy-calendar-day{min-height:96px;padding:8px}
+  .academy-calendar-count{top:8px;left:8px}
+}
+
 /* AcademyFlow clarity pass — dashboard and workspace */
 body.academy-app{
   font-size:15px;
@@ -5875,25 +5921,223 @@ const AF = (() => {
 
   async function renderCalendar() {
     const target = document.getElementById('pageContent');
-    target.innerHTML = '<div class="academy-empty">جاري تحميل المواعيد...</div>';
+    target.innerHTML = '<div class="academy-empty">جاري تحميل التقويم...</div>';
+
     try {
       const rows = await api('/api/live-sessions');
-      const sorted = rows.slice().sort((a,b) => new Date(a.startAt) - new Date(b.startAt));
+      const sessions = rows.slice().sort((a,b) => new Date(a.startAt) - new Date(b.startAt));
+      const today = calendarTodayKey();
+      const initialKey = today;
+      let selectedKey = initialKey;
+      let visibleMonth = calendarMonthFromKey(initialKey);
+
       target.innerHTML = `
         <section class="academy-card">
-          <div class="academy-card-head"><div><h2>جدول المحاضرات</h2><p>المواعيد مرتبة من الأقرب إلى الأبعد.</p></div><a class="btn primary" href="/academy/live.html">إدارة المحاضرات</a></div>
-          <div class="academy-list">
-            ${sorted.length ? sorted.map(x => `
-              <div class="academy-list-row">
-                <div><b>${esc(x.title)}</b><span>${esc(x.startAtDisplay || fmtDate(x.startAt,true))} · ${esc(x.durationMinutes || 60)} دقيقة</span></div>
-                ${status(x.status)}
+          <div class="academy-calendar-toolbar">
+            <div>
+              <h2 style="margin:0 0 5px">التقويم</h2>
+              <p style="margin:0;color:var(--text-mute);font-size:10.5px">اختَر أي يوم وبتطلع لك كل المحاضرات المجدولة فيه.</p>
+            </div>
+            <a class="btn primary" href="/academy/live.html">إدارة المحاضرات</a>
+          </div>
+
+          <div class="academy-calendar-toolbar">
+            <div class="academy-calendar-month" id="calendarMonthLabel"></div>
+            <div class="academy-calendar-nav">
+              <button class="btn secondary" type="button" id="calendarNextMonth">الشهر التالي</button>
+              <button class="btn soft" type="button" id="calendarToday">اليوم</button>
+              <button class="btn secondary" type="button" id="calendarPrevMonth">الشهر السابق</button>
+            </div>
+          </div>
+
+          <div class="academy-calendar-shell">
+            <div class="academy-calendar-board">
+              <div class="academy-calendar-scroll">
+                <div class="academy-calendar-grid" id="academyCalendarGrid" aria-label="تقويم المحاضرات"></div>
               </div>
-            `).join('') : '<div class="academy-empty">ما فيه مواعيد في التقويم حاليًا.</div>'}
+            </div>
+
+            <aside class="academy-card academy-calendar-agenda" style="box-shadow:none">
+              <h3 class="academy-calendar-agenda-title">مواعيد اليوم</h3>
+              <span class="academy-calendar-agenda-date" id="calendarSelectedDate"></span>
+              <div class="academy-calendar-events" id="calendarDayEvents"></div>
+            </aside>
           </div>
         </section>
       `;
+
+      const grid = document.getElementById('academyCalendarGrid');
+      const monthLabel = document.getElementById('calendarMonthLabel');
+      const selectedDate = document.getElementById('calendarSelectedDate');
+      const eventsTarget = document.getElementById('calendarDayEvents');
+
+      const byDay = sessions.reduce((acc,row) => {
+        const key = calendarSessionKey(row);
+        if (!key) return acc;
+        (acc[key] ||= []).push(row);
+        return acc;
+      }, {});
+
+      function drawMonth() {
+        const year = visibleMonth.getFullYear();
+        const month = visibleMonth.getMonth();
+        monthLabel.textContent = new Intl.DateTimeFormat('ar-OM', {month:'long', year:'numeric'}).format(new Date(year,month,1));
+
+        const weekDays = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+        const first = new Date(year,month,1);
+        const startDate = new Date(year,month,1-first.getDay());
+
+        let html = weekDays.map(day => '<div class="academy-calendar-weekday">'+day+'</div>').join('');
+
+        for (let i=0;i<42;i++) {
+          const d = new Date(startDate);
+          d.setDate(startDate.getDate()+i);
+          const key = calendarDateKey(d);
+          const dayRows = byDay[key] || [];
+          const outside = d.getMonth() !== month;
+          const previews = dayRows.slice(0,2).map(x => '<span>'+esc(x.title)+'</span>').join('');
+          const more = dayRows.length > 2 ? '<span class="academy-calendar-more">+'+(dayRows.length-2)+' مواعيد</span>' : '';
+
+          html += `
+            <button type="button"
+              class="academy-calendar-day${outside ? ' is-outside' : ''}${key === selectedKey ? ' is-selected' : ''}${key === today ? ' is-today' : ''}"
+              data-calendar-date="${key}"
+              aria-pressed="${key === selectedKey ? 'true' : 'false'}">
+              <span class="academy-calendar-date">${d.getDate()}</span>
+              ${dayRows.length ? '<span class="academy-calendar-count">'+dayRows.length+'</span>' : ''}
+              <span class="academy-calendar-preview">${previews}${more}</span>
+            </button>
+          `;
+        }
+
+        grid.innerHTML = html;
+        grid.querySelectorAll('[data-calendar-date]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            selectedKey = btn.dataset.calendarDate;
+            const picked = calendarMonthFromKey(selectedKey);
+            if (picked.getMonth() !== visibleMonth.getMonth() || picked.getFullYear() !== visibleMonth.getFullYear()) {
+              visibleMonth = picked;
+            }
+            drawMonth();
+            drawDay();
+          });
+        });
+      }
+
+      function drawDay() {
+        const dayRows = (byDay[selectedKey] || []).slice().sort((a,b) => new Date(a.startAt) - new Date(b.startAt));
+        selectedDate.textContent = calendarLongDate(selectedKey);
+
+        if (!dayRows.length) {
+          eventsTarget.innerHTML = '<div class="academy-calendar-empty">ما فيه أي محاضرات مجدولة في هذا اليوم.</div>';
+          return;
+        }
+
+        eventsTarget.innerHTML = dayRows.map(x => {
+          const course = x.courseId?.title || '';
+          const instructor = x.instructorId?.name || '';
+          const group = x.groupId?.name || '';
+          return `
+            <article class="academy-calendar-event">
+              <div class="academy-calendar-event-head">
+                <div>
+                  <h3>${esc(x.title)}</h3>
+                  <div class="academy-calendar-event-meta">
+                    <span>الوقت: ${esc(calendarSessionTime(x))}</span>
+                    <span>المدة: ${esc(x.durationMinutes || 60)} دقيقة</span>
+                    ${course ? '<span>الدورة: '+esc(course)+'</span>' : ''}
+                    ${group ? '<span>المجموعة: '+esc(group)+'</span>' : ''}
+                    ${instructor ? '<span>المدرب: '+esc(instructor)+'</span>' : ''}
+                  </div>
+                </div>
+                ${status(x.status)}
+              </div>
+              ${x.description ? '<p style="margin:9px 0 0;color:var(--text-mute);font-size:9.5px;line-height:1.7">'+esc(x.description)+'</p>' : ''}
+              <div class="academy-calendar-event-actions">
+                ${x.zoomJoinUrl ? '<a class="btn soft" target="_blank" rel="noopener" href="'+esc(x.zoomJoinUrl)+'">فتح Zoom</a>' : ''}
+                <a class="btn secondary" href="/academy/live.html">تفاصيل المحاضرة</a>
+              </div>
+            </article>
+          `;
+        }).join('');
+      }
+
+      document.getElementById('calendarPrevMonth').addEventListener('click', () => {
+        visibleMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth()-1, 1);
+        drawMonth();
+      });
+
+      document.getElementById('calendarNextMonth').addEventListener('click', () => {
+        visibleMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth()+1, 1);
+        drawMonth();
+      });
+
+      document.getElementById('calendarToday').addEventListener('click', () => {
+        selectedKey = today;
+        visibleMonth = calendarMonthFromKey(today);
+        drawMonth();
+        drawDay();
+      });
+
+      drawMonth();
+      drawDay();
     } catch (err) {
       target.innerHTML = '<div class="academy-card academy-empty">'+esc(err.message)+'</div>';
+    }
+  }
+
+  function calendarTodayKey() {
+    const d = new Date();
+    return calendarDateKey(d);
+  }
+
+  function calendarDateKey(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth()+1).padStart(2,'0');
+    const d = String(date.getDate()).padStart(2,'0');
+    return y+'-'+m+'-'+d;
+  }
+
+  function calendarSessionKey(row) {
+    if (row?.startAtLocal) return String(row.startAtLocal).slice(0,10);
+    if (!row?.startAt) return '';
+    const timezone = row.timezone || 'Asia/Muscat';
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone,
+      year:'numeric',
+      month:'2-digit',
+      day:'2-digit'
+    }).formatToParts(new Date(row.startAt));
+    const map = Object.fromEntries(parts.map(x => [x.type,x.value]));
+    return map.year+'-'+map.month+'-'+map.day;
+  }
+
+  function calendarMonthFromKey(key) {
+    const parts = String(key).split('-').map(Number);
+    return new Date(parts[0], Math.max(0,(parts[1] || 1)-1), 1);
+  }
+
+  function calendarLongDate(key) {
+    const parts = String(key).split('-').map(Number);
+    const d = new Date(parts[0], Math.max(0,(parts[1] || 1)-1), parts[2] || 1);
+    return new Intl.DateTimeFormat('ar-OM', {
+      weekday:'long',
+      day:'numeric',
+      month:'long',
+      year:'numeric'
+    }).format(d);
+  }
+
+  function calendarSessionTime(row) {
+    try {
+      const timezone = row.timezone || 'Asia/Muscat';
+      return new Intl.DateTimeFormat('ar-OM', {
+        timeZone: timezone,
+        hour:'numeric',
+        minute:'2-digit'
+      }).format(new Date(row.startAt));
+    } catch (_) {
+      return String(row.startAtDisplay || row.startAtLocal || '').slice(11,16) || '—';
     }
   }
 
