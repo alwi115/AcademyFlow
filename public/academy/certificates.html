@@ -4236,6 +4236,183 @@ html[data-theme='dark'] .academy-card{
   .academy-heading h1{font-size:27px}
 }
 
+
+/* =========================================================
+   Academy Certificates — PDF workflow
+   ========================================================= */
+.academy-certificate-layout{
+  display:grid;
+  grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);
+  gap:14px;
+  align-items:start;
+}
+.academy-certificate-help{
+  display:grid;
+  gap:14px;
+}
+.academy-certificate-help h3{
+  font-size:17px;
+}
+.academy-certificate-security{
+  background:linear-gradient(145deg,var(--surface-strong),color-mix(in srgb,var(--primary-soft) 30%,var(--surface-strong)));
+}
+.academy-certificate-security b{
+  display:block;
+  margin-bottom:5px;
+  font-size:13px;
+}
+.academy-certificate-security p{
+  margin:0;
+  color:var(--text-mute);
+  font-size:11px;
+  line-height:1.7;
+}
+.academy-certificate-form{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:0 12px;
+}
+.academy-certificate-file{
+  margin:4px 0 14px;
+  padding:18px;
+  border:1px dashed color-mix(in srgb,var(--primary) 34%,var(--line));
+  border-radius:10px;
+  background:var(--primary-soft);
+}
+.academy-certificate-file label{
+  display:block;
+  margin-bottom:8px;
+  color:var(--text);
+  font-size:12px;
+  font-weight:700;
+}
+.academy-certificate-file input{
+  display:block;
+  width:100%;
+  padding:10px;
+  border:1px solid var(--line);
+  border-radius:7px;
+  background:var(--surface-strong);
+  color:var(--text);
+}
+.academy-certificate-file span{
+  display:block;
+  margin-top:8px;
+  color:var(--text-mute);
+  font-size:10px;
+}
+.academy-certificate-summary{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+  margin-bottom:12px;
+}
+.academy-certificate-summary article{
+  padding:14px 16px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--surface-strong);
+}
+.academy-certificate-summary small{
+  display:block;
+  color:var(--text-mute);
+  font-size:10px;
+}
+.academy-certificate-summary strong{
+  display:block;
+  margin-top:7px;
+  font-family:var(--font-display);
+  font-size:25px;
+}
+.academy-certificate-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.academy-certificate-item{
+  padding:16px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--surface-muted);
+}
+.academy-certificate-item-top{
+  display:grid;
+  grid-template-columns:42px minmax(0,1fr) auto;
+  gap:10px;
+  align-items:center;
+}
+.academy-certificate-pdf{
+  width:42px;
+  height:48px;
+  display:grid;
+  place-items:center;
+  border-radius:7px;
+  background:var(--primary);
+  color:#fff;
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.06em;
+}
+.academy-certificate-title{
+  font-size:13px;
+  font-weight:700;
+}
+.academy-certificate-course{
+  margin-top:3px;
+  color:var(--text-mute);
+  font-size:10.5px;
+}
+.academy-certificate-meta{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:14px;
+  padding-top:13px;
+  border-top:1px solid var(--line);
+}
+.academy-certificate-meta span{
+  color:var(--text-soft);
+  font-size:10px;
+  overflow-wrap:anywhere;
+}
+.academy-certificate-meta b{
+  display:block;
+  margin-bottom:3px;
+  color:var(--text-mute);
+  font-size:8.5px;
+  font-weight:600;
+}
+.academy-certificate-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+  margin-top:14px;
+}
+.academy-certificate-actions .btn{
+  min-height:36px;
+  padding-inline:10px;
+  font-size:10px;
+}
+@media(max-width:1050px){
+  .academy-certificate-layout{grid-template-columns:1fr}
+  .academy-certificate-help{grid-template-columns:1fr 1fr}
+}
+@media(max-width:760px){
+  .academy-certificate-summary{grid-template-columns:1fr 1fr}
+  .academy-certificate-grid{grid-template-columns:1fr}
+  .academy-certificate-form{grid-template-columns:1fr}
+  .academy-certificate-form .full{grid-column:auto}
+}
+@media(max-width:520px){
+  .academy-certificate-help{grid-template-columns:1fr}
+  .academy-certificate-summary{grid-template-columns:1fr}
+  .academy-certificate-meta{grid-template-columns:1fr}
+  .academy-certificate-item-top{grid-template-columns:42px minmax(0,1fr)}
+  .academy-certificate-item-top .academy-status{grid-column:1/-1;justify-self:start}
+  .academy-certificate-actions .btn,
+  .academy-certificate-actions a{flex:1}
+}
+
 </style>
   <script>
 /* ===== INLINED FROM /js/ui.js ===== */
@@ -6235,6 +6412,260 @@ const AF = (() => {
     loadEmailStatus();
   }
 
+  function certificateFileSize(bytes) {
+    const value = Number(bytes || 0);
+    if (!value) return '—';
+    if (value < 1024 * 1024) return Math.max(1, Math.round(value / 1024)) + ' KB';
+    return (value / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  async function renderCertificatesPage() {
+    const target = document.getElementById('pageContent');
+    target.innerHTML = '<div class="academy-empty">جاري تحميل الشهادات...</div>';
+
+    try {
+      const opts = await getOptions();
+
+      target.innerHTML = `
+        <section class="academy-certificate-layout">
+          <article class="academy-card academy-certificate-upload-card">
+            <div class="academy-card-head">
+              <div>
+                <span class="academy-section-label">إصدار شهادة</span>
+                <h2>رفع شهادة PDF</h2>
+                <p>ارفع النسخة النهائية للشهادة وسيتم إتاحتها للطالب مباشرة داخل حسابه.</p>
+              </div>
+            </div>
+
+            <form id="certificateUploadForm" class="academy-certificate-form">
+              <div class="field">
+                <label>الطالب</label>
+                <select name="studentId" required>
+                  <option value="">اختر الطالب...</option>
+                  ${(opts.students || []).map(x => '<option value="'+esc(x._id)+'">'+esc(x.name)+' · '+esc(x.email || '')+'</option>').join('')}
+                </select>
+              </div>
+              <div class="field">
+                <label>الدورة</label>
+                <select name="courseId" required>
+                  <option value="">اختر الدورة...</option>
+                  ${(opts.courses || []).map(x => '<option value="'+esc(x._id)+'">'+esc(x.title)+(x.code ? ' · '+esc(x.code) : '')+'</option>').join('')}
+                </select>
+              </div>
+              <div class="field">
+                <label>رقم الشهادة <span style="font-weight:400;color:var(--text-mute)">(اختياري)</span></label>
+                <input name="certificateNo" placeholder="يُنشأ تلقائيًا إذا تركته فارغًا">
+              </div>
+              <div class="field">
+                <label>تاريخ الإصدار</label>
+                <input name="issuedAt" type="date">
+              </div>
+              <div class="academy-certificate-file full">
+                <label for="certificatePdf">ملف الشهادة PDF</label>
+                <input id="certificatePdf" name="pdf" type="file" accept="application/pdf,.pdf" required>
+                <span>PDF فقط · الحد الأقصى 10MB · الملف لا يكون عامًا على الإنترنت.</span>
+              </div>
+              <div class="academy-form-message full" id="certificateUploadMessage"></div>
+              <div class="academy-form-actions full">
+                <button class="btn primary" type="submit">رفع وإرسال للطالب</button>
+              </div>
+            </form>
+          </article>
+
+          <aside class="academy-certificate-help">
+            <article class="academy-card">
+              <span class="academy-section-label">آلية العمل</span>
+              <h3 style="margin:0 0 9px">الشهادة تصل للطالب تلقائيًا</h3>
+              <p style="margin:0;color:var(--text-mute);font-size:12px;line-height:1.8">بعد الرفع، يظهر للطالب إشعار جديد وتظهر الشهادة في صفحة “شهاداتي” مع فتح وحفظ PDF.</p>
+            </article>
+            <article class="academy-card academy-certificate-security">
+              <span class="academy-section-label">الخصوصية</span>
+              <b>ملفات كل أكاديمية معزولة</b>
+              <p>لا يستطيع طالب أو أكاديمية أخرى الوصول إلى ملف الشهادة.</p>
+            </article>
+          </aside>
+        </section>
+
+        <section class="academy-section">
+          <div class="academy-certificate-summary" id="certificateSummary"></div>
+          <div class="academy-card">
+            <div class="academy-card-head">
+              <div>
+                <span class="academy-section-label">سجل الشهادات</span>
+                <h2>الشهادات المرسلة</h2>
+                <p>افتح الملف أو نزّله أو استبدله أو ألغِ ظهوره للطالب.</p>
+              </div>
+              <input class="academy-search" id="certificateSearch" placeholder="بحث باسم الطالب أو الدورة أو رقم الشهادة">
+            </div>
+            <div id="certificateRows"><div class="academy-empty">جاري التحميل...</div></div>
+          </div>
+        </section>
+      `;
+
+      let rows = [];
+
+      const draw = () => {
+        const q = (document.getElementById('certificateSearch')?.value || '').trim().toLowerCase();
+        const visible = q
+          ? rows.filter(x => JSON.stringify({
+              no:x.certificateNo,
+              student:x.studentId?.name,
+              email:x.studentId?.email,
+              course:x.courseId?.title,
+              code:x.courseId?.code
+            }).toLowerCase().includes(q))
+          : rows;
+
+        const issued = rows.filter(x => x.status === 'issued').length;
+        const withPdf = rows.filter(x => x.hasPdf).length;
+        const downloads = rows.reduce((sum,x) => sum + Number(x.downloadCount || 0), 0);
+
+        document.getElementById('certificateSummary').innerHTML = `
+          <article><small>إجمالي الشهادات</small><strong>${rows.length}</strong></article>
+          <article><small>متاحة للطلاب</small><strong>${issued}</strong></article>
+          <article><small>ملفات PDF</small><strong>${withPdf}</strong></article>
+          <article><small>مرات الحفظ/الفتح</small><strong>${downloads}</strong></article>
+        `;
+
+        document.getElementById('certificateRows').innerHTML = visible.length
+          ? '<div class="academy-certificate-grid">'+visible.map(x => `
+              <article class="academy-certificate-item">
+                <div class="academy-certificate-item-top">
+                  <div class="academy-certificate-pdf">PDF</div>
+                  <div>
+                    <div class="academy-certificate-title">${esc(x.studentId?.name || 'طالب')}</div>
+                    <div class="academy-certificate-course">${esc(x.courseId?.title || 'دورة')}</div>
+                  </div>
+                  ${status(x.status)}
+                </div>
+                <div class="academy-certificate-meta">
+                  <span><b>رقم الشهادة</b>${esc(x.certificateNo)}</span>
+                  <span><b>تاريخ الإصدار</b>${fmtDate(x.issuedAt)}</span>
+                  <span><b>الملف</b>${x.hasPdf ? esc(x.fileName)+' · '+certificateFileSize(x.fileSize) : 'لا يوجد PDF'}</span>
+                  <span><b>أُرسلت للطالب</b>${x.deliveredAt ? fmtDate(x.deliveredAt,true) : '—'}</span>
+                </div>
+                <div class="academy-certificate-actions">
+                  ${x.hasPdf ? '<a class="btn soft" target="_blank" rel="noopener" href="/api/academy/certificates/'+esc(x._id)+'/file">فتح PDF</a>' : ''}
+                  ${x.hasPdf ? '<a class="btn ghost" href="/api/academy/certificates/'+esc(x._id)+'/file?download=1">تنزيل</a>' : ''}
+                  <button class="btn ghost certificate-replace" data-id="${esc(x._id)}" type="button">استبدال الملف</button>
+                  <button class="btn ${x.status==='issued'?'ghost':'soft'} certificate-status" data-id="${esc(x._id)}" data-status="${x.status==='issued'?'revoked':'issued'}" type="button">${x.status==='issued'?'إلغاء الشهادة':'إعادة الإتاحة'}</button>
+                </div>
+              </article>
+            `).join('')+'</div>'
+          : '<div class="academy-empty">لا توجد شهادات مطابقة.</div>';
+
+        document.querySelectorAll('.certificate-replace').forEach(btn => {
+          btn.onclick = () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'application/pdf,.pdf';
+            input.onchange = async () => {
+              const file = input.files?.[0];
+              if (!file) return;
+              if (file.size > 10 * 1024 * 1024) return alert('حجم الملف يجب ألا يتجاوز 10MB');
+              btn.disabled = true;
+              try {
+                await api('/api/academy/certificates/'+encodeURIComponent(btn.dataset.id)+'/file?fileName='+encodeURIComponent(file.name), {
+                  method:'PUT',
+                  headers:{'Content-Type':'application/pdf'},
+                  body:file
+                });
+                await load();
+              } catch (err) {
+                alert(err.message);
+              } finally {
+                btn.disabled = false;
+              }
+            };
+            input.click();
+          };
+        });
+
+        document.querySelectorAll('.certificate-status').forEach(btn => {
+          btn.onclick = async () => {
+            btn.disabled = true;
+            try {
+              await api('/api/academy/certificates/'+encodeURIComponent(btn.dataset.id)+'/status', {
+                method:'PATCH',
+                body:JSON.stringify({status:btn.dataset.status})
+              });
+              await load();
+            } catch (err) {
+              alert(err.message);
+            } finally {
+              btn.disabled = false;
+            }
+          };
+        });
+      };
+
+      const load = async () => {
+        rows = await api('/api/academy/certificates');
+        draw();
+      };
+
+      document.getElementById('certificateSearch').addEventListener('input', draw);
+
+      document.getElementById('certificateUploadForm').onsubmit = async e => {
+        e.preventDefault();
+        const form = e.currentTarget;
+        const button = form.querySelector('button[type="submit"]');
+        const msg = document.getElementById('certificateUploadMessage');
+        const fd = new FormData(form);
+        const file = fd.get('pdf');
+
+        msg.textContent = '';
+        msg.style.color = 'var(--danger)';
+
+        if (!(file instanceof File) || !file.size) {
+          msg.textContent = 'اختر ملف PDF للشهادة.';
+          return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          msg.textContent = 'حجم ملف الشهادة يجب ألا يتجاوز 10MB.';
+          return;
+        }
+        if (file.type && file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
+          msg.textContent = 'يُسمح بملفات PDF فقط.';
+          return;
+        }
+
+        const params = new URLSearchParams({
+          studentId:String(fd.get('studentId') || ''),
+          courseId:String(fd.get('courseId') || ''),
+          certificateNo:String(fd.get('certificateNo') || ''),
+          issuedAt:String(fd.get('issuedAt') || ''),
+          fileName:file.name
+        });
+
+        const original = button.textContent;
+        button.disabled = true;
+        button.textContent = 'جاري الرفع...';
+
+        try {
+          await api('/api/academy/certificates/upload?'+params.toString(), {
+            method:'POST',
+            headers:{'Content-Type':'application/pdf'},
+            body:file
+          });
+          form.reset();
+          msg.style.color = 'var(--success)';
+          msg.textContent = 'تم رفع الشهادة وإرسالها للطالب بنجاح.';
+          await load();
+        } catch (err) {
+          msg.textContent = err.message;
+        } finally {
+          button.disabled = false;
+          button.textContent = original;
+        }
+      };
+
+      await load();
+    } catch (err) {
+      target.innerHTML = '<div class="academy-card academy-empty">'+esc(err.message)+'</div>';
+    }
+  }
+
   function settingsInput(name,label,value,type='text') {
     return '<div class="field"><label>'+esc(label)+'</label><input name="'+esc(name)+'" type="'+esc(type)+'" value="'+esc(value || '')+'"></div>';
   }
@@ -6259,6 +6690,7 @@ const AF = (() => {
     if (page === 'reports') return renderReports();
     if (page === 'settings') return renderSettings();
     if (page === 'calendar') return renderCalendar();
+    if (page === 'certificates') return renderCertificatesPage();
     return renderGeneric(page);
   }
 
