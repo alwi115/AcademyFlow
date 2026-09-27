@@ -3443,23 +3443,41 @@ const StudentPortal = (() => {
       target.innerHTML = `
         <section class="student-card">
           <div class="student-card-head">
-            <div><h2>شهاداتي</h2><p>الشهادات الصادرة والمعتمدة في حسابك.</p></div>
-            ${rows.length ? '<button class="btn secondary" id="printCertificates" type="button">طباعة</button>' : ''}
+            <div>
+              <span class="student-section-label">ملفاتك الرسمية</span>
+              <h2>شهاداتي</h2>
+              <p>الشهادات التي رفعتها الأكاديمية لك بصيغة PDF.</p>
+            </div>
+            <span class="student-certificate-count">${rows.length} شهادة</span>
           </div>
-          ${rows.length ? '<div class="student-course-grid">'+rows.map(x => `
-            <article class="student-certificate">
-              <span class="student-status good">شهادة صادرة</span>
+
+          ${rows.length ? '<div class="student-certificate-grid">'+rows.map(x => `
+            <article class="student-certificate student-certificate-pdf-card">
+              <div class="student-certificate-head">
+                <div class="student-certificate-filemark">PDF</div>
+                <span class="student-status good">متاحة</span>
+              </div>
               <h3>${esc(x.courseId?.title || 'دورة')}</h3>
-              <p style="margin:0;color:var(--text-mute);font-size:10px">صادرة باسم ${esc(user.name || 'الطالب')}</p>
-              <div class="student-certificate-number" style="margin-top:12px">${esc(x.certificateNo)}</div>
-              <div class="student-meta"><span>${fmtDate(x.issuedAt)}</span><span>${esc(x.courseId?.code || '')}</span></div>
+              <p class="student-certificate-owner">صادرة باسم ${esc(user.name || 'الطالب')}</p>
+              <div class="student-certificate-number">${esc(x.certificateNo)}</div>
+              <div class="student-certificate-details">
+                <span><b>تاريخ الإصدار</b>${fmtDate(x.issuedAt)}</span>
+                <span><b>الدورة</b>${esc(x.courseId?.code || '—')}</span>
+                <span><b>اسم الملف</b>${esc(x.fileName || 'certificate.pdf')}</span>
+              </div>
+              <div class="student-certificate-actions">
+                ${x.hasPdf ? '<a class="btn soft" target="_blank" rel="noopener" href="/api/student/certificates/'+esc(x._id)+'/file">فتح PDF</a>' : ''}
+                ${x.hasPdf ? '<a class="btn primary" href="/api/student/certificates/'+esc(x._id)+'/file?download=1">حفظ الشهادة</a>' : '<span class="student-status warn">الملف غير متوفر</span>'}
+              </div>
             </article>
-          `).join('')+'</div>' : '<div class="student-empty">لم تصدر لك شهادات حتى الآن.</div>'}
+          `).join('')+'</div>' : `
+            <div class="student-empty student-certificate-empty">
+              <b>ما عندك شهادات حتى الآن</b>
+              <span>عند إصدار الأكاديمية شهادة لك ستظهر هنا تلقائيًا.</span>
+            </div>
+          `}
         </section>
       `;
-
-      const print = document.getElementById('printCertificates');
-      if (print) print.onclick = () => window.print();
     } catch (err) {
       target.innerHTML = '<div class="student-card student-empty">'+esc(err.message)+'</div>';
     }
