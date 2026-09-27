@@ -176,7 +176,7 @@
         <p class="af-plan-description">${esc(planDescription(plan,index))}</p>
         <div class="af-plan-price">${price}</div>
         ${yearly>0? `<small style="display:block;margin:-8px 0 14px;color:inherit;opacity:.65;font-size:7px">سنويًا: ${yearly.toLocaleString('en-OM',{maximumFractionDigits:3})} OMR</small>`:''}
-        <a class="af-button af-button-primary" href="/academy/login.html">ابدأ تجربة 15 يوم</a>
+        <a class="af-button af-button-primary" href="/legal/support.html">ابدأ تجربة 15 يوم</a>
         <ul class="af-plan-features">${features.map(f=>`<li>${esc(f)}</li>`).join('')}</ul>
         <div class="af-plan-limits">${limitItems.map(v=>`<span>${esc(v)}</span>`).join('')}</div>
       </article>`;
