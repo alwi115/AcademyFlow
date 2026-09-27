@@ -180,3 +180,16 @@ html[data-theme="dark"] body.academy-public-page .af-button-primary{color:#10201
   .af-mobile-menu-foot>a:first-child{display:grid;place-items:center;border:1px solid var(--line);text-decoration:none;font-size:9px}
 }
 @media(max-width:700px){.af-lang-toggle{display:grid}}
+
+/* RTL/LTR + mobile menu final QA */
+body.af-menu-open{overflow:hidden}
+.af-skip{left:auto;inset-inline-start:8px}
+.af-hero-proof>div+div{border-right:0;border-inline-start:1px solid var(--line)}
+.af-product-sidebar{border-left:0;border-inline-end:1px solid var(--soft)}
+.af-context-attendance{left:auto;right:auto;inset-inline-start:-30px}
+.af-context-branch{left:auto;right:auto;inset-inline-end:-20px}
+.af-signal-grid>div{border-left:0}.af-signal-grid>div+div{border-inline-start:1px solid var(--line)}
+@media(max-width:700px){
+  .af-context-attendance,.af-context-branch{inset-inline-start:auto;inset-inline-end:auto}
+  .af-signal-grid>div+div{border-inline-start:0}
+}
