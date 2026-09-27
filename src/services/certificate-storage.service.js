@@ -6,7 +6,9 @@ const crypto = require('crypto');
 const MAX_PDF_BYTES = 10 * 1024 * 1024;
 const ROOT = path.resolve(
   process.env.CERTIFICATE_STORAGE_DIR ||
-  path.join(process.cwd(), '.data', 'certificates')
+  (process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_ENVIRONMENT_ID
+    ? '/data/certificates'
+    : path.join(process.cwd(), '.data', 'certificates'))
 );
 
 function safeSegment(value) {
