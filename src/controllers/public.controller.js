@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const SystemSetting = require('../models/SystemSetting');
 const PrivacyRequest = require('../models/PrivacyRequest');
+const Plan = require('../models/Plan');
 const mailer = require('../services/mailer.service');
 const { CURRENT_LEGAL_VERSION } = require('../config/legal');
 
@@ -53,6 +54,30 @@ async function legalConfig(req, res) {
     privacyOfficerEmail: settings.privacyOfficerEmail || '',
     legalVersion: CURRENT_LEGAL_VERSION,
     jurisdiction: 'Sultanate of Oman'
+  });
+}
+
+async function listPlans(req, res) {
+  const rows = await Plan.find({ active: true })
+    .select('name code monthlyPrice yearlyPrice limits features')
+    .sort({ monthlyPrice: 1, createdAt: 1 })
+    .lean();
+
+  res.set({
+    'Cache-Control': 'public, max-age=300',
+    'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'"
+  });
+
+  res.json({
+    plans: rows.map(row => ({
+      id: String(row._id),
+      name: row.name,
+      code: row.code,
+      monthlyPrice: Number(row.monthlyPrice || 0),
+      yearlyPrice: Number(row.yearlyPrice || 0),
+      limits: row.limits || {},
+      features: Array.isArray(row.features) ? row.features.slice(0, 12) : []
+    }))
   });
 }
 
@@ -136,5 +161,6 @@ async function createPrivacyRequest(req, res) {
 
 module.exports = {
   legalConfig,
+  listPlans,
   createPrivacyRequest
 };
