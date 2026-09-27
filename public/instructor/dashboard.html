@@ -1864,6 +1864,43 @@ body.instructor-app{min-width:320px;overflow-x:hidden;font-size:14px}
 .instructor-weekdays input:checked+span{border-color:var(--primary);background:var(--primary-soft);color:var(--primary);font-weight:800}
 @media(max-width:640px){.instructor-weekdays{grid-template-columns:repeat(4,minmax(0,1fr))}.instructor-weekdays span{font-size:10px}}
 
+
+/* AcademyFlow clarity pass — instructor */
+body.instructor-app{font-size:15px;background:var(--bg)}
+.instructor-layout{grid-template-columns:252px minmax(0,1fr)}
+.instructor-sidebar{padding:18px 13px 22px;background:var(--sidebar);border-left-color:var(--line-strong);backdrop-filter:none}
+.instructor-sidebar .brand{padding:4px 8px 19px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.instructor-nav-title{margin:17px 10px 7px;font-size:10px;letter-spacing:.04em}
+.instructor-nav{gap:4px}
+.instructor-nav a{min-height:44px;padding:0 11px;gap:10px;border-radius:8px;font-size:13px;font-weight:500}
+.instructor-nav a.active{box-shadow:inset -3px 0 0 var(--primary)}
+.instructor-nav-icon{width:30px;height:30px;border-radius:7px;font-size:10px}
+.instructor-nav a.active .instructor-nav-icon{background:var(--primary);color:#fff;border-color:var(--primary)}
+html[data-theme='dark'] .instructor-nav a.active .instructor-nav-icon{color:#101b29}
+.instructor-sidebar-card{margin:20px 4px 0;padding:13px;border-radius:9px}
+.instructor-main{padding:24px 30px 46px}
+.instructor-content{max-width:1500px}
+.instructor-topbar{min-height:68px;margin-bottom:21px;padding-bottom:17px;border-bottom:1px solid var(--line);align-items:center}
+.instructor-heading h1{font-size:clamp(28px,2.5vw,35px);font-weight:650}
+.instructor-heading p{font-size:12.5px;line-height:1.75}
+.instructor-eyebrow{font-size:9.5px;letter-spacing:.12em}
+.instructor-user{min-height:42px;padding:5px 9px;border-radius:8px}
+.instructor-avatar{width:32px;height:32px;border-radius:50%}
+.instructor-kpis{gap:13px;margin-bottom:15px}
+.instructor-kpi{min-height:132px;padding:18px;border-radius:12px;box-shadow:0 8px 22px rgba(19,46,64,.05)}
+.instructor-kpi small{font-size:11.5px;color:var(--text-soft)}
+.instructor-kpi strong{margin-top:13px;font-size:30px}
+.instructor-grid-2{gap:14px}
+.instructor-card{padding:18px;border-radius:12px;box-shadow:0 8px 24px rgba(19,46,64,.05)}
+.instructor-card-head h2{font-size:17px;font-weight:650}
+.instructor-card-head p{font-size:11.5px}
+.instructor-search{min-height:44px;border-radius:7px;background:var(--surface-strong);font-size:12px}
+.instructor-list-row{padding:12px 13px;border-radius:9px}
+@media(max-width:900px){.instructor-main{padding:18px 15px 36px}}
+@media(max-width:640px){.instructor-kpis{grid-template-columns:1fr 1fr}.instructor-kpi{min-height:124px}}
+@media(max-width:430px){.instructor-kpis{grid-template-columns:1fr}}
+
+
 </style>
   <script>
 /* ===== INLINED FROM /js/ui.js ===== */
