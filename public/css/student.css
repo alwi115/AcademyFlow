@@ -107,3 +107,39 @@ body.student-app{min-width:320px;overflow-x:hidden;font-size:14px}
   .student-urgent-actions{grid-template-columns:1fr}
   .student-urgent-copy h2{font-size:14px}
 }
+
+
+/* AcademyFlow clarity pass — student */
+body.student-app{font-size:15px;background:var(--bg)}
+.student-layout{grid-template-columns:252px minmax(0,1fr)}
+.student-sidebar{padding:18px 13px 22px;background:var(--sidebar);border-left-color:var(--line-strong);backdrop-filter:none}
+.student-sidebar .brand{padding:4px 8px 19px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.student-nav-title{margin:17px 10px 7px;font-size:10px;letter-spacing:.04em}
+.student-nav{gap:4px}
+.student-nav a{min-height:44px;padding:0 11px;gap:10px;border-radius:8px;font-size:13px;font-weight:500}
+.student-nav a.active{box-shadow:inset -3px 0 0 var(--primary)}
+.student-nav-icon{width:30px;height:30px;border-radius:7px;font-size:10px}
+.student-nav a.active .student-nav-icon{background:var(--primary);color:#fff;border-color:var(--primary)}
+html[data-theme='dark'] .student-nav a.active .student-nav-icon{color:#101b29}
+.student-sidebar-card{margin:20px 4px 0;padding:13px;border-radius:9px}
+.student-main{padding:24px 30px 46px}
+.student-content{max-width:1500px}
+.student-topbar{min-height:68px;margin-bottom:21px;padding-bottom:17px;border-bottom:1px solid var(--line);align-items:center}
+.student-heading h1{font-size:clamp(28px,2.5vw,35px);font-weight:650}
+.student-heading p{font-size:12.5px;line-height:1.75}
+.student-eyebrow{font-size:9.5px;letter-spacing:.12em}
+.student-user{min-height:42px;padding:5px 9px;border-radius:8px}
+.student-avatar{width:32px;height:32px;border-radius:50%}
+.student-kpis{gap:13px;margin-bottom:15px}
+.student-kpi{min-height:132px;padding:18px;border-radius:12px;box-shadow:0 8px 22px rgba(19,46,64,.05)}
+.student-kpi small{font-size:11.5px;color:var(--text-soft)}
+.student-kpi strong{margin-top:13px;font-size:30px}
+.student-grid-2{gap:14px}
+.student-card{padding:18px;border-radius:12px;box-shadow:0 8px 24px rgba(19,46,64,.05)}
+.student-card-head h2{font-size:17px;font-weight:650}
+.student-card-head p{font-size:11.5px}
+.student-list-row{padding:12px 13px;border-radius:9px}
+@media(max-width:900px){.student-main{padding:18px 15px 36px}}
+@media(max-width:640px){.student-kpis{grid-template-columns:1fr 1fr}.student-kpi{min-height:124px}}
+@media(max-width:430px){.student-kpis{grid-template-columns:1fr}}
+
