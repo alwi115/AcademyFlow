@@ -3,138 +3,107 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#f2f0e8">
+  <meta name="theme-color" content="#f4f4f0">
   <meta name="color-scheme" content="light dark">
-  <meta name="description" content="تسجيل الدخول الآمن إلى AcademyFlow.">
   <title>تسجيل الدخول | AcademyFlow</title>
   <link rel="stylesheet" href="/css/app.css">
-  <link rel="stylesheet" href="/css/academy-login.css?v=10">
+  <link rel="stylesheet" href="/css/academy-login.css?v=5">
   <script src="/js/ui.js"></script>
 </head>
 <body class="academy-login-page">
-  <a class="af-auth-skip" href="#academyLoginForm">انتقل لتسجيل الدخول</a>
-  <main class="af-auth-shell">
-    <section class="af-auth-experience" aria-label="AcademyFlow">
-      <div class="af-auth-top">
-        <a class="af-auth-brand" href="/">
-          <span>AF</span>
-          <div><b>AcademyFlow</b><small>ACADEMY OPERATING SYSTEM</small></div>
-        </a>
-        <a class="af-auth-home" href="/">العودة للرئيسية <span>↗</span></a>
-      </div>
-
-      <div class="af-auth-story">
-        <span class="af-auth-kicker">YOUR ACADEMY, IN CONTEXT</span>
-        <h1>ارجع لنفس المكان<br>اللي <em>شغلك واقف عنده.</em></h1>
-        <p>كود الأكاديمية يحدد مساحة العمل، وبعد الدخول يفتح AcademyFlow الواجهة المناسبة حسب دورك وصلاحياتك.</p>
-      </div>
-
-      <div class="af-auth-product" aria-hidden="true">
-        <div class="af-auth-product-bar">
-          <div><i>AF</i><span></span></div>
-          <small>Today · 27 Sep</small>
+  <main class="af-login-shell">
+    <section class="af-login-wrap" aria-label="تسجيل الدخول إلى AcademyFlow">
+      <aside class="af-login-visual">
+        <div class="af-login-visual-top">
+          <a class="af-login-brand" href="/">
+            <span>AF</span>
+            <div><b>AcademyFlow</b><small>ACADEMY OPERATING SYSTEM</small></div>
+          </a>
+          <a class="af-back-home" href="/">الرئيسية <i>↗</i></a>
         </div>
-        <div class="af-auth-product-body">
-          <aside><i class="active"></i><i></i><i></i><i></i></aside>
-          <div class="af-auth-product-main">
-            <div class="af-auth-product-head"><div><small>نظرة عامة</small><b>الأكاديمية الرئيسية</b></div><span></span></div>
-            <div class="af-auth-stats">
-              <div><small>الطلاب</small><b>1,284</b></div>
-              <div><small>الحضور</small><b>92.4%</b></div>
-              <div><small>حصص اليوم</small><b>18</b></div>
-            </div>
-            <div class="af-auth-product-lower">
-              <div class="af-auth-list">
-                <span><i></i><b></b><em></em></span>
-                <span><i></i><b></b><em></em></span>
-                <span><i></i><b></b><em></em></span>
+
+        <div class="af-login-message-block">
+          <span class="af-login-kicker">بوابتك للأكاديمية</span>
+          <h1>ادخل،<br><em>وكمل من وين وقفت.</em></h1>
+          <p>كود الأكاديمية يحدد مساحتك، وAcademyFlow يوجهك للوحة المناسبة حسب دورك وصلاحيات حسابك.</p>
+        </div>
+
+        <div class="af-login-art" aria-hidden="true">
+          <div class="af-login-orbit one"></div>
+          <div class="af-login-orbit two"></div>
+          <div class="af-login-mini-card main">
+            <div class="af-mini-head"><span></span><i></i></div>
+            <div class="af-mini-stats"><b></b><b></b><b></b></div>
+            <div class="af-mini-body"><span></span><span></span><span></span><span></span></div>
+          </div>
+          <div class="af-login-float attendance"><strong>92%</strong><span>الحضور اليوم</span></div>
+          <div class="af-login-float secure"><i>✓</i><div><b>جلسة محمية</b><span>توجيه حسب الدور</span></div></div>
+        </div>
+
+        <div class="af-login-roles"><span>الإدارة</span><i></i><span>المدربين</span><i></i><span>الطلاب</span></div>
+      </aside>
+
+      <section class="af-login-panel">
+        <div class="af-login-panel-top">
+          <span>تسجيل الدخول</span>
+          <button class="af-login-theme theme-toggle" data-theme-toggle data-theme-icon type="button" aria-label="تبديل الوضع">◐</button>
+        </div>
+
+        <div class="af-login-form-wrap">
+          <div class="af-login-heading">
+            <span>WELCOME BACK</span>
+            <h2>مرحبًا برجعتك</h2>
+            <p>اكتب بيانات الحساب اللي وفرتها لك الأكاديمية.</p>
+          </div>
+
+          <form id="academyLoginForm" data-login-kind="academy" method="post" action="/api/auth/login" autocomplete="on">
+            <input type="hidden" id="csrfToken" name="_csrf" value="">
+
+            <div class="af-field">
+              <label for="academyCode"><span>كود الأكاديمية</span><small>مثال AF-0001</small></label>
+              <div class="af-input-wrap">
+                <span class="af-input-badge">AF</span>
+                <input class="af-ltr af-code" id="academyCode" name="academyCode" type="text" autocomplete="organization" autocapitalize="characters" spellcheck="false" maxlength="32" placeholder="AF-0001" required>
               </div>
-              <div class="af-auth-chart"><i style="--h:35%"></i><i style="--h:48%"></i><i style="--h:42%"></i><i style="--h:65%"></i><i style="--h:58%"></i><i style="--h:78%"></i></div>
             </div>
+
+            <div class="af-field">
+              <label for="academyEmail"><span>البريد الإلكتروني</span></label>
+              <div class="af-input-wrap">
+                <span class="af-input-badge">@</span>
+                <input class="af-ltr" id="academyEmail" name="email" type="email" inputmode="email" autocomplete="email" maxlength="254" placeholder="name@academy.com" required>
+              </div>
+            </div>
+
+            <div class="af-field">
+              <label for="academyPassword"><span>كلمة المرور</span></label>
+              <div class="af-input-wrap">
+                <span class="af-input-badge">••</span>
+                <input class="af-ltr af-password" id="academyPassword" name="password" type="password" autocomplete="current-password" maxlength="128" placeholder="••••••••••••" required>
+                <button class="af-password-toggle" id="academyPasswordToggle" type="button" aria-controls="academyPassword" aria-pressed="false">إظهار</button>
+              </div>
+            </div>
+
+            <button class="af-login-submit" type="submit"><span>دخول إلى AcademyFlow</span><i>←</i></button>
+            <p class="af-login-form-message" id="msg" aria-live="polite"></p>
+          </form>
+
+          <div class="af-security-note">
+            <span>✓</span>
+            <div><b>دخول آمن</b><p>الجلسة تستخدم Cookie آمنة من نوع HttpOnly وSameSite، وكلمة المرور ما تنحفظ كنص صريح.</p></div>
+          </div>
+
+          <div class="af-login-legal">
+            <a href="/legal/privacy.html">الخصوصية</a>
+            <a href="/legal/terms.html">الشروط</a>
+            <a href="/legal/privacy-request.html">طلب خصوصية</a>
           </div>
         </div>
-      </div>
-
-      <div class="af-auth-status">
-        <div><span>✓</span><p><b>مساحة مستقلة</b><small>بيانات كل أكاديمية ضمن سياقها</small></p></div>
-        <div><span>01</span><p><b>صلاحيات محددة</b><small>واجهة حسب الدور</small></p></div>
-      </div>
-    </section>
-
-    <section class="af-auth-panel">
-      <div class="af-auth-panel-top">
-        <span>تسجيل الدخول الآمن</span>
-        <div>
-          <button class="af-auth-control" type="button" data-login-lang aria-label="Switch language">EN</button>
-          <button class="af-auth-control theme-toggle" data-theme-toggle data-theme-icon type="button" aria-label="تبديل المظهر">◐</button>
-        </div>
-      </div>
-
-      <div class="af-auth-form-wrap">
-        <div class="af-auth-heading">
-          <span>SIGN IN</span>
-          <h2>مرحبًا برجعتك</h2>
-          <p>استخدم كود الأكاديمية والبريد وكلمة المرور للدخول لمساحتك.</p>
-        </div>
-
-        <form id="academyLoginForm" data-login-kind="academy" method="post" action="/api/auth/login" autocomplete="on">
-          <input type="hidden" id="csrfToken" name="_csrf" value="">
-
-          <div class="af-auth-field">
-            <label for="academyCode"><span>كود الأكاديمية</span><small>مثال AF-0001</small></label>
-            <div class="af-auth-input">
-              <span class="af-auth-prefix">AF</span>
-              <input id="academyCode" name="academyCode" type="text" inputmode="text" autocomplete="organization" autocapitalize="characters" spellcheck="false" maxlength="32" placeholder="AF-0001" required>
-            </div>
-          </div>
-
-          <div class="af-auth-field">
-            <label for="academyEmail"><span>البريد الإلكتروني</span></label>
-            <div class="af-auth-input">
-              <span class="af-auth-prefix">@</span>
-              <input id="academyEmail" name="email" type="email" inputmode="email" autocomplete="email" maxlength="254" placeholder="name@academy.com" required>
-            </div>
-          </div>
-
-          <div class="af-auth-field">
-            <label for="academyPassword"><span>كلمة المرور</span></label>
-            <div class="af-auth-input">
-              <span class="af-auth-prefix">••</span>
-              <input class="af-auth-password" id="academyPassword" name="password" type="password" autocomplete="current-password" maxlength="128" placeholder="••••••••••••" required>
-              <button class="af-auth-password-toggle" id="academyPasswordToggle" type="button" aria-controls="academyPassword" aria-pressed="false">إظهار</button>
-            </div>
-          </div>
-
-          <div class="af-auth-options">
-            <label class="af-auth-remember"><input id="rememberAcademy" type="checkbox"><span aria-hidden="true"></span><b>تذكر كود الأكاديمية والبريد</b></label>
-            <button type="button" class="af-auth-help-link" data-login-help aria-expanded="false">نسيت كلمة المرور؟</button>
-          </div>
-
-          <div class="af-auth-help" id="loginHelp" hidden>
-            <b>استعادة الوصول</b>
-            <p>إذا نسيت كلمة المرور، تواصل مع إدارة أكاديميتك. وإذا كنت مالك الأكاديمية وتحتاج مساعدة، استخدم مركز الدعم.</p>
-            <a href="/legal/support.html">فتح مركز الدعم ↗</a>
-          </div>
-
-          <button class="af-auth-submit" type="submit">دخول إلى AcademyFlow</button>
-          <p class="af-auth-message" id="msg" aria-live="polite"></p>
-        </form>
-
-        <div class="af-auth-security">
-          <span>✓</span>
-          <p><b>جلسة آمنة</b><small>AcademyFlow يستخدم جلسة HttpOnly وSameSite، مع حماية من محاولات الدخول المتكررة.</small></p>
-        </div>
-      </div>
-
-      <div class="af-auth-legal">
-        <a href="/legal/privacy.html">الخصوصية</a>
-        <a href="/legal/terms.html">الشروط</a>
-        <a href="/legal/support.html">الدعم</a>
-      </div>
+      </section>
     </section>
   </main>
 
-  <script src="/js/academy-login.js?v=10"></script>
+  <script src="/js/academy-login.js?v=2"></script>
   <script src="/js/auth.js?v=2"></script>
 </body>
 </html>
