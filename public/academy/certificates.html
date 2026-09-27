@@ -6412,6 +6412,260 @@ const AF = (() => {
     loadEmailStatus();
   }
 
+  function certificateFileSize(bytes) {
+    const value = Number(bytes || 0);
+    if (!value) return '—';
+    if (value < 1024 * 1024) return Math.max(1, Math.round(value / 1024)) + ' KB';
+    return (value / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  async function renderCertificatesPage() {
+    const target = document.getElementById('pageContent');
+    target.innerHTML = '<div class="academy-empty">جاري تحميل الشهادات...</div>';
+
+    try {
+      const opts = await getOptions();
+
+      target.innerHTML = `
+        <section class="academy-certificate-layout">
+          <article class="academy-card academy-certificate-upload-card">
+            <div class="academy-card-head">
+              <div>
+                <span class="academy-section-label">إصدار شهادة</span>
+                <h2>رفع شهادة PDF</h2>
+                <p>ارفع النسخة النهائية للشهادة وسيتم إتاحتها للطالب مباشرة داخل حسابه.</p>
+              </div>
+            </div>
+
+            <form id="certificateUploadForm" class="academy-certificate-form">
+              <div class="field">
+                <label>الطالب</label>
+                <select name="studentId" required>
+                  <option value="">اختر الطالب...</option>
+                  ${(opts.students || []).map(x => '<option value="'+esc(x._id)+'">'+esc(x.name)+' · '+esc(x.email || '')+'</option>').join('')}
+                </select>
+              </div>
+              <div class="field">
+                <label>الدورة</label>
+                <select name="courseId" required>
+                  <option value="">اختر الدورة...</option>
+                  ${(opts.courses || []).map(x => '<option value="'+esc(x._id)+'">'+esc(x.title)+(x.code ? ' · '+esc(x.code) : '')+'</option>').join('')}
+                </select>
+              </div>
+              <div class="field">
+                <label>رقم الشهادة <span style="font-weight:400;color:var(--text-mute)">(اختياري)</span></label>
+                <input name="certificateNo" placeholder="يُنشأ تلقائيًا إذا تركته فارغًا">
+              </div>
+              <div class="field">
+                <label>تاريخ الإصدار</label>
+                <input name="issuedAt" type="date">
+              </div>
+              <div class="academy-certificate-file full">
+                <label for="certificatePdf">ملف الشهادة PDF</label>
+                <input id="certificatePdf" name="pdf" type="file" accept="application/pdf,.pdf" required>
+                <span>PDF فقط · الحد الأقصى 10MB · الملف لا يكون عامًا على الإنترنت.</span>
+              </div>
+              <div class="academy-form-message full" id="certificateUploadMessage"></div>
+              <div class="academy-form-actions full">
+                <button class="btn primary" type="submit">رفع وإرسال للطالب</button>
+              </div>
+            </form>
+          </article>
+
+          <aside class="academy-certificate-help">
+            <article class="academy-card">
+              <span class="academy-section-label">آلية العمل</span>
+              <h3 style="margin:0 0 9px">الشهادة تصل للطالب تلقائيًا</h3>
+              <p style="margin:0;color:var(--text-mute);font-size:12px;line-height:1.8">بعد الرفع، يظهر للطالب إشعار جديد وتظهر الشهادة في صفحة “شهاداتي” مع فتح وحفظ PDF.</p>
+            </article>
+            <article class="academy-card academy-certificate-security">
+              <span class="academy-section-label">الخصوصية</span>
+              <b>ملفات كل أكاديمية معزولة</b>
+              <p>لا يستطيع طالب أو أكاديمية أخرى الوصول إلى ملف الشهادة.</p>
+            </article>
+          </aside>
+        </section>
+
+        <section class="academy-section">
+          <div class="academy-certificate-summary" id="certificateSummary"></div>
+          <div class="academy-card">
+            <div class="academy-card-head">
+              <div>
+                <span class="academy-section-label">سجل الشهادات</span>
+                <h2>الشهادات المرسلة</h2>
+                <p>افتح الملف أو نزّله أو استبدله أو ألغِ ظهوره للطالب.</p>
+              </div>
+              <input class="academy-search" id="certificateSearch" placeholder="بحث باسم الطالب أو الدورة أو رقم الشهادة">
+            </div>
+            <div id="certificateRows"><div class="academy-empty">جاري التحميل...</div></div>
+          </div>
+        </section>
+      `;
+
+      let rows = [];
+
+      const draw = () => {
+        const q = (document.getElementById('certificateSearch')?.value || '').trim().toLowerCase();
+        const visible = q
+          ? rows.filter(x => JSON.stringify({
+              no:x.certificateNo,
+              student:x.studentId?.name,
+              email:x.studentId?.email,
+              course:x.courseId?.title,
+              code:x.courseId?.code
+            }).toLowerCase().includes(q))
+          : rows;
+
+        const issued = rows.filter(x => x.status === 'issued').length;
+        const withPdf = rows.filter(x => x.hasPdf).length;
+        const downloads = rows.reduce((sum,x) => sum + Number(x.downloadCount || 0), 0);
+
+        document.getElementById('certificateSummary').innerHTML = `
+          <article><small>إجمالي الشهادات</small><strong>${rows.length}</strong></article>
+          <article><small>متاحة للطلاب</small><strong>${issued}</strong></article>
+          <article><small>ملفات PDF</small><strong>${withPdf}</strong></article>
+          <article><small>مرات الحفظ/الفتح</small><strong>${downloads}</strong></article>
+        `;
+
+        document.getElementById('certificateRows').innerHTML = visible.length
+          ? '<div class="academy-certificate-grid">'+visible.map(x => `
+              <article class="academy-certificate-item">
+                <div class="academy-certificate-item-top">
+                  <div class="academy-certificate-pdf">PDF</div>
+                  <div>
+                    <div class="academy-certificate-title">${esc(x.studentId?.name || 'طالب')}</div>
+                    <div class="academy-certificate-course">${esc(x.courseId?.title || 'دورة')}</div>
+                  </div>
+                  ${status(x.status)}
+                </div>
+                <div class="academy-certificate-meta">
+                  <span><b>رقم الشهادة</b>${esc(x.certificateNo)}</span>
+                  <span><b>تاريخ الإصدار</b>${fmtDate(x.issuedAt)}</span>
+                  <span><b>الملف</b>${x.hasPdf ? esc(x.fileName)+' · '+certificateFileSize(x.fileSize) : 'لا يوجد PDF'}</span>
+                  <span><b>أُرسلت للطالب</b>${x.deliveredAt ? fmtDate(x.deliveredAt,true) : '—'}</span>
+                </div>
+                <div class="academy-certificate-actions">
+                  ${x.hasPdf ? '<a class="btn soft" target="_blank" rel="noopener" href="/api/academy/certificates/'+esc(x._id)+'/file">فتح PDF</a>' : ''}
+                  ${x.hasPdf ? '<a class="btn ghost" href="/api/academy/certificates/'+esc(x._id)+'/file?download=1">تنزيل</a>' : ''}
+                  <button class="btn ghost certificate-replace" data-id="${esc(x._id)}" type="button">استبدال الملف</button>
+                  <button class="btn ${x.status==='issued'?'ghost':'soft'} certificate-status" data-id="${esc(x._id)}" data-status="${x.status==='issued'?'revoked':'issued'}" type="button">${x.status==='issued'?'إلغاء الشهادة':'إعادة الإتاحة'}</button>
+                </div>
+              </article>
+            `).join('')+'</div>'
+          : '<div class="academy-empty">لا توجد شهادات مطابقة.</div>';
+
+        document.querySelectorAll('.certificate-replace').forEach(btn => {
+          btn.onclick = () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'application/pdf,.pdf';
+            input.onchange = async () => {
+              const file = input.files?.[0];
+              if (!file) return;
+              if (file.size > 10 * 1024 * 1024) return alert('حجم الملف يجب ألا يتجاوز 10MB');
+              btn.disabled = true;
+              try {
+                await api('/api/academy/certificates/'+encodeURIComponent(btn.dataset.id)+'/file?fileName='+encodeURIComponent(file.name), {
+                  method:'PUT',
+                  headers:{'Content-Type':'application/pdf'},
+                  body:file
+                });
+                await load();
+              } catch (err) {
+                alert(err.message);
+              } finally {
+                btn.disabled = false;
+              }
+            };
+            input.click();
+          };
+        });
+
+        document.querySelectorAll('.certificate-status').forEach(btn => {
+          btn.onclick = async () => {
+            btn.disabled = true;
+            try {
+              await api('/api/academy/certificates/'+encodeURIComponent(btn.dataset.id)+'/status', {
+                method:'PATCH',
+                body:JSON.stringify({status:btn.dataset.status})
+              });
+              await load();
+            } catch (err) {
+              alert(err.message);
+            } finally {
+              btn.disabled = false;
+            }
+          };
+        });
+      };
+
+      const load = async () => {
+        rows = await api('/api/academy/certificates');
+        draw();
+      };
+
+      document.getElementById('certificateSearch').addEventListener('input', draw);
+
+      document.getElementById('certificateUploadForm').onsubmit = async e => {
+        e.preventDefault();
+        const form = e.currentTarget;
+        const button = form.querySelector('button[type="submit"]');
+        const msg = document.getElementById('certificateUploadMessage');
+        const fd = new FormData(form);
+        const file = fd.get('pdf');
+
+        msg.textContent = '';
+        msg.style.color = 'var(--danger)';
+
+        if (!(file instanceof File) || !file.size) {
+          msg.textContent = 'اختر ملف PDF للشهادة.';
+          return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          msg.textContent = 'حجم ملف الشهادة يجب ألا يتجاوز 10MB.';
+          return;
+        }
+        if (file.type && file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
+          msg.textContent = 'يُسمح بملفات PDF فقط.';
+          return;
+        }
+
+        const params = new URLSearchParams({
+          studentId:String(fd.get('studentId') || ''),
+          courseId:String(fd.get('courseId') || ''),
+          certificateNo:String(fd.get('certificateNo') || ''),
+          issuedAt:String(fd.get('issuedAt') || ''),
+          fileName:file.name
+        });
+
+        const original = button.textContent;
+        button.disabled = true;
+        button.textContent = 'جاري الرفع...';
+
+        try {
+          await api('/api/academy/certificates/upload?'+params.toString(), {
+            method:'POST',
+            headers:{'Content-Type':'application/pdf'},
+            body:file
+          });
+          form.reset();
+          msg.style.color = 'var(--success)';
+          msg.textContent = 'تم رفع الشهادة وإرسالها للطالب بنجاح.';
+          await load();
+        } catch (err) {
+          msg.textContent = err.message;
+        } finally {
+          button.disabled = false;
+          button.textContent = original;
+        }
+      };
+
+      await load();
+    } catch (err) {
+      target.innerHTML = '<div class="academy-card academy-empty">'+esc(err.message)+'</div>';
+    }
+  }
+
   function settingsInput(name,label,value,type='text') {
     return '<div class="field"><label>'+esc(label)+'</label><input name="'+esc(name)+'" type="'+esc(type)+'" value="'+esc(value || '')+'"></div>';
   }
@@ -6436,6 +6690,7 @@ const AF = (() => {
     if (page === 'reports') return renderReports();
     if (page === 'settings') return renderSettings();
     if (page === 'calendar') return renderCalendar();
+    if (page === 'certificates') return renderCertificatesPage();
     return renderGeneric(page);
   }
 
