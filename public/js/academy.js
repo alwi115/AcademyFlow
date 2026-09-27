@@ -1026,46 +1026,98 @@ const AF = (() => {
       const quick = [
         ['students','S','الطلاب','إضافة ومتابعة الطلاب'],
         ['courses','C','الدورات','إدارة المحتوى والدورات'],
-        ['lessons','▶','الدروس','روابط YouTube والدروس'],
-        ['live','Z','المباشر','جلسات Zoom القادمة']
+        ['lessons','▶','الدروس','إدارة الدروس والفيديو'],
+        ['live','Z','المحاضرات','جلسات Zoom القادمة']
       ].filter(x => {
         const navItem = navGroups.flatMap(g => g.items).find(i => i[0] === x[0]);
         return !navItem || allowed(navItem[3]);
       });
 
+      const todayLabel = new Intl.DateTimeFormat('ar-OM', {
+        weekday:'long',
+        day:'numeric',
+        month:'long'
+      }).format(new Date());
+
       target.innerHTML = `
-        <section class="academy-kpis">
-          ${kpi('الطلاب',d.students,'S')}
-          ${kpi('الدورات',d.courses,'C')}
-          ${kpi('التسجيلات النشطة',d.activeEnrollments,'E')}
-          ${kpi('المحاضرات القادمة',d.upcomingLive,'Z')}
+        <section class="academy-dashboard-intro">
+          <div>
+            <span class="academy-dashboard-kicker">ملخص التشغيل · ${esc(todayLabel)}</span>
+            <h2>كل المهم أمامك، بدون زحمة.</h2>
+            <p>تابع الطلاب والدورات والتسجيلات والمحاضرات القادمة من مكان واحد.</p>
+          </div>
+          <div class="academy-dashboard-intro-actions">
+            ${allowed(['owner','admin','accountant']) ? '<a class="btn ghost" href="/academy/reports.html">التقارير</a>' : ''}
+            ${allowed(['owner','admin','branch_manager','reception']) ? '<a class="btn primary" href="/academy/students.html">إدارة الطلاب</a>' : ''}
+          </div>
         </section>
 
-        <section class="academy-grid-2">
-          <article class="academy-card">
-            <div class="academy-card-head"><div><h2>اختصارات سريعة</h2><p>أكثر الأدوات استخدامًا في الأكاديمية.</p></div></div>
-            <div class="academy-quick-grid">
-              ${quick.map(x => '<a class="academy-quick" href="'+href(x[0])+'"><i>'+esc(x[1])+'</i><span><b>'+esc(x[2])+'</b><span>'+esc(x[3])+'</span></span></a>').join('')}
+        <section class="academy-kpis academy-dashboard-kpis">
+          ${kpi('إجمالي الطلاب',d.students,'S','طالب مسجل في الأكاديمية')}
+          ${kpi('الدورات',d.courses,'C','الدورات الموجودة في النظام')}
+          ${kpi('التسجيلات النشطة',d.activeEnrollments,'E','طلاب مسجلون حاليًا')}
+          ${kpi('المحاضرات القادمة',d.upcomingLive,'Z','جلسات مجدولة قادمة')}
+        </section>
+
+        <section class="academy-dashboard-grid">
+          <article class="academy-card academy-dashboard-sessions">
+            <div class="academy-card-head">
+              <div>
+                <span class="academy-section-label">الجدول القادم</span>
+                <h2>المحاضرات القادمة</h2>
+                <p>أقرب جلسات Zoom المجدولة للأكاديمية.</p>
+              </div>
+              <a class="btn soft" href="/academy/live.html">عرض الكل</a>
+            </div>
+
+            <div class="academy-session-list">
+              ${d.upcomingSessions?.length ? d.upcomingSessions.map(x => `
+                <div class="academy-session-row">
+                  <div class="academy-session-time">
+                    <strong>${esc(new Date(x.startAt).toLocaleTimeString('ar-OM',{hour:'2-digit',minute:'2-digit'}))}</strong>
+                    <span>${fmtDate(x.startAt)}</span>
+                  </div>
+                  <div class="academy-session-main">
+                    <b>${esc(x.title)}</b>
+                    <span>${esc(x.course || 'بدون دورة')} · ${esc(x.instructor || 'بدون مدرب')}</span>
+                  </div>
+                  <div class="academy-session-action">
+                    ${x.zoomJoinUrl ? '<a class="btn soft" target="_blank" rel="noopener" href="'+esc(x.zoomJoinUrl)+'">فتح Zoom</a>' : status('scheduled')}
+                  </div>
+                </div>
+              `).join('') : '<div class="academy-empty academy-empty-clean">لا توجد محاضرات قادمة حاليًا.</div>'}
             </div>
           </article>
 
-          <article class="academy-card">
-            <div class="academy-card-head"><div><h2>ملخص مالي</h2><p>إجمالي الدفعات المدفوعة المسجلة.</p></div></div>
-            <div style="font-family:var(--font-display);font-size:34px;font-weight:800;color:var(--primary)">${fmtMoney(d.revenue)}</div>
-            <div class="academy-note" style="margin-top:14px">الأرقام تعتمد على الدفعات المسجلة بحالة “مدفوع”. التقارير التفصيلية موجودة في صفحة التقارير.</div>
-          </article>
-        </section>
-
-        <section class="academy-card academy-section">
-          <div class="academy-card-head"><div><h2>المحاضرات القادمة</h2><p>أقرب جلسات Zoom المجدولة.</p></div><a class="btn soft" href="/academy/live.html">عرض الكل</a></div>
-          <div class="academy-list">
-            ${d.upcomingSessions?.length ? d.upcomingSessions.map(x => `
-              <div class="academy-list-row">
-                <div><b>${esc(x.title)}</b><span>${fmtDate(x.startAt,true)} · ${esc(x.course || 'بدون دورة')} · ${esc(x.instructor || 'بدون مدرب')}</span></div>
-                ${x.zoomJoinUrl ? '<a class="btn soft" target="_blank" rel="noopener" href="'+esc(x.zoomJoinUrl)+'">Zoom</a>' : status('scheduled')}
+          <aside class="academy-dashboard-side">
+            <article class="academy-card academy-finance-card">
+              <div class="academy-card-head">
+                <div>
+                  <span class="academy-section-label">المالية</span>
+                  <h2>الدفعات المدفوعة</h2>
+                  <p>إجمالي المبالغ المسجلة بحالة مدفوع.</p>
+                </div>
               </div>
-            `).join('') : '<div class="academy-empty">لا توجد محاضرات قادمة.</div>'}
-          </div>
+              <div class="academy-finance-value">${fmtMoney(d.revenue)}</div>
+              <div class="academy-finance-foot">
+                <span>القيمة من السجلات الحالية</span>
+                ${allowed(['owner','admin','accountant']) ? '<a href="/academy/reports.html">التفاصيل ←</a>' : ''}
+              </div>
+            </article>
+
+            <article class="academy-card academy-quick-card">
+              <div class="academy-card-head">
+                <div>
+                  <span class="academy-section-label">وصول سريع</span>
+                  <h2>اختصارات</h2>
+                  <p>انتقل مباشرة لأكثر المهام استخدامًا.</p>
+                </div>
+              </div>
+              <div class="academy-quick-grid academy-dashboard-quick-grid">
+                ${quick.map(x => '<a class="academy-quick" href="'+href(x[0])+'"><i>'+esc(x[1])+'</i><span><b>'+esc(x[2])+'</b><span>'+esc(x[3])+'</span></span><em>←</em></a>').join('')}
+              </div>
+            </article>
+          </aside>
         </section>
       `;
     } catch (err) {
@@ -1073,11 +1125,15 @@ const AF = (() => {
     }
   }
 
-  function kpi(label,value,icon) {
+  function kpi(label,value,icon,description = '') {
     return `
       <article class="academy-kpi">
-        <div class="academy-kpi-head"><small>${esc(label)}</small><span class="academy-kpi-icon">${esc(icon)}</span></div>
+        <div class="academy-kpi-head">
+          <span class="academy-kpi-icon">${esc(icon)}</span>
+          <small>${esc(label)}</small>
+        </div>
         <strong>${esc(value ?? 0)}</strong>
+        <span class="academy-kpi-description">${esc(description)}</span>
       </article>
     `;
   }
