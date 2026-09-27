@@ -4,6 +4,7 @@ const tenant = require('../middleware/tenant');
 const c = require('../controllers/student.controller');
 const q = require('../controllers/student-quiz.controller');
 const liveAttendance = require('../controllers/live-attendance.controller');
+const certificate = require('../controllers/certificate.controller');
 
 router.use(auth, tenant, allowRoles('student'));
 
@@ -26,7 +27,8 @@ router.post('/quiz-attempts/:attemptId/submit', q.submitQuiz);
 router.get('/quiz-attempts/:attemptId/result', q.quizResult);
 
 router.get('/payments', c.payments);
-router.get('/certificates', c.certificates);
+router.get('/certificates', certificate.listStudent);
+router.get('/certificates/:id/file', certificate.studentFile);
 router.get('/notifications/urgent', c.urgentNotification);
 router.get('/notifications', c.notifications);
 
