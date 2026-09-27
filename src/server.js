@@ -4,6 +4,8 @@ const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
 const connectDB = require('./config/db');
 const bootstrapSuperAdmin = require('./services/superadmin-bootstrap.service');
 const liveReminderWorker = require('./services/live-reminder.service');
@@ -21,6 +23,11 @@ const app = express();
 
 app.set('trust proxy', 1);
 
+app.use((req, res, next) => {
+  res.locals.cspNonce = crypto.randomBytes(18).toString('base64');
+  next();
+});
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -28,9 +35,9 @@ app.use(helmet({
       baseUri: ["'self'"],
       objectSrc: ["'none'"],
       frameAncestors: ["'none'"],
-      scriptSrc: ["'self'", 'https://www.youtube.com'],
+      scriptSrc: ["'self'", (req, res) => `'nonce-${res.locals.cspNonce}'`, 'https://www.youtube.com'],
       scriptSrcAttr: ["'none'"],
-      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      styleSrc: ["'self'", (req, res) => `'nonce-${res.locals.cspNonce}'`, "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
       imgSrc: ["'self'", 'data:', 'https:'],
       connectSrc: ["'self'"],
@@ -47,24 +54,27 @@ app.use(cors({
   credentials: true
 }));
 
-const STRICT_PUBLIC_CSP = [
-  "default-src 'self'",
-  "base-uri 'self'",
-  "object-src 'none'",
-  "frame-ancestors 'none'",
-  "form-action 'self'",
-  "script-src 'self'",
-  "script-src-attr 'none'",
-  "style-src 'self' https://fonts.googleapis.com",
-  "font-src 'self' https://fonts.gstatic.com data:",
-  "img-src 'self' data:",
-  "connect-src 'self'",
-  "frame-src 'none'",
-  "worker-src 'self'",
-  "manifest-src 'self'",
-  "media-src 'self'",
-  'upgrade-insecure-requests'
-].join('; ');
+function buildStrictPublicCsp(nonce) {
+  return [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+    `script-src 'self' 'nonce-${nonce}'`,
+    "script-src-attr 'none'",
+    `style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com`,
+    "style-src-attr 'unsafe-inline'",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "img-src 'self' data:",
+    "connect-src 'self'",
+    "frame-src 'none'",
+    "worker-src 'self'",
+    "manifest-src 'self'",
+    "media-src 'self'",
+    'upgrade-insecure-requests'
+  ].join('; ');
+}
 
 const HARDENED_PUBLIC_PATHS = new Set([
   '/',
@@ -90,7 +100,7 @@ const HARDENED_PUBLIC_PATHS = new Set([
 
 app.use((req, res, next) => {
   if (HARDENED_PUBLIC_PATHS.has(req.path)) {
-    res.setHeader('Content-Security-Policy', STRICT_PUBLIC_CSP);
+    res.setHeader('Content-Security-Policy', buildStrictPublicCsp(res.locals.cspNonce));
     res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
   }
   next();
@@ -157,7 +167,46 @@ app.use(rateLimit({
   legacyHeaders: false
 }));
 
-app.use(express.static(path.join(__dirname, '..', 'public'), {
+const publicRoot = path.join(__dirname, '..', 'public');
+
+function resolveHtmlFile(requestPath) {
+  let relativePath = requestPath === '/' ? 'index.html' : requestPath.replace(/^\/+/, '');
+  if (relativePath.endsWith('/')) relativePath += 'index.html';
+  if (!relativePath.toLowerCase().endsWith('.html')) return null;
+
+  const fullPath = path.resolve(publicRoot, relativePath);
+  if (!fullPath.startsWith(publicRoot + path.sep)) return null;
+  return fullPath;
+}
+
+function injectCspNonce(html, nonce) {
+  return html
+    .replace(/<style\b(?![^>]*\bnonce=)/gi, `<style nonce="${nonce}"`)
+    .replace(/<script\b(?![^>]*\bnonce=)/gi, `<script nonce="${nonce}"`);
+}
+
+app.use(async (req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+
+  const htmlFile = resolveHtmlFile(req.path);
+  if (!htmlFile) return next();
+
+  try {
+    const source = await fs.promises.readFile(htmlFile, 'utf8');
+    const html = injectCspNonce(source, res.locals.cspNonce);
+
+    res.type('html');
+    res.setHeader('Cache-Control', 'no-store, max-age=0');
+
+    if (req.method === 'HEAD') return res.end();
+    return res.send(html);
+  } catch (err) {
+    if (err && err.code === 'ENOENT') return next();
+    return next(err);
+  }
+});
+
+app.use(express.static(publicRoot, {
   etag: true,
   maxAge: '5m',
   setHeaders(res, filePath) {
