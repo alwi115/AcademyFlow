@@ -1067,3 +1067,32 @@ html[data-theme='dark'] .sa-nav a.active .sa-nav-icon{color:#101b29}
 @media(max-width:640px){.sa-kpis{grid-template-columns:1fr 1fr}.sa-kpi{min-height:124px}}
 @media(max-width:430px){.sa-kpis{grid-template-columns:1fr}}
 
+
+
+/* =========================================================
+   Super Admin — clarity pass
+   ========================================================= */
+body.superadmin-app{font-size:15px;background:var(--bg)}
+.sa-layout{grid-template-columns:258px minmax(0,1fr)}
+.sa-sidebar{padding:18px 12px;background:var(--sidebar);backdrop-filter:none}
+.sa-nav-title{font-size:10px;margin:17px 9px 7px}
+.sa-nav{gap:4px}
+.sa-nav a{min-height:44px;padding:0 11px;border-radius:7px;font-size:12.5px}
+.sa-nav a.active{position:relative}
+.sa-nav a.active:before{content:"";position:absolute;inset-inline-start:0;width:3px;height:22px;border-radius:99px;background:var(--primary)}
+.sa-nav-icon{width:29px;height:29px;border-radius:6px;font-size:10px}
+.sa-main{padding:24px 30px 42px}
+.sa-topbar{min-height:72px;margin-bottom:24px;padding-bottom:17px;border-bottom:1px solid var(--line)}
+.sa-heading h1{font-size:clamp(29px,2.8vw,38px);font-weight:700}
+.sa-heading p{font-size:13px;line-height:1.7}
+.sa-eyebrow{font-size:10px}
+.sa-user{border-radius:8px;padding:6px 9px}
+.sa-avatar{width:34px;height:34px;border-radius:50%}
+.sa-kpis{gap:12px;margin-bottom:14px}
+.sa-kpi{min-height:132px;padding:18px;border-radius:10px;box-shadow:none}
+.sa-kpi small{font-size:11px;color:var(--text-soft)}
+.sa-kpi strong{font-size:30px;margin-top:13px}
+.sa-card{padding:20px!important;border-radius:12px!important;box-shadow:0 8px 24px rgba(19,46,64,.055)!important}
+.sa-list-row{border-radius:8px!important}
+@media(max-width:760px){.sa-main{padding:16px 14px 34px}.sa-kpis{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.sa-kpis{grid-template-columns:1fr}}
