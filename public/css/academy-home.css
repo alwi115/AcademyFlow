@@ -163,3 +163,6 @@ body.academy-public-page::before{display:none}.af-shell{width:min(1240px,calc(10
 @media(prefers-reduced-motion:reduce){
   [data-reveal]{opacity:1;transform:none;transition:none}.af-plan-skeleton{animation:none}.af-button{transition:none}.af-faq-list summary span{transition:none}
 }
+
+/* token aliases for extended sections */
+body.academy-public-page{--border:var(--line);--border2:color-mix(in srgb,var(--line) 72%,var(--ink));--surface2:var(--raised);--surface3:var(--soft);--sub:var(--copy);--bg2:var(--surface)}
