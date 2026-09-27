@@ -38,6 +38,7 @@ app.use(helmet({
       scriptSrc: ["'self'", (req, res) => `'nonce-${res.locals.cspNonce}'`, 'https://www.youtube.com'],
       scriptSrcAttr: ["'none'"],
       styleSrc: ["'self'", (req, res) => `'nonce-${res.locals.cspNonce}'`, "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      styleSrcAttr: ["'unsafe-inline'"],
       fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
       imgSrc: ["'self'", 'data:', 'https:'],
       connectSrc: ["'self'"],
