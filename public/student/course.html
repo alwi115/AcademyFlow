@@ -1982,6 +1982,38 @@ body.student-app{font-size:15px;background:var(--bg)}
 @media(max-width:760px){.student-main{padding:16px 14px 34px}.student-kpis{grid-template-columns:1fr 1fr}}
 @media(max-width:480px){.student-kpis{grid-template-columns:1fr}}
 
+
+/* Student clarity pass */
+body.student-app{font-size:15px;background:var(--bg)}
+.student-layout{grid-template-columns:250px minmax(0,1fr)}
+.student-sidebar{padding:18px 12px;background:var(--sidebar);backdrop-filter:none}
+.student-sidebar .brand{padding:4px 8px 18px}
+.student-nav-title{margin:17px 10px 7px;font-size:10px}
+.student-nav{gap:4px}
+.student-nav a{min-height:44px;padding:0 11px;border-radius:7px;font-size:12.5px}
+.student-nav a.active{position:relative;background:var(--primary-soft);color:var(--primary)}
+.student-nav a.active:before{content:"";position:absolute;inset-inline-start:0;width:3px;height:22px;border-radius:99px;background:var(--primary)}
+.student-nav-icon{width:29px;height:29px;border-radius:6px;font-size:10px}
+.student-main{padding:24px 30px 42px}
+.student-content{max-width:1540px}
+.student-topbar{min-height:72px;margin-bottom:24px;padding-bottom:17px;border-bottom:1px solid var(--line)}
+.student-heading h1{font-size:clamp(29px,2.8vw,38px);font-weight:700}
+.student-heading p{font-size:13px;line-height:1.7}
+.student-eyebrow{font-size:10px}
+.student-user{border-radius:8px;padding:6px 9px}
+.student-avatar{width:34px;height:34px;border-radius:50%}
+.student-kpis{gap:12px;margin-bottom:14px}
+.student-kpi{min-height:132px;padding:18px;border-radius:10px;box-shadow:none}
+.student-kpi small{font-size:11px}
+.student-kpi strong{font-size:32px;margin-top:13px}
+.student-card{padding:20px;border-radius:12px;box-shadow:0 8px 24px rgba(19,46,64,.055)}
+.student-card-head{margin-bottom:18px}
+.student-card-head h2{font-size:18px}
+.student-card-head p{font-size:12px;line-height:1.7}
+.student-list-row{padding:13px 14px;border-radius:8px}
+@media(max-width:760px){.student-main{padding:16px 14px 34px}.student-kpis{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.student-kpis{grid-template-columns:1fr}}
+
 </style>
   <script>
 /* ===== INLINED FROM /js/ui.js ===== */
