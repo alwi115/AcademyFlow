@@ -1,4 +1,5 @@
-const router = require('express').Router();
+const express = require('express');
+const router = express.Router();
 const { auth, allowRoles } = require('../middleware/auth');
 const tenant = require('../middleware/tenant');
 const requireOwnerLegalAcceptance = require('../middleware/legal-acceptance');
@@ -6,6 +7,9 @@ const c = require('../controllers/academy.controller');
 const q = require('../controllers/academy-quiz.controller');
 const ops = require('../controllers/academy-operations.controller');
 const email = require('../controllers/email.controller');
+const certificate = require('../controllers/certificate.controller');
+
+const certificatePdf = express.raw({ type: 'application/pdf', limit: '10mb' });
 
 const ACADEMY_ROLES = ['owner','admin','branch_manager','accountant','reception','content_manager','support'];
 const ADMIN_ROLES = ['owner','admin'];
@@ -63,8 +67,11 @@ router.patch('/quizzes/:id/attempts/:attemptId/questions/:questionId/grade', all
 router.get('/payments', allowRoles(...FINANCE_ROLES), c.listPayments);
 router.post('/payments', allowRoles(...FINANCE_ROLES), c.createPayment);
 
-router.get('/certificates', allowRoles(...CONTENT_ROLES), c.listCertificates);
-router.post('/certificates', allowRoles(...CONTENT_ROLES), c.createCertificate);
+router.get('/certificates', allowRoles(...CONTENT_ROLES), certificate.listAcademy);
+router.post('/certificates/upload', allowRoles(...CONTENT_ROLES), certificatePdf, certificate.upload);
+router.put('/certificates/:id/file', allowRoles(...CONTENT_ROLES), certificatePdf, certificate.replaceFile);
+router.get('/certificates/:id/file', allowRoles(...CONTENT_ROLES), certificate.academyFile);
+router.patch('/certificates/:id/status', allowRoles(...CONTENT_ROLES), certificate.setStatus);
 
 router.get('/notifications', allowRoles(...COMMUNICATION_ROLES), c.listNotifications);
 router.post('/notifications', allowRoles(...COMMUNICATION_ROLES), c.createNotification);
