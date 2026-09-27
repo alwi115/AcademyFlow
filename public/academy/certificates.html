@@ -4236,6 +4236,183 @@ html[data-theme='dark'] .academy-card{
   .academy-heading h1{font-size:27px}
 }
 
+
+/* =========================================================
+   Academy Certificates — PDF workflow
+   ========================================================= */
+.academy-certificate-layout{
+  display:grid;
+  grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);
+  gap:14px;
+  align-items:start;
+}
+.academy-certificate-help{
+  display:grid;
+  gap:14px;
+}
+.academy-certificate-help h3{
+  font-size:17px;
+}
+.academy-certificate-security{
+  background:linear-gradient(145deg,var(--surface-strong),color-mix(in srgb,var(--primary-soft) 30%,var(--surface-strong)));
+}
+.academy-certificate-security b{
+  display:block;
+  margin-bottom:5px;
+  font-size:13px;
+}
+.academy-certificate-security p{
+  margin:0;
+  color:var(--text-mute);
+  font-size:11px;
+  line-height:1.7;
+}
+.academy-certificate-form{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:0 12px;
+}
+.academy-certificate-file{
+  margin:4px 0 14px;
+  padding:18px;
+  border:1px dashed color-mix(in srgb,var(--primary) 34%,var(--line));
+  border-radius:10px;
+  background:var(--primary-soft);
+}
+.academy-certificate-file label{
+  display:block;
+  margin-bottom:8px;
+  color:var(--text);
+  font-size:12px;
+  font-weight:700;
+}
+.academy-certificate-file input{
+  display:block;
+  width:100%;
+  padding:10px;
+  border:1px solid var(--line);
+  border-radius:7px;
+  background:var(--surface-strong);
+  color:var(--text);
+}
+.academy-certificate-file span{
+  display:block;
+  margin-top:8px;
+  color:var(--text-mute);
+  font-size:10px;
+}
+.academy-certificate-summary{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+  margin-bottom:12px;
+}
+.academy-certificate-summary article{
+  padding:14px 16px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--surface-strong);
+}
+.academy-certificate-summary small{
+  display:block;
+  color:var(--text-mute);
+  font-size:10px;
+}
+.academy-certificate-summary strong{
+  display:block;
+  margin-top:7px;
+  font-family:var(--font-display);
+  font-size:25px;
+}
+.academy-certificate-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.academy-certificate-item{
+  padding:16px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--surface-muted);
+}
+.academy-certificate-item-top{
+  display:grid;
+  grid-template-columns:42px minmax(0,1fr) auto;
+  gap:10px;
+  align-items:center;
+}
+.academy-certificate-pdf{
+  width:42px;
+  height:48px;
+  display:grid;
+  place-items:center;
+  border-radius:7px;
+  background:var(--primary);
+  color:#fff;
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.06em;
+}
+.academy-certificate-title{
+  font-size:13px;
+  font-weight:700;
+}
+.academy-certificate-course{
+  margin-top:3px;
+  color:var(--text-mute);
+  font-size:10.5px;
+}
+.academy-certificate-meta{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:14px;
+  padding-top:13px;
+  border-top:1px solid var(--line);
+}
+.academy-certificate-meta span{
+  color:var(--text-soft);
+  font-size:10px;
+  overflow-wrap:anywhere;
+}
+.academy-certificate-meta b{
+  display:block;
+  margin-bottom:3px;
+  color:var(--text-mute);
+  font-size:8.5px;
+  font-weight:600;
+}
+.academy-certificate-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+  margin-top:14px;
+}
+.academy-certificate-actions .btn{
+  min-height:36px;
+  padding-inline:10px;
+  font-size:10px;
+}
+@media(max-width:1050px){
+  .academy-certificate-layout{grid-template-columns:1fr}
+  .academy-certificate-help{grid-template-columns:1fr 1fr}
+}
+@media(max-width:760px){
+  .academy-certificate-summary{grid-template-columns:1fr 1fr}
+  .academy-certificate-grid{grid-template-columns:1fr}
+  .academy-certificate-form{grid-template-columns:1fr}
+  .academy-certificate-form .full{grid-column:auto}
+}
+@media(max-width:520px){
+  .academy-certificate-help{grid-template-columns:1fr}
+  .academy-certificate-summary{grid-template-columns:1fr}
+  .academy-certificate-meta{grid-template-columns:1fr}
+  .academy-certificate-item-top{grid-template-columns:42px minmax(0,1fr)}
+  .academy-certificate-item-top .academy-status{grid-column:1/-1;justify-self:start}
+  .academy-certificate-actions .btn,
+  .academy-certificate-actions a{flex:1}
+}
+
 </style>
   <script>
 /* ===== INLINED FROM /js/ui.js ===== */
