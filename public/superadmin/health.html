@@ -3852,7 +3852,7 @@ const SA = (() => {
         <div class="sa-card-head">
           <div>
             <h2>مركز صحة النظام</h2>
-            <p>قاعدة البيانات، النسخ الاحتياطي، البريد، Zoom، التخزين وأخطاء السيرفر.</p>
+            <p>قاعدة البيانات، النسخ الاحتياطي داخل MongoDB، البريد، Zoom وأخطاء السيرفر.</p>
           </div>
           <div class="sa-actions">
             <button class="btn secondary" id="backupCreate" data-action="create-backup" type="button">إنشاء Backup الآن</button>
@@ -3903,7 +3903,7 @@ const SA = (() => {
             <article class="sa-health-item">
               <small>التخزين</small>
               <strong>${h.storage.writable ? 'قابل للكتابة' : 'غير متاح'}</strong>
-              <p>المتاح: ${h.storage.freeMb == null ? '—' : esc(h.storage.freeMb)+' MB'}</p>
+              <p>${h.storage.provider === 'mongodb-gridfs' ? 'MongoDB GridFS' : esc(h.storage.provider || 'MongoDB')}</p>
             </article>
             <article class="sa-health-item">
               <small>البريد</small>
@@ -3961,10 +3961,10 @@ const SA = (() => {
           <div class="sa-grid-2 sa-section">
             <article class="sa-card" style="box-shadow:none">
               <div class="sa-card-head">
-                <div><h2>النسخ الاحتياطي</h2><p>نسخ مضغوطة مع SHA-256 وتحقق قبل الاسترجاع.</p></div>
+                <div><h2>النسخ الاحتياطي</h2><p>نسخ مشفرة ومضغوطة محفوظة داخل MongoDB GridFS مع SHA-256 وتحقق قبل الاسترجاع.</p></div>
               </div>
               <div class="sa-config-list">
-                <div class="sa-config-row"><b>BACKUP_DIR دائم</b>${yesNo(h.configuration.backupDirectoryConfigured)}</div>
+                <div class="sa-config-row"><b>MongoDB GridFS</b>${yesNo(h.configuration.backupMongoConfigured)}</div>
                 <div class="sa-config-row"><b>تشفير AES-256-GCM</b>${yesNo(h.configuration.backupEncryptionConfigured)}</div>
                 <div class="sa-config-row"><b>التخزين قابل للكتابة</b>${yesNo(h.storage.writable)}</div>
                 <div class="sa-config-row"><b>النسخ التلقائي</b>${yesNo(h.backups.automaticEnabled)}</div>
