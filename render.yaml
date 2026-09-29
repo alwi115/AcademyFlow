@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: academyflow
+    runtime: docker
+    plan: free
+    region: frankfurt
+    branch: production
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeployTrigger: checksPass
+    maxShutdownDelaySeconds: 30
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: BACKUP_ENCRYPTION_KEY
+        generateValue: true
+      - key: AUTO_BACKUP_ENABLED
+        value: "true"
+      - key: BACKUP_INTERVAL_HOURS
+        value: "24"
+      - key: BACKUP_RETENTION_COUNT
+        value: "5"
+      - key: ENABLE_PRODUCTION_RESTORE
+        value: "false"
+      - key: ACADEMYFLOW_AI_ENABLED
+        value: "true"
+      - key: ACADEMYFLOW_AI_PROVIDER
+        value: gemini
+      - key: ACADEMYFLOW_AI_MODEL
+        value: gemini-3.5-flash-lite
+      - key: ACADEMYFLOW_AI_RATE_LIMIT
+        value: "30"
+      - key: ACADEMYFLOW_AI_TIMEOUT_MS
+        value: "30000"
+      - key: GEMINI_BASE_URL
+        value: https://generativelanguage.googleapis.com/v1beta
+      - key: MONGODB_URI
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
