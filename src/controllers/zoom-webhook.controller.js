@@ -234,6 +234,9 @@ async function handle(req, res) {
     return res.json({ plainToken, encryptedToken });
   }
 
+  // The event value is covered by the verified Zoom HMAC signature above,
+  // and handleAppDeauthorized additionally checks the OAuth client ID.
+  // codeql[js/user-controlled-bypass]
   if (event === 'app_deauthorized') {
     await handleAppDeauthorized(body);
     return res.json({ ok: true });
