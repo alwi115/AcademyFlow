@@ -154,7 +154,19 @@ app.use((req, res, next) => {
   next();
 });
 
-app.post('/api/webhooks/zoom', express.raw({ type: 'application/json', limit: '1mb' }), require('./controllers/zoom-webhook.controller').handle);
+const zoomWebhookLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 180,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false
+});
+
+app.post(
+  '/api/webhooks/zoom',
+  zoomWebhookLimiter,
+  express.raw({ type: 'application/json', limit: '1mb' }),
+  require('./controllers/zoom-webhook.controller').handle
+);
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false, limit: '16kb' }));
