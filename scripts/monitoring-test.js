@@ -1,7 +1,4 @@
 const assert = require('assert');
-const fs = require('fs/promises');
-const path = require('path');
-const os = require('os');
 const mongoose = require('mongoose');
 
 const SystemAlert = require('../src/models/SystemAlert');
@@ -35,8 +32,6 @@ async function main() {
   process.env.BACKUP_STALE_HOURS = '30';
   process.env.BACKUP_ENCRYPTION_KEY =
     'monitor-test-encryption-key-0123456789-abcdefghijklmnopqrstuvwxyz';
-  process.env.BACKUP_DIR = process.env.BACKUP_DIR ||
-    await fs.mkdtemp(path.join(os.tmpdir(), 'academyflow-monitor-test-'));
 
   delete process.env.SENDGRID_API_KEY;
   delete process.env.SENDGRID_FROM_EMAIL;
@@ -63,6 +58,10 @@ async function main() {
   assert(backupAlert);
   assert.strictEqual(backupAlert.active, false);
   assert(backupAlert.resolvedAt instanceof Date);
+
+  const storage = await backupService.storageStatus();
+  assert.strictEqual(storage.provider, 'mongodb-gridfs');
+  assert.strictEqual(storage.writable, true);
 
   await SystemError.create([
     {
@@ -97,7 +96,7 @@ async function main() {
   assert(emailAlert);
   assert.strictEqual(emailAlert.active, true);
 
-  console.log('Monitoring alert regression tests passed.');
+  console.log('Monitoring alert regression tests passed with MongoDB storage.');
 }
 
 main()
