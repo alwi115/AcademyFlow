@@ -62,6 +62,25 @@ window.StudentQuiz = (() => {
     return data;
   }
 
+  async function trustedAttemptId(value){
+    const requested=String(value||'').trim();
+    if(!/^[a-f0-9]{24}$/i.test(requested)){
+      throw new Error('معرف المحاولة غير صحيح');
+    }
+
+    const quizzes=await api('/api/student/quizzes');
+    for(const quiz of quizzes){
+      const candidates=[
+        ...(Array.isArray(quiz.attempts)?quiz.attempts:[]),
+        ...(quiz.activeAttempt?[quiz.activeAttempt]:[])
+      ];
+      const match=candidates.find(item=>String(item?.id||'')===requested);
+      if(match)return String(match.id);
+    }
+
+    throw new Error('المحاولة غير موجودة أو لا تخص حسابك');
+  }
+
   function toast(message,type='ok'){
     let box=document.getElementById('studentQuizToast');
     if(!box){
@@ -504,8 +523,14 @@ window.StudentQuiz = (() => {
     const result=params.get('result');
     const attempt=params.get('attempt');
 
-    if(result)return renderResult(result);
-    if(attempt)return renderAttempt(attempt);
+    try{
+      if(result)return renderResult(await trustedAttemptId(result));
+      if(attempt)return renderAttempt(await trustedAttemptId(attempt));
+    }catch(err){
+      document.getElementById('studentPageContent').innerHTML=
+        '<div class="student-card student-empty">'+esc(err.message)+'</div>';
+      return;
+    }
 
     document.getElementById('studentPageContent').innerHTML='<div class="student-card student-empty">لم يتم تحديد محاولة.</div>';
   }
