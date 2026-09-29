@@ -1066,12 +1066,14 @@ async function createCertificate(req, res) {
     return res.status(400).json({ message: 'Selected user is not a student' });
   }
 
-  await assertOwned(Course, courseId, academyId, 'Course');
+  const course = await assertOwned(Course, courseId, academyId, 'Course');
+  const safeStudentId = student._id;
+  const safeCourseId = course._id;
 
   const enrollment = await Enrollment.exists({
     academyId,
-    studentId,
-    courseId,
+    studentId: safeStudentId,
+    courseId: safeCourseId,
     status: { $in: ['active','paused','completed'] }
   });
 
@@ -1084,8 +1086,8 @@ async function createCertificate(req, res) {
   const generated = `CERT-${new Date().getFullYear()}-${String(Date.now()).slice(-7)}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
   const row = await Certificate.create({
     academyId,
-    studentId,
-    courseId,
+    studentId: safeStudentId,
+    courseId: safeCourseId,
     certificateNo: clean(certificateNo) || generated,
     issuedAt: issuedAt || new Date()
   });
