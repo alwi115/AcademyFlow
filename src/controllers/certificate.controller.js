@@ -53,21 +53,20 @@ async function validateOwnership({ academyId, studentId, courseId }) {
     throw err;
   }
 
-  const safeStudentId = objectId(studentId, 'معرف الطالب غير صحيح');
-  const safeCourseId = objectId(courseId, 'معرف الدورة غير صحيح');
+  const requestedStudentId = String(studentId).trim();
+  const requestedCourseId = String(courseId).trim();
 
-  const [student, course] = await Promise.all([
-    User.findOne({
-      _id: safeStudentId,
+  const [students, courses] = await Promise.all([
+    User.find({
       academyId,
       role: 'student',
       active: true
-    }).select('_id name email'),
-    Course.findOne({
-      _id: safeCourseId,
-      academyId
-    }).select('_id title code')
+    }).select('_id name email').lean(),
+    Course.find({ academyId }).select('_id title code').lean()
   ]);
+
+  const student = students.find(row => String(row._id) === requestedStudentId) || null;
+  const course = courses.find(row => String(row._id) === requestedCourseId) || null;
 
   if (!student) {
     const err = new Error('الطالب غير موجود في هذه الأكاديمية أو غير نشط');
@@ -83,8 +82,8 @@ async function validateOwnership({ academyId, studentId, courseId }) {
 
   const enrolled = await Enrollment.exists({
     academyId,
-    studentId: safeStudentId,
-    courseId: safeCourseId,
+    studentId: student._id,
+    courseId: course._id,
     status: { $in: ['active','paused','completed'] }
   });
 
