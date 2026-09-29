@@ -4,6 +4,7 @@ const Assessment = require('../models/Assessment');
 const Branch = require('../models/Branch');
 const User = require('../models/User');
 const AssignmentSubmission = require('../models/AssignmentSubmission');
+const { objectId } = require('../utils/security-input');
 
 function clean(value) {
   return typeof value === 'string' ? value.trim() : value;
@@ -12,8 +13,9 @@ function clean(value) {
 async function assertInstructor(id, academyId) {
   if (!id) return null;
 
+  const safeId = objectId(String(id), 'معرف المدرب غير صحيح');
   const user = await User.findOne({
-    _id: id,
+    _id: safeId,
     academyId,
     role: 'instructor',
     active: true
@@ -39,8 +41,9 @@ function validateRange(startAt, endAt, label) {
 }
 
 async function updateCourse(req, res) {
+  const courseId = objectId(req.params.id, 'معرف الدورة غير صحيح');
   const row = await Course.findOne({
-    _id: req.params.id,
+    _id: courseId,
     academyId: req.academyId
   });
 
@@ -131,8 +134,9 @@ async function updateCourse(req, res) {
 }
 
 async function updateGroup(req, res) {
+  const groupId = objectId(req.params.id, 'معرف المجموعة غير صحيح');
   const query = {
-    _id: req.params.id,
+    _id: groupId,
     academyId: req.academyId
   };
 
@@ -187,8 +191,9 @@ async function updateGroup(req, res) {
       });
     }
 
+    const requestedCourseId = objectId(String(req.body.courseId), 'معرف الدورة غير صحيح');
     const course = await Course.findOne({
-      _id: req.body.courseId,
+      _id: requestedCourseId,
       academyId: req.academyId
     });
 
@@ -208,8 +213,9 @@ async function updateGroup(req, res) {
       }
       row.branchId = req.user.branchId;
     } else if (req.body.branchId) {
+      const requestedBranchId = objectId(String(req.body.branchId), 'معرف الفرع غير صحيح');
       const branch = await Branch.findOne({
-        _id: req.body.branchId,
+        _id: requestedBranchId,
         academyId: req.academyId
       });
 
@@ -277,8 +283,9 @@ async function updateGroup(req, res) {
 }
 
 async function updateAssignment(req, res) {
+  const assignmentId = objectId(req.params.id, 'معرف الواجب غير صحيح');
   const row = await Assessment.findOne({
-    _id: req.params.id,
+    _id: assignmentId,
     academyId: req.academyId,
     type: 'assignment'
   });
@@ -299,8 +306,9 @@ async function updateAssignment(req, res) {
       });
     }
 
+    const requestedCourseId = objectId(String(req.body.courseId), 'معرف الدورة غير صحيح');
     const course = await Course.findOne({
-      _id: req.body.courseId,
+      _id: requestedCourseId,
       academyId: req.academyId
     });
 
