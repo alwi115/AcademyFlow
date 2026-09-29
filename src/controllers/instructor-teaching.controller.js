@@ -3,6 +3,7 @@ const Attendance = require('../models/Attendance');
 const Group = require('../models/Group');
 const Assessment = require('../models/Assessment');
 const AssignmentSubmission = require('../models/AssignmentSubmission');
+const { objectId } = require('../utils/security-input');
 const Notification = require('../models/Notification');
 const {
   manageableCourseIds,
@@ -53,8 +54,9 @@ async function lessons(req, res) {
   };
 
   if (req.query.courseId) {
-    await assertCourse(req, req.query.courseId);
-    query.courseId = req.query.courseId;
+    const safeCourseId = objectId(req.query.courseId, 'معرف الدورة غير صحيح');
+    await assertCourse(req, String(safeCourseId));
+    query.courseId = safeCourseId;
   }
 
   res.json(
@@ -174,10 +176,12 @@ async function createAttendance(req, res) {
   let resolvedGroupId = enrollment.groupId || null;
 
   if (groupId) {
+    const safeGroupId = objectId(String(groupId), 'معرف المجموعة غير صحيح');
+    const safeCourseId = objectId(String(courseId), 'معرف الدورة غير صحيح');
     const group = await Group.findOne({
-      _id: groupId,
+      _id: safeGroupId,
       academyId: req.academyId,
-      courseId,
+      courseId: safeCourseId,
       status: { $ne: 'cancelled' }
     }).select('_id');
 
