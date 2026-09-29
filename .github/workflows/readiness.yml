@@ -24,7 +24,6 @@ jobs:
           - 27020:27017
     env:
       MONGODB_URI: mongodb://127.0.0.1:27020/academyflow_readiness_test
-      BACKUP_DIR: /tmp/academyflow-readiness-backups
       NODE_ENV: test
       PERFORMANCE_P95_MS: 2500
     steps:
@@ -46,12 +45,19 @@ jobs:
           node --check src/services/audit.service.js
           node --check src/middleware/audit.js
           node --check scripts/monitoring-test.js
+          node --check scripts/mongodb-storage-test.js
+          node --check scripts/migrate-storage-to-mongodb.js
+          node --check src/services/certificate-storage.service.js
+          node --check src/controllers/certificate.controller.js
           node --check scripts/e2e-test.js
           node --check scripts/performance-smoke-test.js
           node --check scripts/legal-readiness-test.js
 
       - name: Monitoring alert regression
         run: npm run test:monitoring
+
+      - name: MongoDB GridFS certificate storage
+        run: npm run test:mongodb-storage
 
       - name: Legal readiness and privacy rights
         run: npm run test:legal
