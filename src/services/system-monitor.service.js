@@ -6,7 +6,6 @@ const SystemSetting = require('../models/SystemSetting');
 const PrivacyIncident = require('../models/PrivacyIncident');
 const backupService = require('./backup.service');
 const mailer = require('./mailer.service');
-const externalBackup = require('./external-backup.service');
 
 let timer = null;
 let running = false;
@@ -75,7 +74,7 @@ async function collectIssues() {
     }
   }
 
-  const [backups, storage, errorCount, brokenZoom, externalStorage, legalSettings, overduePrivacyIncidents] = await Promise.all([
+  const [backups, storage, errorCount, brokenZoom, legalSettings, overduePrivacyIncidents] = await Promise.all([
     backupService.listBackups().catch(() => []),
     backupService.storageStatus(),
     SystemError.countDocuments({
@@ -90,7 +89,6 @@ async function collectIssues() {
         { 'zoomIntegration.tokensEncrypted': { $in: ['', null] } }
       ]
     }),
-    externalBackup.healthCheck(),
     SystemSetting.findOne({ key: 'platform' }).lean(),
     PrivacyIncident.countDocuments({
       status: { $ne: 'closed' },
@@ -133,7 +131,7 @@ async function collectIssues() {
       key: 'storage.not_writable',
       severity: 'critical',
       title: 'تخزين النسخ غير قابل للكتابة',
-      message: storage.error || 'BACKUP_DIR غير قابل للكتابة.'
+      message: storage.error || 'تعذر الكتابة إلى MongoDB GridFS.'
     });
   }
 
@@ -173,30 +171,6 @@ async function collectIssues() {
       title: 'تكاملات Zoom تحتاج إصلاح',
       message: `${brokenZoom} أكاديمية لديها ربط Zoom غير مكتمل.`,
       details: { brokenZoom }
-    });
-  }
-
-  if (externalStorage.configured && !externalStorage.ok) {
-    issues.push({
-      key: 'backup.external_unavailable',
-      severity: 'critical',
-      title: 'التخزين الخارجي للنسخ غير متاح',
-      message: externalStorage.reason || 'فشل الاتصال بمخزن النسخ الخارجي.'
-    });
-  }
-
-  if (
-    externalStorage.configured &&
-    latest &&
-    latest.external?.configured &&
-    !latest.external?.uploaded
-  ) {
-    issues.push({
-      key: 'backup.external_upload_failed',
-      severity: 'critical',
-      title: 'فشل رفع آخر Backup خارج Railway',
-      message: latest.external?.error || 'آخر نسخة محلية لم تصل إلى التخزين الخارجي.',
-      details: { latestBackupId: latest.id }
     });
   }
 
