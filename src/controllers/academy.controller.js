@@ -339,18 +339,17 @@ async function listUsers(req, res) {
     return res.status(403).json({ message: 'Forbidden' });
   }
 
-  let roleFilter;
-  if (kind === 'staff') roleFilter = { $in: STAFF_ROLES };
-  else if (['student','instructor'].includes(kind)) roleFilter = kind;
-  else return res.status(400).json({ message: 'Invalid user kind' });
-
-  const query = { academyId, role: roleFilter };
-
+  const query = { academyId };
   if (isBranchManager(req)) {
     const scope = await branchScope(req);
-    query._id = {
-      $in: kind === 'student' ? scope.studentIds : scope.instructorIds
-    };
+    query._id = { $in: [...scope.studentIds, ...scope.instructorIds] };
+    query.role = { $in: ['student','instructor'] };
+  } else if (role === 'content_manager') {
+    query.role = 'instructor';
+  } else if (role === 'reception') {
+    query.role = { $in: ['student','instructor'] };
+  } else {
+    query.role = { $in: ['student','instructor',...STAFF_ROLES] };
   }
 
   const rows = await User.find(query)
@@ -358,7 +357,12 @@ async function listUsers(req, res) {
     .populate('branchId', 'name code')
     .sort({ createdAt: -1 });
 
-  res.json(rows);
+  const filtered = rows.filter(row => {
+    if (kind === 'staff') return STAFF_ROLES.includes(row.role);
+    return row.role === kind;
+  });
+
+  res.json(filtered);
 }
 
 async function createUser(req, res) {
@@ -629,8 +633,17 @@ async function createCourse(req, res) {
 
 async function listLessons(req, res) {
   const query = { academyId: req.academyId };
+
   if (req.query.courseId) {
-    query.courseId = objectId(req.query.courseId, 'معرف الدورة غير صحيح');
+    const requested = String(req.query.courseId).trim();
+    const courses = await Course.find({ academyId: req.academyId }).select('_id').lean();
+    const trustedCourse = courses.find(row => String(row._id) === requested);
+
+    if (!trustedCourse) {
+      return res.status(400).json({ message: 'Course does not belong to this academy' });
+    }
+
+    query.courseId = trustedCourse._id;
   }
 
   const rows = await Lesson.find(query)
@@ -829,8 +842,17 @@ async function createEnrollment(req, res) {
 
 async function listAttendance(req, res) {
   const query = { academyId: req.academyId };
+
   if (req.query.courseId) {
-    query.courseId = objectId(req.query.courseId, 'معرف الدورة غير صحيح');
+    const requested = String(req.query.courseId).trim();
+    const courses = await Course.find({ academyId: req.academyId }).select('_id').lean();
+    const trustedCourse = courses.find(row => String(row._id) === requested);
+
+    if (!trustedCourse) {
+      return res.status(400).json({ message: 'Course does not belong to this academy' });
+    }
+
+    query.courseId = trustedCourse._id;
   }
 
   if (isBranchManager(req)) {
