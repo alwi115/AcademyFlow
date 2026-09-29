@@ -198,6 +198,23 @@ function injectCspNonce(html, nonce) {
     .replace(/<script\b(?![^>]*\bnonce=)/gi, `<script nonce="${nonce}"`);
 }
 
+function injectAcademyAiAssets(html, requestPath, nonce) {
+  const portal = requestPath.startsWith('/student/')
+    ? 'student'
+    : requestPath.startsWith('/instructor/')
+      ? 'instructor'
+      : '';
+
+  if (!portal || html.includes('/js/academy-ai.js')) return html;
+
+  const styleTag = '<link rel="stylesheet" href="/css/academy-ai.css">';
+  const scriptTag = `<script nonce="${nonce}" src="/js/academy-ai.js" data-portal="${portal}" defer></script>`;
+
+  return html
+    .replace('</head>', `  ${styleTag}\n</head>`)
+    .replace('</body>', `  ${scriptTag}\n</body>`);
+}
+
 app.use(async (req, res, next) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next();
 
@@ -206,7 +223,8 @@ app.use(async (req, res, next) => {
 
   try {
     const source = await fs.promises.readFile(htmlFile, 'utf8');
-    const html = injectCspNonce(source, res.locals.cspNonce);
+    const withNonce = injectCspNonce(source, res.locals.cspNonce);
+    const html = injectAcademyAiAssets(withNonce, req.path, res.locals.cspNonce);
 
     res.type('html');
     res.setHeader('Cache-Control', 'no-store, max-age=0');
@@ -245,6 +263,7 @@ app.use('/api/superadmin', require('./routes/superadmin.routes'));
 app.use('/api/academy', require('./routes/academy.routes'));
 app.use('/api/student', require('./routes/student.routes'));
 app.use('/api/instructor', require('./routes/instructor.routes'));
+app.use('/api/ai', require('./routes/ai.routes'));
 app.use('/api/live-sessions', require('./routes/live.routes'));
 app.use('/api/zoom', require('./routes/zoom.routes'));
 
