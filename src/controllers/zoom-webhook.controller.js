@@ -48,6 +48,20 @@ function parseBody(req) {
   return { raw, body: raw ? JSON.parse(raw) : {} };
 }
 
+function supportedEvent(value) {
+  switch (value) {
+    case 'endpoint.url_validation':
+    case 'app_deauthorized':
+    case 'meeting.started':
+    case 'meeting.ended':
+    case 'meeting.participant_joined':
+    case 'meeting.participant_left':
+      return value;
+    default:
+      return '';
+  }
+}
+
 async function studentFromParticipant(session, participant) {
   const email = String(participant?.email || '').trim().toLowerCase();
   if (!email) return null;
@@ -206,8 +220,11 @@ async function handle(req, res) {
   }
 
   const body = parsed.body;
+  const event = supportedEvent(body.event);
 
-  if (body.event === 'endpoint.url_validation') {
+  if (!event) return res.json({ ok: true });
+
+  if (event === 'endpoint.url_validation') {
     const plainToken = String(body.payload?.plainToken || '');
     const encryptedToken = crypto
       .createHmac('sha256', secret())
@@ -217,7 +234,7 @@ async function handle(req, res) {
     return res.json({ plainToken, encryptedToken });
   }
 
-  if (body.event === 'app_deauthorized') {
+  if (event === 'app_deauthorized') {
     await handleAppDeauthorized(body);
     return res.json({ ok: true });
   }
@@ -231,21 +248,21 @@ async function handle(req, res) {
   const session = await LiveSession.findOne({ zoomMeetingId: meetingId });
   if (!session) return res.json({ ok: true });
 
-  if (body.event === 'meeting.started') {
+  if (event === 'meeting.started') {
     session.status = 'live';
     await session.save();
   }
 
-  if (body.event === 'meeting.ended') {
+  if (event === 'meeting.ended') {
     session.status = 'ended';
     await session.save();
   }
 
-  if (body.event === 'meeting.participant_joined' && participant) {
+  if (event === 'meeting.participant_joined' && participant) {
     await handleParticipantJoined(session, participant);
   }
 
-  if (body.event === 'meeting.participant_left' && participant) {
+  if (event === 'meeting.participant_left' && participant) {
     await handleParticipantLeft(session, participant);
   }
 
