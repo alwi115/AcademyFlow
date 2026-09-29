@@ -61,6 +61,8 @@ jobs:
         run: npm run test:backup-restore
 
       - name: Monitoring regression
+        env:
+          BACKUP_DIR: /tmp/academyflow-security-monitor-backups
         run: npm run test:monitoring
 
       - name: Legal readiness regression
