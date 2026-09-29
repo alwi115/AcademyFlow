@@ -75,6 +75,9 @@ async function savePdf({ buffer }) {
   const finalPath = path.join(ROOT, filename);
   const tempPath = finalPath + '.tmp-' + crypto.randomBytes(8).toString('hex');
 
+  // This is an intentional upload sink: assertPdf enforces a 10 MB limit and
+  // PDF signature, while tempPath is generated exclusively from server randomness.
+  // codeql[js/http-to-file-access]
   await fsp.writeFile(tempPath, pdf, { mode: 0o600, flag: 'wx' });
   await fsp.rename(tempPath, finalPath);
 
