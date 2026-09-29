@@ -48,15 +48,21 @@ function youtubeIdFromUrl(input) {
 
 async function lessons(req, res) {
   const courseIds = await manageableCourseIds(req);
+  const trustedCourseIds = courseIds.map(id => objectId(String(id), 'معرف الدورة غير صحيح'));
   const query = {
     academyId: req.academyId,
-    courseId: { $in: courseIds }
+    courseId: { $in: trustedCourseIds }
   };
 
   if (req.query.courseId) {
-    const safeCourseId = objectId(req.query.courseId, 'معرف الدورة غير صحيح');
-    await assertCourse(req, String(safeCourseId));
-    query.courseId = safeCourseId;
+    const requested = String(req.query.courseId).trim();
+    const trustedMatch = courseIds.find(id => String(id) === requested);
+
+    if (!trustedMatch) {
+      return res.status(403).json({ message: 'لا تملك صلاحية الوصول إلى هذه الدورة' });
+    }
+
+    query.courseId = objectId(String(trustedMatch), 'معرف الدورة غير صحيح');
   }
 
   res.json(
