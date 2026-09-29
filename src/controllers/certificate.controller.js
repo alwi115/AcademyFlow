@@ -1,4 +1,3 @@
-const path = require('path');
 const crypto = require('crypto');
 const Certificate = require('../models/Certificate');
 const User = require('../models/User');
@@ -260,7 +259,7 @@ async function setStatus(req, res) {
   res.json(publicRow(row));
 }
 
-function sendPdf(res, row, filePath, download) {
+function sendPdf(res, row, buffer, download) {
   const fallback = row.certificateNo ? row.certificateNo + '.pdf' : 'certificate.pdf';
   const filename = safePdfName(row.fileName, fallback);
   const disposition = download ? 'attachment' : 'inline';
@@ -270,10 +269,11 @@ function sendPdf(res, row, filePath, download) {
     'Content-Type': 'application/pdf',
     'Content-Disposition': disposition + '; filename="certificate.pdf"; filename*=UTF-8\'\'' + encoded,
     'Cache-Control': 'private, no-store, max-age=0',
-    'X-Content-Type-Options': 'nosniff'
+    'X-Content-Type-Options': 'nosniff',
+    'Content-Length': String(buffer.length)
   });
 
-  return res.sendFile(filePath);
+  return res.end(buffer);
 }
 
 async function academyFile(req, res) {
@@ -285,11 +285,17 @@ async function academyFile(req, res) {
   if (!row) return res.status(404).json({ message: 'الشهادة غير موجودة' });
   if (!row.fileStorageKey) return res.status(404).json({ message: 'لا يوجد ملف PDF لهذه الشهادة' });
 
+  let pdf;
   try {
-    await storage.stat(row.fileStorageKey);
+    pdf = await storage.read(row.fileStorageKey);
   } catch (err) {
     if (err.code === 'ENOENT') {
-      return res.status(404).json({ message: 'ملف الشهادة غير موجود في التخزين' });
+      return res.status(404).json({ message: 'ملف الشهادة غير موجود في MongoDB' });
+    }
+    if (err.code === 'LEGACY_STORAGE_KEY') {
+      return res.status(409).json({
+        message: 'ملف الشهادة قديم ويحتاج ترحيل إلى MongoDB قبل تنزيله'
+      });
     }
     throw err;
   }
@@ -297,7 +303,7 @@ async function academyFile(req, res) {
   return sendPdf(
     res,
     row,
-    storage.pathFor(row.fileStorageKey),
+    pdf,
     req.query.download === '1'
   );
 }
@@ -330,11 +336,17 @@ async function studentFile(req, res) {
   if (!row) return res.status(404).json({ message: 'الشهادة غير موجودة أو غير متاحة' });
   if (!row.fileStorageKey) return res.status(404).json({ message: 'ملف الشهادة غير متوفر' });
 
+  let pdf;
   try {
-    await storage.stat(row.fileStorageKey);
+    pdf = await storage.read(row.fileStorageKey);
   } catch (err) {
     if (err.code === 'ENOENT') {
-      return res.status(404).json({ message: 'ملف الشهادة غير موجود في التخزين' });
+      return res.status(404).json({ message: 'ملف الشهادة غير موجود في MongoDB' });
+    }
+    if (err.code === 'LEGACY_STORAGE_KEY') {
+      return res.status(409).json({
+        message: 'ملف الشهادة قديم ويحتاج ترحيل إلى MongoDB قبل تنزيله'
+      });
     }
     throw err;
   }
@@ -346,7 +358,7 @@ async function studentFile(req, res) {
   return sendPdf(
     res,
     row,
-    storage.pathFor(row.fileStorageKey),
+    pdf,
     req.query.download === '1'
   );
 }
