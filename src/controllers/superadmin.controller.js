@@ -541,7 +541,7 @@ async function health(req, res) {
       latestAgeHours: backupAgeHours,
       automaticEnabled: backupAutoEnabled,
       intervalHours: Number(process.env.BACKUP_INTERVAL_HOURS || 24),
-      retentionCount: Number(process.env.BACKUP_RETENTION_COUNT || 14),
+      retentionCount: Number(process.env.BACKUP_RETENTION_COUNT || 5),
       busy: backupService.isBusy(),
       operation: backupService.operation(),
       productionRestoreEnabled:
@@ -571,6 +571,11 @@ async function health(req, res) {
       zoomTokenEncryptionConfigured: Boolean(process.env.ZOOM_TOKEN_ENCRYPTION_KEY),
       sendgridConfigured: email.configured,
       backupDirectoryConfigured: storage.explicitlyConfigured,
+      backupMongoConfigured:
+        storage.provider === 'mongodb-gridfs' &&
+        storage.explicitlyConfigured &&
+        storage.writable,
+      backupStorageProvider: storage.provider || 'mongodb-gridfs',
       backupEncryptionConfigured: storage.encryptionConfigured
     },
     counts: { academies, users, plans, auditLogs: logs },
