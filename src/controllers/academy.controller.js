@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const mongoose = require('mongoose');
 const Academy = require('../models/Academy');
 const User = require('../models/User');
@@ -15,6 +16,7 @@ const Notification = require('../models/Notification');
 const SupportTicket = require('../models/SupportTicket');
 const LiveSession = require('../models/LiveSession');
 const auditService = require('../services/audit.service');
+const { objectId, enumValue } = require('../utils/security-input');
 
 const STAFF_ROLES = ['admin','branch_manager','accountant','reception','content_manager','support'];
 
@@ -52,7 +54,8 @@ function youtubeIdFromUrl(input) {
 
 async function assertOwned(model, id, academyId, label) {
   if (!id) return null;
-  const row = await model.findOne({ _id: id, academyId });
+  const safeId = objectId(String(id), `${label || 'Resource'} identifier is invalid`);
+  const row = await model.findOne({ _id: safeId, academyId });
   if (!row) {
     const err = new Error(`${label || 'Resource'} does not belong to this academy`);
     err.status = 400;
@@ -336,18 +339,17 @@ async function listUsers(req, res) {
     return res.status(403).json({ message: 'Forbidden' });
   }
 
-  let roleFilter;
-  if (kind === 'staff') roleFilter = { $in: STAFF_ROLES };
-  else if (['student','instructor'].includes(kind)) roleFilter = kind;
-  else return res.status(400).json({ message: 'Invalid user kind' });
-
-  const query = { academyId, role: roleFilter };
-
+  const query = { academyId };
   if (isBranchManager(req)) {
     const scope = await branchScope(req);
-    query._id = {
-      $in: kind === 'student' ? scope.studentIds : scope.instructorIds
-    };
+    query._id = { $in: [...scope.studentIds, ...scope.instructorIds] };
+    query.role = { $in: ['student','instructor'] };
+  } else if (role === 'content_manager') {
+    query.role = 'instructor';
+  } else if (role === 'reception') {
+    query.role = { $in: ['student','instructor'] };
+  } else {
+    query.role = { $in: ['student','instructor',...STAFF_ROLES] };
   }
 
   const rows = await User.find(query)
@@ -355,7 +357,12 @@ async function listUsers(req, res) {
     .populate('branchId', 'name code')
     .sort({ createdAt: -1 });
 
-  res.json(rows);
+  const filtered = rows.filter(row => {
+    if (kind === 'staff') return STAFF_ROLES.includes(row.role);
+    return row.role === kind;
+  });
+
+  res.json(filtered);
 }
 
 async function createUser(req, res) {
@@ -379,8 +386,9 @@ async function createUser(req, res) {
       return res.status(400).json({ message: 'Branch is required for a branch manager' });
     }
 
+    const safeBranchId = objectId(String(branchId), 'معرف الفرع غير صحيح');
     const branch = await Branch.findOne({
-      _id: branchId,
+      _id: safeBranchId,
       academyId,
       active: true
     }).select('_id');
@@ -425,8 +433,9 @@ async function createUser(req, res) {
 
 async function updateUser(req, res) {
   const academyId = req.academyId;
+  const userId = objectId(req.params.id, 'معرف المستخدم غير صحيح');
   const row = await User.findOne({
-    _id: req.params.id,
+    _id: userId,
     academyId
   });
 
@@ -466,8 +475,9 @@ async function updateUser(req, res) {
       return res.status(400).json({ message: 'Branch is required for a branch manager' });
     }
 
+    const safeRequestedBranchId = objectId(String(requestedBranchId), 'معرف الفرع غير صحيح');
     const branch = await Branch.findOne({
-      _id: requestedBranchId,
+      _id: safeRequestedBranchId,
       academyId,
       active: true
     }).select('_id');
@@ -623,7 +633,18 @@ async function createCourse(req, res) {
 
 async function listLessons(req, res) {
   const query = { academyId: req.academyId };
-  if (req.query.courseId) query.courseId = req.query.courseId;
+
+  if (req.query.courseId) {
+    const requested = String(req.query.courseId).trim();
+    const courses = await Course.find({ academyId: req.academyId }).select('_id').lean();
+    const trustedCourse = courses.find(row => String(row._id) === requested);
+
+    if (!trustedCourse) {
+      return res.status(400).json({ message: 'Course does not belong to this academy' });
+    }
+
+    query.courseId = trustedCourse._id;
+  }
 
   const rows = await Lesson.find(query)
     .populate('courseId', 'title code')
@@ -761,7 +782,9 @@ async function createEnrollment(req, res) {
 
   const student = await assertOwned(User, studentId, academyId, 'Student');
   if (student.role !== 'student') return res.status(400).json({ message: 'Selected user is not a student' });
-  await assertOwned(Course, courseId, academyId, 'Course');
+  const course = await assertOwned(Course, courseId, academyId, 'Course');
+  const safeStudentId = student._id;
+  const safeCourseId = course._id;
 
   if (isBranchManager(req)) {
     const scope = await branchScope(req);
@@ -780,10 +803,11 @@ async function createEnrollment(req, res) {
   }
 
   if (groupId) {
+    const safeGroupId = objectId(String(groupId), 'معرف المجموعة غير صحيح');
     const groupQuery = {
-      _id: groupId,
+      _id: safeGroupId,
       academyId,
-      courseId,
+      courseId: safeCourseId,
       status: { $ne: 'cancelled' }
     };
     if (isBranchManager(req)) groupQuery.branchId = req.user.branchId;
@@ -797,16 +821,20 @@ async function createEnrollment(req, res) {
     }
   }
 
-  if (await Enrollment.exists({ academyId, studentId, courseId })) {
+  if (await Enrollment.exists({ academyId, studentId: safeStudentId, courseId: safeCourseId })) {
     return res.status(409).json({ message: 'Student is already enrolled in this course' });
   }
 
+  const safeEnrollmentStatus = status
+    ? enumValue(status, ['active','paused','completed','cancelled'], 'حالة التسجيل غير صحيحة')
+    : 'active';
+
   const row = await Enrollment.create({
     academyId,
-    studentId,
-    courseId,
-    groupId: groupId || null,
-    status: status || 'active'
+    studentId: safeStudentId,
+    courseId: safeCourseId,
+    groupId: groupId ? objectId(String(groupId), 'معرف المجموعة غير صحيح') : null,
+    status: safeEnrollmentStatus
   });
 
   res.status(201).json(row);
@@ -814,7 +842,18 @@ async function createEnrollment(req, res) {
 
 async function listAttendance(req, res) {
   const query = { academyId: req.academyId };
-  if (req.query.courseId) query.courseId = req.query.courseId;
+
+  if (req.query.courseId) {
+    const requested = String(req.query.courseId).trim();
+    const courses = await Course.find({ academyId: req.academyId }).select('_id').lean();
+    const trustedCourse = courses.find(row => String(row._id) === requested);
+
+    if (!trustedCourse) {
+      return res.status(400).json({ message: 'Course does not belong to this academy' });
+    }
+
+    query.courseId = trustedCourse._id;
+  }
 
   if (isBranchManager(req)) {
     const ids = await branchGroupIds(req, { includeCancelled: true });
@@ -844,12 +883,14 @@ async function createAttendance(req, res) {
     return res.status(400).json({ message: 'Selected user is not a student' });
   }
 
-  await assertOwned(Course, courseId, academyId, 'Course');
+  const course = await assertOwned(Course, courseId, academyId, 'Course');
+  const safeStudentId = student._id;
+  const safeCourseId = course._id;
 
   const enrollment = await Enrollment.findOne({
     academyId,
-    studentId,
-    courseId,
+    studentId: safeStudentId,
+    courseId: safeCourseId,
     status: { $in: ['active','paused','completed'] }
   }).select('groupId');
 
@@ -878,10 +919,11 @@ async function createAttendance(req, res) {
   }
 
   if (groupId) {
+    const safeGroupId = objectId(String(groupId), 'معرف المجموعة غير صحيح');
     const groupQuery = {
-      _id: groupId,
+      _id: safeGroupId,
       academyId,
-      courseId,
+      courseId: safeCourseId,
       status: { $ne: 'cancelled' }
     };
     if (isBranchManager(req)) groupQuery.branchId = req.user.branchId;
@@ -906,13 +948,17 @@ async function createAttendance(req, res) {
     resolvedGroupId = group._id;
   }
 
+  const safeAttendanceStatus = status
+    ? enumValue(status, ['present','absent','late','excused'], 'حالة الحضور غير صحيحة')
+    : 'present';
+
   const row = await Attendance.create({
     academyId,
-    studentId,
-    courseId,
+    studentId: safeStudentId,
+    courseId: safeCourseId,
     groupId: resolvedGroupId,
     date,
-    status: status || 'present',
+    status: safeAttendanceStatus,
     note: clean(note)
   });
 
@@ -920,8 +966,10 @@ async function createAttendance(req, res) {
 }
 
 async function listAssessments(req, res) {
-  const type = req.query.type;
-  if (!['quiz','assignment'].includes(type)) {
+  let type;
+  try {
+    type = enumValue(req.query.type, ['quiz','assignment'], 'Assessment type is required');
+  } catch {
     return res.status(400).json({ message: 'Assessment type is required' });
   }
 
@@ -1040,12 +1088,14 @@ async function createCertificate(req, res) {
     return res.status(400).json({ message: 'Selected user is not a student' });
   }
 
-  await assertOwned(Course, courseId, academyId, 'Course');
+  const course = await assertOwned(Course, courseId, academyId, 'Course');
+  const safeStudentId = student._id;
+  const safeCourseId = course._id;
 
   const enrollment = await Enrollment.exists({
     academyId,
-    studentId,
-    courseId,
+    studentId: safeStudentId,
+    courseId: safeCourseId,
     status: { $in: ['active','paused','completed'] }
   });
 
@@ -1055,11 +1105,11 @@ async function createCertificate(req, res) {
     });
   }
 
-  const generated = `CERT-${new Date().getFullYear()}-${String(Date.now()).slice(-7)}-${Math.floor(Math.random()*90+10)}`;
+  const generated = `CERT-${new Date().getFullYear()}-${String(Date.now()).slice(-7)}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
   const row = await Certificate.create({
     academyId,
-    studentId,
-    courseId,
+    studentId: safeStudentId,
+    courseId: safeCourseId,
     certificateNo: clean(certificateNo) || generated,
     issuedAt: issuedAt || new Date()
   });

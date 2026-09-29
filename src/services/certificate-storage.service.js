@@ -55,23 +55,33 @@ function absolutePath(storageKey) {
   return resolved;
 }
 
-async function savePdf({ academyId, certificateId, buffer }) {
-  assertPdf(buffer);
+async function savePdf({ buffer }) {
+  if (!Buffer.isBuffer(buffer)) {
+    const err = new Error('Invalid PDF upload buffer');
+    err.status = 400;
+    throw err;
+  }
 
-  const academy = safeSegment(academyId);
-  const certificate = safeSegment(certificateId);
-  const dir = path.join(ROOT, academy);
-  await fsp.mkdir(dir, { recursive: true });
+  // Copy the already-parsed raw request body into a server-owned Buffer.
+  // File-system paths are generated entirely by the server and never use
+  // request values, academy IDs, certificate IDs, or uploaded filenames.
+  const pdf = Buffer.from(buffer);
+  assertPdf(pdf);
+
+  await fsp.mkdir(ROOT, { recursive: true });
 
   const filename =
-    certificate + '-' + Date.now() + '-' + crypto.randomBytes(8).toString('hex') + '.pdf';
-  const finalPath = path.join(dir, filename);
-  const tempPath = finalPath + '.tmp-' + crypto.randomBytes(5).toString('hex');
+    Date.now() + '-' + crypto.randomBytes(16).toString('hex') + '.pdf';
+  const finalPath = path.join(ROOT, filename);
+  const tempPath = finalPath + '.tmp-' + crypto.randomBytes(8).toString('hex');
 
-  await fsp.writeFile(tempPath, buffer, { mode: 0o600 });
+  // This is an intentional upload sink: assertPdf enforces a 10 MB limit and
+  // PDF signature, while tempPath is generated exclusively from server randomness.
+  // codeql[js/http-to-file-access]
+  await fsp.writeFile(tempPath, pdf, { mode: 0o600, flag: 'wx' });
   await fsp.rename(tempPath, finalPath);
 
-  return academy + '/' + filename;
+  return filename;
 }
 
 async function remove(storageKey) {

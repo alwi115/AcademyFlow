@@ -8,11 +8,6 @@ const auditService = require('../services/audit.service');
 const STATE_COOKIE = 'af_zoom_oauth_state';
 const STATE_TTL_MS = 10 * 60 * 1000;
 
-function secureCookie() {
-  return process.env.NODE_ENV === 'production' ||
-    Boolean(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_ENVIRONMENT_ID);
-}
-
 function cookieValue(req, name) {
   const raw = req.headers.cookie || '';
   for (const part of raw.split(';')) {
@@ -32,20 +27,10 @@ function stateHash(value) {
   return crypto.createHash('sha256').update(String(value || '')).digest('hex');
 }
 
-function stateCookieOptions() {
-  return {
-    httpOnly: true,
-    secure: secureCookie(),
-    sameSite: 'lax',
-    path: '/',
-    maxAge: STATE_TTL_MS
-  };
-}
-
 function clearStateCookie(res) {
   res.clearCookie(STATE_COOKIE, {
     httpOnly: true,
-    secure: secureCookie(),
+    secure: true,
     sameSite: 'lax',
     path: '/'
   });
@@ -126,7 +111,13 @@ async function connect(req, res) {
     }
   );
 
-  res.cookie(STATE_COOKIE, nonce, stateCookieOptions());
+  res.cookie(STATE_COOKIE, nonce, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: STATE_TTL_MS
+  });
   res.set({ 'Cache-Control': 'no-store', Pragma: 'no-cache' });
 
   res.json({

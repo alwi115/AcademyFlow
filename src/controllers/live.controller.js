@@ -7,6 +7,7 @@ const Group = require('../models/Group');
 const LiveSeries = require('../models/LiveSeries');
 const zoom = require('../services/zoom.service');
 const { createRecurringSeries, cancelFutureSeries } = require('../services/live-series.service');
+const { objectId } = require('../utils/security-input');
 const {
   safeTimeZone,
   parseAcademyDateTime,
@@ -19,8 +20,9 @@ function clean(value) {
 }
 
 async function ownedInstructor(academyId, instructorId) {
+  const safeInstructorId = objectId(String(instructorId), 'معرف المدرب غير صحيح');
   return User.findOne({
-    _id: instructorId,
+    _id: safeInstructorId,
     academyId,
     role: 'instructor',
     active: true
@@ -29,7 +31,8 @@ async function ownedInstructor(academyId, instructorId) {
 
 async function ownedCourse(academyId, courseId) {
   if (!courseId) return null;
-  return Course.findOne({ _id: courseId, academyId });
+  const safeCourseId = objectId(String(courseId), 'معرف الدورة غير صحيح');
+  return Course.findOne({ _id: safeCourseId, academyId });
 }
 
 async function createLiveSession(req, res) {
@@ -78,10 +81,11 @@ async function createLiveSession(req, res) {
 
   let group = null;
   if (groupId) {
+    const safeGroupId = objectId(String(groupId), 'معرف المجموعة غير صحيح');
     group = await Group.findOne({
-      _id: groupId,
+      _id: safeGroupId,
       academyId,
-      courseId: courseId || null,
+      courseId: course?._id || null,
       status: { $ne: 'cancelled' }
     });
   }
@@ -295,8 +299,9 @@ async function updateLiveSession(req, res) {
 
   if (req.body.groupId !== undefined) {
     if (req.body.groupId) {
+      const safeGroupId = objectId(String(req.body.groupId), 'معرف المجموعة غير صحيح');
       const group = await Group.findOne({
-        _id: req.body.groupId,
+        _id: safeGroupId,
         academyId: req.academyId,
         courseId: nextCourseId,
         status: { $ne: 'cancelled' }
@@ -486,8 +491,9 @@ async function createLiveSeries(req, res) {
 
   let group = null;
   if (groupId) {
+    const safeGroupId = objectId(String(groupId), 'معرف المجموعة غير صحيح');
     group = await Group.findOne({
-      _id: groupId,
+      _id: safeGroupId,
       academyId: req.academyId,
       courseId: course._id,
       status: { $ne: 'cancelled' }

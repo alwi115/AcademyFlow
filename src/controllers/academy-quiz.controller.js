@@ -2,6 +2,7 @@ const Assessment = require('../models/Assessment');
 const Course = require('../models/Course');
 const QuizQuestion = require('../models/QuizQuestion');
 const QuizAttempt = require('../models/QuizAttempt');
+const { objectId } = require('../utils/security-input');
 const {
   recalcQuizMarks,
   normalizeQuestionPayload,
@@ -28,8 +29,9 @@ async function assertCourseAccess(req, courseId) {
     return assertInstructorCourse(req, courseId);
   }
 
+  const safeCourseId = objectId(String(courseId), 'معرف الدورة غير صحيح');
   const course = await Course.findOne({
-    _id: courseId,
+    _id: safeCourseId,
     academyId: req.academyId
   });
 
@@ -51,8 +53,9 @@ async function assertCourseManagementAccess(req, courseId) {
 }
 
 async function getQuizForAdmin(req, id) {
+  const quizId = objectId(String(id), 'معرف الاختبار غير صحيح');
   const quiz = await Assessment.findOne({
-    _id: id,
+    _id: quizId,
     academyId: req.academyId,
     type: 'quiz'
   }).populate('courseId', 'title code instructorId');

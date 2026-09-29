@@ -1,0 +1,76 @@
+name: CodeQL Remediation Report
+
+on:
+  push:
+    branches:
+      - security/codeql-remediation
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: read
+
+concurrency:
+  group: codeql-remediation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: CodeQL security report
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+
+      - name: Analyze and keep SARIF locally
+        uses: github/codeql-action/analyze@v3
+        with:
+          output: codeql-sarif
+          upload: false
+
+      - name: Print findings for remediation
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "CODEQL_FINDINGS_BEGIN"
+          find codeql-sarif -type f -name '*.sarif' -print0 | while IFS= read -r -d '' file; do
+            jq -r '
+              .runs[] as $run
+              | ($run.tool.driver.rules // []) as $rules
+              | $run.results[]?
+              | . as $result
+              | ($result.ruleId // "") as $ruleId
+              | ($rules | map(select(.id == $ruleId)) | .[0] // {}) as $rule
+              | ($result.locations[0].physicalLocation.artifactLocation.uri // "") as $path
+              | ($result.locations[0].physicalLocation.region.startLine // 0) as $line
+              | [
+                  "FINDING",
+                  $ruleId,
+                  ($rule.name // ""),
+                  ($rule.properties["security-severity"] // ""),
+                  ($result.level // ""),
+                  $path,
+                  ($line|tostring),
+                  ($result.message.text // "" | gsub("[\\r\\n\\t]+"; " "))
+                ] | @tsv
+            ' "$file"
+          done
+          echo "CODEQL_FINDINGS_END"
+
+      - name: Upload original CodeQL SARIF
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: academyflow-codeql-sarif
+          path: codeql-sarif/
+          if-no-files-found: error
+          retention-days: 30

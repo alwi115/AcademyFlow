@@ -13,6 +13,7 @@ const mailer = require('../services/mailer.service');
 const bootstrapSuperAdmin = require('../services/superadmin-bootstrap.service');
 const systemMonitor = require('../services/system-monitor.service');
 const auditService = require('../services/audit.service');
+const { objectId } = require('../utils/security-input');
 
 async function platformSettings() {
   return SystemSetting.findOneAndUpdate(
@@ -94,7 +95,8 @@ async function createAcademy(req, res) {
     return res.status(409).json({ message: 'Academy slug is already used' });
   }
 
-  if (planId && !(await Plan.exists({ _id: planId }))) {
+  const safePlanId = planId ? objectId(String(planId), 'معرف الخطة غير صحيح') : null;
+  if (safePlanId && !(await Plan.exists({ _id: safePlanId }))) {
     return res.status(400).json({ message: 'Selected plan does not exist' });
   }
 
@@ -130,7 +132,7 @@ async function createAcademy(req, res) {
         name: String(name).trim(),
         nameEn: String(nameEn || '').trim(),
         slug: normalizedSlug,
-        planId: planId || null,
+        planId: safePlanId,
         phone: String(phone || '').trim(),
         email: String(email || '').trim().toLowerCase(),
         country: String(country || 'Oman').trim(),
@@ -164,7 +166,8 @@ async function createAcademy(req, res) {
 }
 
 async function updateAcademy(req, res) {
-  const academy = await Academy.findById(req.params.id);
+  const academyId = objectId(req.params.id, 'معرف الأكاديمية غير صحيح');
+  const academy = await Academy.findById(academyId);
   if (!academy) return res.status(404).json({ message: 'Academy not found' });
 
   const allowed = ['name','nameEn','phone','email','country','city','currency','timezone'];
@@ -173,10 +176,13 @@ async function updateAcademy(req, res) {
   }
 
   if (req.body.planId !== undefined) {
-    if (req.body.planId && !(await Plan.exists({ _id: req.body.planId }))) {
+    const safePlanId = req.body.planId
+      ? objectId(String(req.body.planId), 'معرف الخطة غير صحيح')
+      : null;
+    if (safePlanId && !(await Plan.exists({ _id: safePlanId }))) {
       return res.status(400).json({ message: 'Selected plan does not exist' });
     }
-    academy.planId = req.body.planId || null;
+    academy.planId = safePlanId;
   }
 
   await academy.save();
@@ -194,7 +200,8 @@ async function updateStatus(req, res) {
     return res.status(400).json({ message: 'Invalid status' });
   }
 
-  const academy = await Academy.findById(req.params.id);
+  const academyId = objectId(req.params.id, 'معرف الأكاديمية غير صحيح');
+  const academy = await Academy.findById(academyId);
   if (!academy) return res.status(404).json({ message: 'Academy not found' });
 
   const before = { status: academy.status };
@@ -217,7 +224,8 @@ async function updateStatus(req, res) {
 
 async function updateSubscription(req, res) {
   const { planId, subscriptionEndsAt, status } = req.body;
-  const academy = await Academy.findById(req.params.id);
+  const academyId = objectId(req.params.id, 'معرف الأكاديمية غير صحيح');
+  const academy = await Academy.findById(academyId);
   if (!academy) return res.status(404).json({ message: 'Academy not found' });
 
   const before = {
@@ -227,10 +235,11 @@ async function updateSubscription(req, res) {
   };
 
   if (planId !== undefined) {
-    if (planId && !(await Plan.exists({ _id: planId }))) {
+    const safePlanId = planId ? objectId(String(planId), 'معرف الخطة غير صحيح') : null;
+    if (safePlanId && !(await Plan.exists({ _id: safePlanId }))) {
       return res.status(400).json({ message: 'Selected plan does not exist' });
     }
-    academy.planId = planId || null;
+    academy.planId = safePlanId;
   }
 
   if (subscriptionEndsAt !== undefined) {
