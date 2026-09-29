@@ -1,19 +1,22 @@
 const Course = require('../models/Course');
 const Group = require('../models/Group');
 const Enrollment = require('../models/Enrollment');
+const { objectId } = require('../utils/security-input');
 
 async function instructorScope(req) {
   if (req._instructorScope) return req._instructorScope;
 
+  const instructorId = objectId(String(req.user.sub), 'معرف المدرب غير صحيح');
+
   const [directCourses, assignedGroups] = await Promise.all([
     Course.find({
       academyId: req.academyId,
-      instructorId: req.user.sub,
+      instructorId,
       status: { $ne: 'archived' }
     }).select('_id'),
     Group.find({
       academyId: req.academyId,
-      instructorId: req.user.sub,
+      instructorId,
       status: { $ne: 'cancelled' }
     }).select('_id courseId')
   ]);
@@ -73,15 +76,16 @@ async function directlyManagedCourseIds(req) {
 
 async function assertCourse(req, courseId) {
   const scope = await instructorScope(req);
+  const safeCourseId = objectId(String(courseId), 'معرف الدورة غير صحيح');
 
-  if (!scope.contentCourseIds.includes(String(courseId))) {
+  if (!scope.contentCourseIds.includes(String(safeCourseId))) {
     const err = new Error('لا تملك صلاحية الوصول إلى هذه الدورة');
     err.status = 403;
     throw err;
   }
 
   const course = await Course.findOne({
-    _id: courseId,
+    _id: safeCourseId,
     academyId: req.academyId,
     status: { $ne: 'archived' }
   });
@@ -97,17 +101,19 @@ async function assertCourse(req, courseId) {
 
 async function assertDirectCourse(req, courseId) {
   const scope = await instructorScope(req);
+  const safeCourseId = objectId(String(courseId), 'معرف الدورة غير صحيح');
+  const instructorId = objectId(String(req.user.sub), 'معرف المدرب غير صحيح');
 
-  if (!scope.directCourseIds.includes(String(courseId))) {
+  if (!scope.directCourseIds.includes(String(safeCourseId))) {
     const err = new Error('هذه العملية متاحة لمدرب الدورة الرئيسي فقط');
     err.status = 403;
     throw err;
   }
 
   const course = await Course.findOne({
-    _id: courseId,
+    _id: safeCourseId,
     academyId: req.academyId,
-    instructorId: req.user.sub,
+    instructorId,
     status: { $ne: 'archived' }
   });
 
@@ -204,7 +210,7 @@ async function accessibleStudentIds(req, courseId = null) {
     status: { $in: ['active','paused','completed'] }
   };
 
-  if (courseId) extra.courseId = courseId;
+  if (courseId) extra.courseId = objectId(String(courseId), 'معرف الدورة غير صحيح');
 
   const rows = await Enrollment.find(
     await enrollmentAccessFilter(req, extra)
@@ -254,12 +260,13 @@ async function studentCourseAccessFilter(req, extra = {}) {
 }
 
 async function assertStudentEnrollment(req, studentId, courseId) {
-  await assertCourse(req, courseId);
+  const course = await assertCourse(req, courseId);
+  const safeStudentId = objectId(String(studentId), 'معرف الطالب غير صحيح');
 
   const enrollment = await Enrollment.findOne(
     await enrollmentAccessFilter(req, {
-      studentId,
-      courseId,
+      studentId: safeStudentId,
+      courseId: course._id,
       status: { $in: ['active','paused','completed'] }
     })
   );
@@ -274,8 +281,11 @@ async function assertStudentEnrollment(req, studentId, courseId) {
 }
 
 async function assertGroupAccess(req, groupId, courseId = null) {
-  const extra = { _id: groupId, status: { $ne: 'cancelled' } };
-  if (courseId) extra.courseId = courseId;
+  const extra = {
+    _id: objectId(String(groupId), 'معرف المجموعة غير صحيح'),
+    status: { $ne: 'cancelled' }
+  };
+  if (courseId) extra.courseId = objectId(String(courseId), 'معرف الدورة غير صحيح');
 
   const group = await Group.findOne(
     await groupAccessFilter(req, extra)
