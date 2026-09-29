@@ -1,24 +1,23 @@
-const fs = require('fs');
-const fsp = fs.promises;
-const path = require('path');
-const crypto = require('crypto');
+const mongoose = require('mongoose');
 
 const MAX_PDF_BYTES = 10 * 1024 * 1024;
-const ROOT = path.resolve(
-  process.env.CERTIFICATE_STORAGE_DIR ||
-  (process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_ENVIRONMENT_ID
-    ? '/data/certificates'
-    : path.join(process.cwd(), '.data', 'certificates'))
-);
+const BUCKET_NAME = 'academyflow_certificates';
+const KEY_PREFIX = 'gridfs:';
 
-function safeSegment(value) {
-  const segment = String(value || '').trim();
-  if (!/^[a-zA-Z0-9_-]+$/.test(segment)) {
-    const err = new Error('Invalid storage segment');
-    err.status = 400;
+function assertConnected() {
+  if (mongoose.connection.readyState !== 1 || !mongoose.connection.db) {
+    const err = new Error('MongoDB storage is not connected');
+    err.status = 503;
     throw err;
   }
-  return segment;
+}
+
+function bucket() {
+  assertConnected();
+  return new mongoose.mongo.GridFSBucket(
+    mongoose.connection.db,
+    { bucketName: BUCKET_NAME }
+  );
 }
 
 function assertPdf(buffer) {
@@ -42,71 +41,145 @@ function assertPdf(buffer) {
   }
 }
 
-function absolutePath(storageKey) {
-  const cleanKey = String(storageKey || '').replace(/\\/g, '/').replace(/^\/+/, '');
-  const resolved = path.resolve(ROOT, cleanKey);
-
-  if (resolved !== ROOT && !resolved.startsWith(ROOT + path.sep)) {
-    const err = new Error('Invalid certificate storage path');
-    err.status = 400;
+function storageId(storageKey) {
+  const value = String(storageKey || '').trim();
+  if (!value.startsWith(KEY_PREFIX)) {
+    const err = new Error('Certificate file is not stored in MongoDB GridFS');
+    err.status = 409;
+    err.code = 'LEGACY_STORAGE_KEY';
     throw err;
   }
 
-  return resolved;
+  const id = value.slice(KEY_PREFIX.length);
+  if (!mongoose.isValidObjectId(id)) {
+    const err = new Error('Invalid certificate storage key');
+    err.status = 409;
+    throw err;
+  }
+
+  return new mongoose.Types.ObjectId(id);
 }
 
-async function savePdf({ buffer }) {
-  if (!Buffer.isBuffer(buffer)) {
-    const err = new Error('Invalid PDF upload buffer');
-    err.status = 400;
-    throw err;
-  }
+function notFound() {
+  const err = new Error('Certificate file not found in MongoDB');
+  err.status = 404;
+  err.code = 'ENOENT';
+  return err;
+}
 
-  // Copy the already-parsed raw request body into a server-owned Buffer.
-  // File-system paths are generated entirely by the server and never use
-  // request values, academy IDs, certificate IDs, or uploaded filenames.
-  const pdf = Buffer.from(buffer);
-  assertPdf(pdf);
-
-  await fsp.mkdir(ROOT, { recursive: true });
+async function savePdf({ academyId, certificateId, buffer }) {
+  assertPdf(buffer);
+  assertConnected();
 
   const filename =
-    Date.now() + '-' + crypto.randomBytes(16).toString('hex') + '.pdf';
-  const finalPath = path.join(ROOT, filename);
-  const tempPath = finalPath + '.tmp-' + crypto.randomBytes(8).toString('hex');
+    String(certificateId) + '-' + Date.now() + '.pdf';
 
-  // This is an intentional upload sink: assertPdf enforces a 10 MB limit and
-  // PDF signature, while tempPath is generated exclusively from server randomness.
-  // codeql[js/http-to-file-access]
-  await fsp.writeFile(tempPath, pdf, { mode: 0o600, flag: 'wx' });
-  await fsp.rename(tempPath, finalPath);
+  const upload = bucket().openUploadStream(filename, {
+    contentType: 'application/pdf',
+    metadata: {
+      kind: 'academyflow-certificate',
+      academyId: String(academyId),
+      certificateId: String(certificateId),
+      uploadedAt: new Date()
+    }
+  });
 
-  return filename;
+  await new Promise((resolve, reject) => {
+    upload.once('error', reject);
+    upload.once('finish', resolve);
+    upload.end(buffer);
+  });
+
+  return KEY_PREFIX + String(upload.id);
 }
 
 async function remove(storageKey) {
   if (!storageKey) return;
+
+  let id;
   try {
-    await fsp.unlink(absolutePath(storageKey));
+    id = storageId(storageKey);
   } catch (err) {
-    if (err.code !== 'ENOENT') throw err;
+    if (err.code === 'LEGACY_STORAGE_KEY') return;
+    throw err;
+  }
+
+  try {
+    await bucket().delete(id);
+  } catch (err) {
+    if (
+      err?.code === 'ENOENT' ||
+      /file not found/i.test(String(err?.message || ''))
+    ) {
+      return;
+    }
+    throw err;
   }
 }
 
 async function stat(storageKey) {
-  return fsp.stat(absolutePath(storageKey));
+  const id = storageId(storageKey);
+  const file = await bucket().find({ _id: id }).next();
+  if (!file) throw notFound();
+
+  return {
+    size: Number(file.length || 0),
+    createdAt: file.uploadDate || null,
+    contentType:
+      file.contentType ||
+      file.metadata?.contentType ||
+      'application/pdf',
+    metadata: file.metadata || {}
+  };
 }
 
-function pathFor(storageKey) {
-  return absolutePath(storageKey);
+async function read(storageKey) {
+  const id = storageId(storageKey);
+  const chunks = [];
+
+  return new Promise((resolve, reject) => {
+    const stream = bucket().openDownloadStream(id);
+
+    stream.on('data', chunk => chunks.push(chunk));
+    stream.once('error', err => {
+      if (
+        err?.code === 'ENOENT' ||
+        /file not found/i.test(String(err?.message || ''))
+      ) {
+        return reject(notFound());
+      }
+      reject(err);
+    });
+    stream.once('end', () => resolve(Buffer.concat(chunks)));
+  });
+}
+
+async function storageStatus() {
+  try {
+    assertConnected();
+    await mongoose.connection.db.command({ ping: 1 });
+    return {
+      provider: 'mongodb-gridfs',
+      bucket: BUCKET_NAME,
+      ready: true
+    };
+  } catch (err) {
+    return {
+      provider: 'mongodb-gridfs',
+      bucket: BUCKET_NAME,
+      ready: false,
+      error: String(err.message || err).slice(0, 500)
+    };
+  }
 }
 
 module.exports = {
   MAX_PDF_BYTES,
+  BUCKET_NAME,
   assertPdf,
   savePdf,
   remove,
   stat,
-  pathFor,
-  root: ROOT
+  read,
+  storageStatus
 };
