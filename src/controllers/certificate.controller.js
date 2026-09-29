@@ -6,9 +6,20 @@ const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
 const Notification = require('../models/Notification');
 const storage = require('../services/certificate-storage.service');
+const { objectId } = require('../utils/security-input');
 
 function clean(value) {
   return typeof value === 'string' ? value.trim() : value;
+}
+
+function requestPdfBuffer(req) {
+  if (!Buffer.isBuffer(req.body)) {
+    const err = new Error('اختر ملف PDF صالحًا للشهادة');
+    err.status = 415;
+    throw err;
+  }
+
+  return Buffer.from(req.body);
 }
 
 function generatedCertificateNo() {
@@ -42,15 +53,18 @@ async function validateOwnership({ academyId, studentId, courseId }) {
     throw err;
   }
 
+  const safeStudentId = objectId(studentId, 'معرف الطالب غير صحيح');
+  const safeCourseId = objectId(courseId, 'معرف الدورة غير صحيح');
+
   const [student, course] = await Promise.all([
     User.findOne({
-      _id: studentId,
+      _id: safeStudentId,
       academyId,
       role: 'student',
       active: true
     }).select('_id name email'),
     Course.findOne({
-      _id: courseId,
+      _id: safeCourseId,
       academyId
     }).select('_id title code')
   ]);
@@ -69,8 +83,8 @@ async function validateOwnership({ academyId, studentId, courseId }) {
 
   const enrolled = await Enrollment.exists({
     academyId,
-    studentId,
-    courseId,
+    studentId: safeStudentId,
+    courseId: safeCourseId,
     status: { $in: ['active','paused','completed'] }
   });
 
@@ -116,7 +130,8 @@ async function listAcademy(req, res) {
 }
 
 async function upload(req, res) {
-  storage.assertPdf(req.body);
+  const pdf = requestPdfBuffer(req);
+  storage.assertPdf(pdf);
 
   const academyId = String(req.academyId);
   const studentId = clean(req.query.studentId);
@@ -151,16 +166,14 @@ async function upload(req, res) {
   let key = '';
   try {
     key = await storage.savePdf({
-      academyId,
-      certificateId: String(row._id),
-      buffer: req.body
+      buffer: pdf
     });
 
     const now = new Date();
     row.fileStorageKey = key;
     row.fileName = originalName;
     row.fileMimeType = 'application/pdf';
-    row.fileSize = req.body.length;
+    row.fileSize = pdf.length;
     row.fileUploadedAt = now;
     row.fileUploadedBy = req.user.sub;
     row.deliveredAt = now;
@@ -187,10 +200,12 @@ async function upload(req, res) {
 }
 
 async function replaceFile(req, res) {
-  storage.assertPdf(req.body);
+  const pdf = requestPdfBuffer(req);
+  storage.assertPdf(pdf);
+  const certificateId = objectId(req.params.id, 'معرف الشهادة غير صحيح');
 
   const row = await Certificate.findOne({
-    _id: req.params.id,
+    _id: certificateId,
     academyId: req.academyId
   }).select('+fileStorageKey');
 
@@ -198,16 +213,14 @@ async function replaceFile(req, res) {
 
   const oldKey = row.fileStorageKey || '';
   const newKey = await storage.savePdf({
-    academyId: String(req.academyId),
-    certificateId: String(row._id),
-    buffer: req.body
+    buffer: pdf
   });
 
   const now = new Date();
   row.fileStorageKey = newKey;
   row.fileName = safePdfName(req.query.fileName, row.certificateNo + '.pdf');
   row.fileMimeType = 'application/pdf';
-  row.fileSize = req.body.length;
+  row.fileSize = pdf.length;
   row.fileUploadedAt = now;
   row.fileUploadedBy = req.user.sub;
   row.deliveredAt = now;
