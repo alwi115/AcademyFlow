@@ -1,7 +1,4 @@
 const assert = require('assert');
-const fs = require('fs/promises');
-const path = require('path');
-const os = require('os');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
@@ -31,8 +28,6 @@ async function main() {
   process.env.NODE_ENV = 'test';
   process.env.BACKUP_ENCRYPTION_KEY = process.env.BACKUP_ENCRYPTION_KEY ||
     'backup-regression-encryption-key-0123456789-abcdefghijklmnopqrstuvwxyz';
-  process.env.BACKUP_DIR = process.env.BACKUP_DIR ||
-    await fs.mkdtemp(path.join(os.tmpdir(), 'academyflow-backup-test-'));
 
   await connectWithRetry();
   await mongoose.connection.db.dropDatabase();
@@ -63,6 +58,7 @@ async function main() {
 
   assert(backup.id);
   assert(backup.sha256);
+  assert.strictEqual(backup.storage, 'mongodb-gridfs');
   assert(backup.documentCount >= 2);
   assert(backup.collectionCount >= 2);
 
@@ -70,7 +66,6 @@ async function main() {
   assert.strictEqual(validation.metadata.id, backup.id);
   assert(validation.payload.data);
 
-  // Destroy and change data after the snapshot.
   await Academy.updateOne(
     { _id: academy._id },
     {
@@ -112,7 +107,6 @@ async function main() {
   assert(restoredUser._id instanceof mongoose.Types.ObjectId);
   assert.strictEqual(String(restoredUser.academyId), originalAcademyId);
 
-  // Data created after the backup must disappear after a full restore.
   assert.strictEqual(await Academy.exists({ _id: extraAcademy._id }), null);
 
   const backups = await backupService.listBackups();
@@ -122,26 +116,25 @@ async function main() {
   const storage = await backupService.storageStatus();
   assert.strictEqual(storage.writable, true);
   assert.strictEqual(storage.explicitlyConfigured, true);
+  assert.strictEqual(storage.provider, 'mongodb-gridfs');
 
-  // Path traversal / arbitrary file access must be rejected.
   await assert.rejects(
     () => backupService.validateBackup('../etc/passwd'),
     err => err && err.status === 400
   );
 
-  // Corruption must be detected before restore.
   const corrupt = await backupService.createBackup({ reason: 'corruption-test' });
-  const corruptPath = path.join(process.env.BACKUP_DIR, corrupt.id + '.backup');
-  const bytes = await fs.readFile(corruptPath);
-  bytes[0] = bytes[0] ^ 0xff;
-  await fs.writeFile(corruptPath, bytes);
+  await mongoose.connection.db.collection('academyflow_backup_records').updateOne(
+    { id: corrupt.id },
+    { $set: { sha256: '0'.repeat(64) } }
+  );
 
   await assert.rejects(
     () => backupService.validateBackup(corrupt.id),
     err => err && err.status === 409
   );
 
-  console.log('Backup and restore regression tests passed.');
+  console.log('MongoDB GridFS backup and restore regression tests passed.');
 }
 
 main()
