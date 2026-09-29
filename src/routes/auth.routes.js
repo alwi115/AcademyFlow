@@ -42,23 +42,24 @@ function secureCookie() {
     Boolean(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_ENVIRONMENT_ID);
 }
 
-function parseCookies(req) {
-  return String(req.get('cookie') || '')
-    .split(';')
-    .map(part => part.trim())
-    .filter(Boolean)
-    .reduce((cookies, part) => {
-      const separator = part.indexOf('=');
-      if (separator === -1) return cookies;
-      const key = part.slice(0, separator).trim();
-      const value = part.slice(separator + 1).trim();
-      try {
-        cookies[key] = decodeURIComponent(value);
-      } catch {
-        cookies[key] = value;
-      }
-      return cookies;
-    }, {});
+function cookieValue(req, expectedName) {
+  const raw = String(req.get('cookie') || '');
+  for (const part of raw.split(';')) {
+    const separator = part.indexOf('=');
+    if (separator === -1) continue;
+
+    const name = part.slice(0, separator).trim();
+    if (name !== expectedName) continue;
+
+    const value = part.slice(separator + 1).trim();
+    try {
+      return decodeURIComponent(value);
+    } catch {
+      return value;
+    }
+  }
+
+  return '';
 }
 
 function csrfCookieOptions() {
@@ -79,7 +80,7 @@ function safeTokenEqual(left, right) {
 }
 
 function requireCsrf(req, res, next) {
-  const cookieToken = parseCookies(req)[CSRF_COOKIE_NAME];
+  const cookieToken = cookieValue(req, CSRF_COOKIE_NAME);
   const submittedToken = String(req.body?._csrf || req.get('x-csrf-token') || '');
 
   if (!safeTokenEqual(cookieToken, submittedToken)) {
