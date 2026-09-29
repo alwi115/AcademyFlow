@@ -110,7 +110,8 @@
       }
 
       if (!context.enabled) {
-        addLocalNotice('AcademyFlow AI مركّب في النظام، لكن يحتاج إضافة OPENAI_API_KEY في متغيرات Railway عشان يبدأ يرد.');
+        const keyName = context.provider === 'openai' ? 'OPENAI_API_KEY' : 'GEMINI_API_KEY';
+        addLocalNotice(`AcademyFlow AI مركّب في النظام، لكن يحتاج إضافة ${keyName} في متغيرات Railway عشان يبدأ يرد.`);
       } else if (!context.courses?.length) {
         addLocalNotice(role === 'instructor'
           ? 'ما عندك دورات مسندة لك حاليًا عشان يستخدمها المساعد.'
