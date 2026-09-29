@@ -35,7 +35,12 @@ window.StudentQuiz = (() => {
   }
 
   async function api(url,options={}){
-    const response=await fetch(url,{
+    const parsed=new URL(String(url),location.origin);
+    if(parsed.origin!==location.origin || !parsed.pathname.startsWith('/api/student/')){
+      throw new Error('عنوان الطلب غير مسموح');
+    }
+    const safeUrl=parsed.pathname+parsed.search;
+    const response=await fetch(safeUrl,{
       ...options,
       credentials:'same-origin',
       headers:{
