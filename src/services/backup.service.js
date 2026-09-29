@@ -1,27 +1,25 @@
-const fs = require('fs/promises');
-const path = require('path');
 const zlib = require('zlib');
 const crypto = require('crypto');
 const { promisify } = require('util');
 const mongoose = require('mongoose');
 const { EJSON } = require('bson');
-const externalBackup = require('./external-backup.service');
 
 const gzip = promisify(zlib.gzip);
 const gunzip = promisify(zlib.gunzip);
 
+const BACKUP_BUCKET = 'academyflow_backups';
+const BACKUP_RECORDS = 'academyflow_backup_records';
+const INTERNAL_COLLECTIONS = new Set([
+  BACKUP_RECORDS,
+  BACKUP_BUCKET + '.files',
+  BACKUP_BUCKET + '.chunks'
+]);
+
 let busy = false;
 let busyOperation = '';
 
-function backupDir() {
-  return path.resolve(
-    process.env.BACKUP_DIR ||
-    path.join(process.cwd(), 'backups')
-  );
-}
-
 function explicitStorageConfigured() {
-  return Boolean(String(process.env.BACKUP_DIR || '').trim());
+  return Boolean(String(process.env.MONGODB_URI || '').trim());
 }
 
 function encryptionConfigured() {
@@ -33,17 +31,19 @@ function productionReady() {
   return explicitStorageConfigured() && encryptionConfigured();
 }
 
-function encryptionKey() {
-  const secret = String(process.env.BACKUP_ENCRYPTION_KEY || '');
-  if (secret.length < 32) return null;
-  return crypto.createHash('sha256').update(secret, 'utf8').digest();
+function ensureConnected() {
+  if (mongoose.connection.readyState !== 1 || !mongoose.connection.db) {
+    const err = new Error('MongoDB is not connected');
+    err.status = 503;
+    throw err;
+  }
 }
 
 function ensureProductionConfig() {
   if (process.env.NODE_ENV !== 'production') return;
 
   if (!explicitStorageConfigured()) {
-    const err = new Error('BACKUP_DIR must point to persistent storage in production');
+    const err = new Error('MONGODB_URI is required for backup storage');
     err.status = 503;
     throw err;
   }
@@ -53,6 +53,25 @@ function ensureProductionConfig() {
     err.status = 503;
     throw err;
   }
+}
+
+function bucket() {
+  ensureConnected();
+  return new mongoose.mongo.GridFSBucket(
+    mongoose.connection.db,
+    { bucketName: BACKUP_BUCKET }
+  );
+}
+
+function records() {
+  ensureConnected();
+  return mongoose.connection.db.collection(BACKUP_RECORDS);
+}
+
+function encryptionKey() {
+  const secret = String(process.env.BACKUP_ENCRYPTION_KEY || '');
+  if (secret.length < 32) return null;
+  return crypto.createHash('sha256').update(secret, 'utf8').digest();
 }
 
 function safeBackupId(value) {
@@ -138,17 +157,28 @@ function decryptBuffer(buffer, metadata) {
   }
 }
 
-async function ensureDir() {
-  const dir = backupDir();
-  await fs.mkdir(dir, { recursive: true });
-  return dir;
+function publicMetadata(row) {
+  if (!row) return null;
+  const result = { ...row };
+  delete result._id;
+  delete result.storageFileId;
+  delete result.storageBucket;
+  return result;
 }
 
 async function userCollections() {
-  const rows = await mongoose.connection.db.listCollections({}, { nameOnly: true }).toArray();
+  ensureConnected();
+  const rows = await mongoose.connection.db
+    .listCollections({}, { nameOnly: true })
+    .toArray();
+
   return rows
     .map(row => row.name)
-    .filter(name => name && !name.startsWith('system.'))
+    .filter(name =>
+      name &&
+      !name.startsWith('system.') &&
+      !INTERNAL_COLLECTIONS.has(name)
+    )
     .sort();
 }
 
@@ -183,7 +213,8 @@ async function snapshotPayload(reason = 'manual') {
 
   return {
     format: 'academyflow-logical-backup',
-    version: 2,
+    version: 3,
+    storage: 'mongodb-gridfs',
     createdAt: new Date(),
     database: db.databaseName,
     reason,
@@ -192,16 +223,63 @@ async function snapshotPayload(reason = 'manual') {
   };
 }
 
-async function writeBackup(reason = 'manual') {
-  ensureProductionConfig();
+async function uploadBuffer(id, buffer) {
+  const stream = bucket().openUploadStream(id + '.backup', {
+    contentType: 'application/octet-stream',
+    metadata: {
+      kind: 'academyflow-backup',
+      backupId: id,
+      createdAt: new Date()
+    }
+  });
 
-  if (mongoose.connection.readyState !== 1) {
-    const err = new Error('Database is not connected');
-    err.status = 503;
+  await new Promise((resolve, reject) => {
+    stream.once('error', reject);
+    stream.once('finish', resolve);
+    stream.end(buffer);
+  });
+
+  return stream.id;
+}
+
+async function downloadBuffer(fileId) {
+  if (!fileId || !mongoose.isValidObjectId(fileId)) {
+    const err = new Error('Backup storage reference is invalid');
+    err.status = 409;
     throw err;
   }
 
-  const dir = await ensureDir();
+  const chunks = [];
+  const stream = bucket().openDownloadStream(
+    new mongoose.Types.ObjectId(String(fileId))
+  );
+
+  return new Promise((resolve, reject) => {
+    stream.on('data', chunk => chunks.push(chunk));
+    stream.once('error', err => {
+      const missing = new Error('Backup data is missing from MongoDB GridFS');
+      missing.status = 409;
+      missing.cause = err;
+      reject(missing);
+    });
+    stream.once('end', () => resolve(Buffer.concat(chunks)));
+  });
+}
+
+async function deleteGridFsFile(fileId) {
+  if (!fileId || !mongoose.isValidObjectId(fileId)) return;
+
+  try {
+    await bucket().delete(new mongoose.Types.ObjectId(String(fileId)));
+  } catch (err) {
+    if (!/file not found/i.test(String(err?.message || ''))) throw err;
+  }
+}
+
+async function writeBackup(reason = 'manual') {
+  ensureProductionConfig();
+  ensureConnected();
+
   const id = timestampId();
   const payload = await snapshotPayload(reason);
   const raw = Buffer.from(EJSON.stringify(payload, { relaxed: false }), 'utf8');
@@ -209,17 +287,13 @@ async function writeBackup(reason = 'manual') {
   const protectedData = encryptBuffer(compressed);
   const digest = sha256(protectedData.buffer);
 
-  const fileName = id + '.backup';
-  const metaName = id + '.meta.json';
-  const filePath = path.join(dir, fileName);
-  const metaPath = path.join(dir, metaName);
-
-  await fs.writeFile(filePath, protectedData.buffer, { flag: 'wx', mode: 0o600 });
+  const storageFileId = await uploadBuffer(id, protectedData.buffer);
 
   const metadata = {
     id,
-    fileName,
+    fileName: id + '.backup',
     formatVersion: payload.version,
+    storage: 'mongodb-gridfs',
     createdAt: payload.createdAt.toISOString(),
     database: payload.database,
     reason,
@@ -233,36 +307,72 @@ async function writeBackup(reason = 'manual') {
       name: row.name,
       count: row.count,
       indexCount: row.indexes.length
-    }))
+    })),
+    storageFileId,
+    storageBucket: BACKUP_BUCKET
   };
 
-  await fs.writeFile(
-    metaPath,
-    JSON.stringify(metadata, null, 2),
-    { flag: 'wx', mode: 0o600 }
-  );
+  try {
+    await records().insertOne(metadata);
+  } catch (err) {
+    await deleteGridFsFile(storageFileId).catch(() => {});
+    throw err;
+  }
 
-  return {
-    ...metadata,
-    _dataPath: filePath,
-    _metaPath: metaPath
-  };
+  return publicMetadata(metadata);
+}
+
+async function readMetadataInternal(id) {
+  const clean = safeBackupId(id);
+  if (!clean) {
+    const err = new Error('Invalid backup id');
+    err.status = 400;
+    throw err;
+  }
+
+  const row = await records().findOne({ id: clean });
+  if (!row) {
+    const err = new Error('Backup not found');
+    err.status = 404;
+    throw err;
+  }
+
+  return row;
+}
+
+async function deleteBackup(id) {
+  const row = await readMetadataInternal(id);
+  await deleteGridFsFile(row.storageFileId);
+  await records().deleteOne({ _id: row._id });
+}
+
+async function listBackups() {
+  ensureConnected();
+
+  const rows = await records()
+    .find({ id: { $type: 'string' } })
+    .sort({ createdAt: -1 })
+    .toArray();
+
+  return rows
+    .filter(row =>
+      safeBackupId(row.id) &&
+      /^[a-f0-9]{64}$/i.test(String(row.sha256 || ''))
+    )
+    .map(publicMetadata);
 }
 
 async function pruneBackups() {
   const retention = Math.min(
-    Math.max(Number(process.env.BACKUP_RETENTION_COUNT || 14), 2),
-    100
+    Math.max(Number(process.env.BACKUP_RETENTION_COUNT || 5), 2),
+    30
   );
 
   const rows = await listBackups();
   for (const row of rows.slice(retention)) {
-    const dir = backupDir();
-    await Promise.allSettled([
-      fs.unlink(path.join(dir, row.id + '.backup')),
-      fs.unlink(path.join(dir, row.id + '.json.gz')),
-      fs.unlink(path.join(dir, row.id + '.meta.json'))
-    ]);
+    await deleteBackup(row.id).catch(err => {
+      console.error('[backup] prune failed', row.id, err.message);
+    });
   }
 }
 
@@ -277,42 +387,7 @@ async function createBackup({ reason = 'manual' } = {}) {
   busyOperation = 'backup';
 
   try {
-    const written = await writeBackup(reason);
-    let external = {
-      configured: false,
-      uploaded: false,
-      provider: 's3-compatible'
-    };
-
-    try {
-      external = await externalBackup.mirrorBackup({
-        dataPath: written._dataPath,
-        metadataPath: written._metaPath
-      });
-    } catch (err) {
-      external = {
-        configured: externalBackup.configured(),
-        uploaded: false,
-        provider: 's3-compatible',
-        error: String(err.message || err).slice(0, 800)
-      };
-      console.error('[backup] external mirror failed', external.error);
-    }
-
-    const metadata = {
-      ...written,
-      external
-    };
-    delete metadata._dataPath;
-    delete metadata._metaPath;
-
-    const metaPath = path.join(backupDir(), metadata.id + '.meta.json');
-    await fs.writeFile(
-      metaPath,
-      JSON.stringify(metadata, null, 2),
-      { mode: 0o600 }
-    );
-
+    const metadata = await writeBackup(reason);
     await pruneBackups();
     return metadata;
   } finally {
@@ -321,65 +396,9 @@ async function createBackup({ reason = 'manual' } = {}) {
   }
 }
 
-async function readMetadata(id) {
-  const clean = safeBackupId(id);
-  if (!clean) {
-    const err = new Error('Invalid backup id');
-    err.status = 400;
-    throw err;
-  }
-
-  const metaPath = path.join(backupDir(), clean + '.meta.json');
-
-  try {
-    const metadata = JSON.parse(await fs.readFile(metaPath, 'utf8'));
-
-    if (metadata.id !== clean) {
-      const err = new Error('Backup metadata id mismatch');
-      err.status = 409;
-      throw err;
-    }
-
-    return metadata;
-  } catch (err) {
-    if (err.code === 'ENOENT') {
-      const notFound = new Error('Backup not found');
-      notFound.status = 404;
-      throw notFound;
-    }
-    throw err;
-  }
-}
-
-async function listBackups() {
-  const dir = await ensureDir();
-  const names = await fs.readdir(dir);
-  const metaNames = names.filter(name => /^academyflow-.*\.meta\.json$/.test(name));
-  const rows = [];
-
-  for (const name of metaNames) {
-    try {
-      const row = JSON.parse(await fs.readFile(path.join(dir, name), 'utf8'));
-      if (
-        row?.id &&
-        safeBackupId(row.id) &&
-        /^[a-f0-9]{64}$/i.test(String(row.sha256 || ''))
-      ) {
-        rows.push(row);
-      }
-    } catch {}
-  }
-
-  return rows.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-}
-
-function backupDataPath(metadata) {
-  const extension = metadata.formatVersion >= 2 ? '.backup' : '.json.gz';
-  return path.join(backupDir(), metadata.id + extension);
-}
-
 async function validateBackup(id) {
-  const metadata = await readMetadata(id);
+  const internal = await readMetadataInternal(id);
+  const metadata = publicMetadata(internal);
 
   if (!/^[a-f0-9]{64}$/i.test(String(metadata.sha256 || ''))) {
     const err = new Error('Backup checksum metadata is invalid');
@@ -387,18 +406,7 @@ async function validateBackup(id) {
     throw err;
   }
 
-  let protectedData;
-  try {
-    protectedData = await fs.readFile(backupDataPath(metadata));
-  } catch (err) {
-    if (err.code === 'ENOENT') {
-      const missing = new Error('Backup data file is missing');
-      missing.status = 409;
-      throw missing;
-    }
-    throw err;
-  }
-
+  const protectedData = await downloadBuffer(internal.storageFileId);
   const actualHash = Buffer.from(sha256(protectedData), 'hex');
   const expectedHash = Buffer.from(metadata.sha256, 'hex');
 
@@ -414,17 +422,20 @@ async function validateBackup(id) {
   let payload;
   try {
     const compressed = decryptBuffer(protectedData, metadata);
-    payload = EJSON.parse((await gunzip(compressed)).toString('utf8'), { relaxed: true });
+    payload = EJSON.parse(
+      (await gunzip(compressed)).toString('utf8'),
+      { relaxed: true }
+    );
   } catch (err) {
     if (err?.status) throw err;
-    const invalid = new Error('Backup file is corrupted or unreadable');
+    const invalid = new Error('Backup data is corrupted or unreadable');
     invalid.status = 409;
     throw invalid;
   }
 
   if (
     payload?.format !== 'academyflow-logical-backup' ||
-    ![1, 2].includes(payload?.version) ||
+    ![1, 2, 3].includes(payload?.version) ||
     !payload.data ||
     !Array.isArray(payload.collections)
   ) {
@@ -437,6 +448,7 @@ async function validateBackup(id) {
     if (
       !row?.name ||
       row.name.startsWith('system.') ||
+      INTERNAL_COLLECTIONS.has(row.name) ||
       !Array.isArray(payload.data[row.name])
     ) {
       const err = new Error('Backup collection manifest is invalid');
@@ -451,7 +463,10 @@ async function validateBackup(id) {
 async function insertInBatches(collection, docs) {
   const batchSize = 500;
   for (let i = 0; i < docs.length; i += batchSize) {
-    await collection.insertMany(docs.slice(i, i + batchSize), { ordered: true });
+    await collection.insertMany(
+      docs.slice(i, i + batchSize),
+      { ordered: true }
+    );
   }
 }
 
@@ -500,12 +515,15 @@ async function restoreBackup(id) {
   }
 
   ensureProductionConfig();
+  ensureConnected();
 
   if (
     process.env.NODE_ENV === 'production' &&
     process.env.ENABLE_PRODUCTION_RESTORE !== 'true'
   ) {
-    const err = new Error('Production restore is disabled. Set ENABLE_PRODUCTION_RESTORE=true for an intentional restore window.');
+    const err = new Error(
+      'Production restore is disabled. Set ENABLE_PRODUCTION_RESTORE=true for an intentional restore window.'
+    );
     err.status = 403;
     throw err;
   }
@@ -516,11 +534,20 @@ async function restoreBackup(id) {
   try {
     const { metadata, payload } = await validateBackup(id);
 
-    // Always create a rollback point from the current state before destructive writes.
+    // Stored in the MongoDB backup bucket, which is deliberately excluded from
+    // the logical snapshot so restoring application data cannot delete the
+    // source backup or its safety point.
     const safetyBackup = await writeBackup('pre-restore-safety');
+
     const db = mongoose.connection.db;
-    const manifest = new Map(payload.collections.map(row => [row.name, row]));
-    const payloadNames = Object.keys(payload.data).filter(name => !name.startsWith('system.'));
+    const manifest = new Map(
+      payload.collections.map(row => [row.name, row])
+    );
+    const payloadNames = Object.keys(payload.data)
+      .filter(name =>
+        !name.startsWith('system.') &&
+        !INTERNAL_COLLECTIONS.has(name)
+      );
     const currentNames = await userCollections();
     const namesToClear = [...new Set([...currentNames, ...payloadNames])];
 
@@ -530,13 +557,18 @@ async function restoreBackup(id) {
 
     for (const name of payloadNames) {
       const collection = db.collection(name);
-      const docs = Array.isArray(payload.data[name]) ? payload.data[name] : [];
+      const docs = Array.isArray(payload.data[name])
+        ? payload.data[name]
+        : [];
 
       if (docs.length) {
         await insertInBatches(collection, docs);
       }
 
-      await restoreIndexes(collection, manifest.get(name)?.indexes || []);
+      await restoreIndexes(
+        collection,
+        manifest.get(name)?.indexes || []
+      );
     }
 
     await pruneBackups();
@@ -545,7 +577,10 @@ async function restoreBackup(id) {
       restored: metadata,
       safetyBackup,
       restoredCollections: payloadNames.length,
-      restoredDocuments: payload.collections.reduce((sum, row) => sum + Number(row.count || 0), 0)
+      restoredDocuments: payload.collections.reduce(
+        (sum, row) => sum + Number(row.count || 0),
+        0
+      )
     };
   } finally {
     busy = false;
@@ -554,39 +589,45 @@ async function restoreBackup(id) {
 }
 
 async function storageStatus() {
-  const dir = backupDir();
-  let writable = false;
-  let freeBytes = null;
-  let totalBytes = null;
-  let error = '';
-
-  try {
-    await ensureDir();
-    const probe = path.join(dir, '.write-test-' + process.pid + '-' + Date.now());
-    await fs.writeFile(probe, 'ok', { flag: 'wx', mode: 0o600 });
-    await fs.unlink(probe);
-    writable = true;
-
-    if (typeof fs.statfs === 'function') {
-      const stat = await fs.statfs(dir);
-      freeBytes = Number(stat.bavail) * Number(stat.bsize);
-      totalBytes = Number(stat.blocks) * Number(stat.bsize);
-    }
-  } catch (err) {
-    error = String(err.message || err).slice(0, 500);
-  }
-
-  return {
-    directory: dir,
+  const result = {
+    provider: 'mongodb-gridfs',
+    bucket: BACKUP_BUCKET,
+    directory: null,
     explicitlyConfigured: explicitStorageConfigured(),
     encryptionConfigured: encryptionConfigured(),
     productionReady: productionReady(),
-    externalBackup: externalBackup.configStatus(),
-    writable,
-    freeBytes,
-    totalBytes,
-    error
+    writable: false,
+    freeBytes: null,
+    totalBytes: null,
+    usedBytes: null,
+    error: ''
   };
+
+  try {
+    ensureConnected();
+    await mongoose.connection.db.command({ ping: 1 });
+
+    const probeId = 'probe-' + crypto.randomBytes(8).toString('hex');
+    await records().insertOne({
+      id: probeId,
+      probe: true,
+      createdAt: new Date().toISOString()
+    });
+    await records().deleteOne({ id: probeId, probe: true });
+    result.writable = true;
+
+    try {
+      const stats = await mongoose.connection.db.command({
+        dbStats: 1,
+        scale: 1
+      });
+      result.usedBytes = Number(stats.storageSize || stats.dataSize || 0) || null;
+    } catch {}
+  } catch (err) {
+    result.error = String(err.message || err).slice(0, 500);
+  }
+
+  return result;
 }
 
 function isBusy() {
@@ -598,6 +639,7 @@ function operation() {
 }
 
 module.exports = {
+  BACKUP_BUCKET,
   createBackup,
   restoreBackup,
   validateBackup,
