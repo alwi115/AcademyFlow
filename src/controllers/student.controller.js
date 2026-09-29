@@ -12,6 +12,7 @@ const Payment = require('../models/Payment');
 const Certificate = require('../models/Certificate');
 const Notification = require('../models/Notification');
 const { safeTimeZone, formatAcademyDisplay } = require('../services/timezone.service');
+const { enumValue } = require('../utils/security-input');
 
 function clean(value) {
   return typeof value === 'string' ? value.trim() : value;
@@ -608,9 +609,11 @@ async function liveSessions(req, res) {
 async function assessments(req, res) {
   const academyId = req.academyId;
   const studentId = req.user.sub;
-  const type = req.query.type;
+  let type;
 
-  if (!['quiz','assignment'].includes(type)) {
+  try {
+    type = enumValue(req.query.type, ['quiz','assignment'], 'Assessment type is required');
+  } catch {
     return res.status(400).json({ message: 'Assessment type is required' });
   }
 
