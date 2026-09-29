@@ -48,6 +48,9 @@ jobs:
           set -euo pipefail
           find src scripts public/js -name '*.js' -print0 | xargs -0 -n1 node --check
 
+      - name: Security input, PDF and webhook regression
+        run: node scripts/security-regression-test.js
+
       - name: Tenant isolation regression
         run: npm run test:tenant-isolation
 
@@ -68,3 +71,4 @@ jobs:
 
       - name: Performance smoke
         run: npm run test:performance
+

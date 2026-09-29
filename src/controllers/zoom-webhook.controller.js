@@ -49,16 +49,15 @@ function parseBody(req) {
 }
 
 function supportedEvent(value) {
+  // Return server-defined constants only after an exact allowlist match.
   switch (value) {
-    case 'endpoint.url_validation':
-    case 'app_deauthorized':
-    case 'meeting.started':
-    case 'meeting.ended':
-    case 'meeting.participant_joined':
-    case 'meeting.participant_left':
-      return value;
-    default:
-      return '';
+    case 'endpoint.url_validation': return 'endpoint.url_validation';
+    case 'app_deauthorized': return 'app_deauthorized';
+    case 'meeting.started': return 'meeting.started';
+    case 'meeting.ended': return 'meeting.ended';
+    case 'meeting.participant_joined': return 'meeting.participant_joined';
+    case 'meeting.participant_left': return 'meeting.participant_left';
+    default: return '';
   }
 }
 
@@ -220,6 +219,9 @@ async function handle(req, res) {
   }
 
   const body = parsed.body;
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return res.status(400).json({ message: 'Invalid payload' });
+  }
   const event = supportedEvent(body.event);
 
   if (!event) return res.json({ ok: true });
@@ -236,7 +238,6 @@ async function handle(req, res) {
 
   // The event value is covered by the verified Zoom HMAC signature above,
   // and handleAppDeauthorized additionally checks the OAuth client ID.
-  // codeql[js/user-controlled-bypass]
   if (event === 'app_deauthorized') {
     await handleAppDeauthorized(body);
     return res.json({ ok: true });
@@ -273,3 +274,4 @@ async function handle(req, res) {
 }
 
 module.exports = { handle };
+

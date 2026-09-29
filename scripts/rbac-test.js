@@ -1,4 +1,11 @@
 const assert = require('assert');
+const fs = require('fs/promises');
+const os = require('os');
+const path = require('path');
+
+// Keep certificate uploads in an isolated test directory.
+const certificateTestRoot = require('fs').mkdtempSync(path.join(os.tmpdir(), 'academyflow-rbac-'));
+process.env.CERTIFICATE_STORAGE_DIR = certificateTestRoot;
 const express = require('express');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
@@ -656,15 +663,29 @@ async function main() {
     assert(instructorAttemptIds.has(String(quizAttempt._id)));
     assert(instructorAttemptIds.has(String(groupOnlyQuizAttempt._id)));
 
-    // Certificate issuance is limited to students actually enrolled in the course.
-    await expect('content_manager', 'POST', '/api/academy/certificates', 400, {
-      studentId: String(unEnrolledStudent._id),
-      courseId: String(course._id)
+    // Exercise the current PDF upload endpoint, including its authorization boundary.
+    const pdf = Buffer.from('%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF\n');
+    const uploadPath = (studentId, courseId) => '/api/academy/certificates/upload?' +
+      new URLSearchParams({ studentId: String(studentId), courseId: String(courseId) });
+    const upload = (role, studentId, courseId, body = pdf, contentType = 'application/pdf') =>
+      request(role, uploadPath(studentId, courseId), {
+        method: 'POST', body, headers: { 'Content-Type': contentType }
+      });
+    assert.strictEqual((await upload('content_manager', unEnrolledStudent._id, course._id)).status, 400);
+    assert.strictEqual((await upload('accountant', users.student._id, course._id)).status, 403);
+    assert.strictEqual((await upload('content_manager', users.student._id, course._id, Buffer.from('not a PDF'))).status, 415);
+    const certificate = await upload('content_manager', users.student._id, course._id);
+    assert.strictEqual(certificate.status, 201, JSON.stringify(certificate.body));
+    assert.strictEqual(certificate.body.hasPdf, true);
+    assert.strictEqual(certificate.body.fileStorageKey, undefined);
+    const download = await fetch(base + certificate.body.downloadUrl, {
+      headers: { Authorization: 'Bearer ' + sessionToken(users.content_manager) }
     });
-    await expect('content_manager', 'POST', '/api/academy/certificates', 201, {
-      studentId: String(users.student._id),
-      courseId: String(course._id)
-    });
+    assert.strictEqual(download.status, 200);
+    assert.deepStrictEqual(Buffer.from(await download.arrayBuffer()), pdf);
+    const otherAcademy = await Academy.create({ code: 'RBAC-B', name: 'Other Academy', slug: 'rbac-other', status: 'active' });
+    const foreignStudent = await User.create({ academyId: otherAcademy._id, name: 'Other student', email: 'other@example.test', passwordHash, role: 'student', active: true });
+    assert.strictEqual((await upload('content_manager', foreignStudent._id, course._id)).status, 400);
 
     // Privilege assignment itself is protected.
     await expect('admin', 'POST', '/api/academy/users', 403, {
@@ -720,6 +741,7 @@ async function main() {
     console.log('RBAC regression tests passed.');
   } finally {
     await new Promise(resolve => server.close(resolve));
+    await fs.rm(certificateTestRoot, { recursive: true, force: true });
   }
 }
 
@@ -733,3 +755,4 @@ main()
     try { await mongoose.disconnect(); } catch {}
     process.exit(1);
   });
+
