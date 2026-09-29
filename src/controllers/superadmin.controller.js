@@ -200,7 +200,8 @@ async function updateStatus(req, res) {
     return res.status(400).json({ message: 'Invalid status' });
   }
 
-  const academy = await Academy.findById(req.params.id);
+  const academyId = objectId(req.params.id, 'معرف الأكاديمية غير صحيح');
+  const academy = await Academy.findById(academyId);
   if (!academy) return res.status(404).json({ message: 'Academy not found' });
 
   const before = { status: academy.status };
