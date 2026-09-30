@@ -257,25 +257,28 @@ async function ensureSessionCompensations(session) {
     featureSettings.compensationPassingPercentage
   );
 
-  for (const enrollment of missed) {
-    await CompensationProgress.findOneAndUpdate(
-      {
-        academyId: session.academyId,
-        liveSessionId: session._id,
-        studentId: enrollment.studentId
-      },
-      {
-        $setOnInsert: {
-          moduleId: module._id,
-          courseId: session.courseId,
-          status: 'pending',
-          attempts: 0,
-          bestPercentage: 0
-        }
-      },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
-  }
+  await CompensationProgress.bulkWrite(
+    missed.map(enrollment => ({
+      updateOne: {
+        filter: {
+          academyId: session.academyId,
+          liveSessionId: session._id,
+          studentId: enrollment.studentId
+        },
+        update: {
+          $setOnInsert: {
+            moduleId: module._id,
+            courseId: session.courseId,
+            status: 'pending',
+            attempts: 0,
+            bestPercentage: 0
+          }
+        },
+        upsert: true
+      }
+    })),
+    { ordered: false }
+  );
 
   return missed.length;
 }
