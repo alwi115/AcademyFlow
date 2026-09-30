@@ -295,6 +295,46 @@
     return 'هلا، أنا مساعد AcademyFlow. بساعدك ضمن صلاحيات حسابك فقط، وما بعرض لك أي بيانات خارج نطاق دورك.';
   }
 
+  function mobileNavigationOpen() {
+    if (window.innerWidth > 900) return false;
+    return Boolean(document.querySelector(
+      '#sidebar.open, .academy-sidebar.open, .instructor-sidebar.open, .student-sidebar.open, .sa-sidebar.open'
+    ));
+  }
+
+  function syncMobileNavigationState(root) {
+    const blocked = mobileNavigationOpen();
+    root.classList.toggle('nav-obscured', blocked);
+    document.body.classList.toggle('af-ai-nav-open', blocked);
+
+    if (blocked && state.open) {
+      state.open = false;
+      root.classList.remove('open');
+    }
+  }
+
+  function watchMobileNavigation(root) {
+    const sync = () => syncMobileNavigationState(root);
+    sync();
+
+    const observer = new MutationObserver(mutations => {
+      if (mutations.some(mutation =>
+        mutation.type === 'attributes' &&
+        mutation.attributeName === 'class'
+      )) {
+        sync();
+      }
+    });
+
+    observer.observe(document.body, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
+    window.addEventListener('resize', sync, { passive: true });
+  }
+
   function buildWidget() {
     const root = el('div', 'af-ai-root');
     root.id = 'afAiRoot';
@@ -358,10 +398,12 @@
     root.appendChild(launcher);
     root.appendChild(panel);
     document.body.appendChild(root);
+    watchMobileNavigation(root);
 
     addMessage('assistant', welcomeMessage());
 
     launcher.addEventListener('click', () => {
+      if (mobileNavigationOpen()) return;
       state.open = !state.open;
       root.classList.toggle('open', state.open);
       if (state.open) setTimeout(() => document.getElementById('afAiInput')?.focus(), 80);
