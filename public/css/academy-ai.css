@@ -2,7 +2,7 @@
   position: fixed;
   left: max(20px, env(safe-area-inset-left));
   bottom: max(20px, env(safe-area-inset-bottom));
-  z-index: 1200;
+  z-index: 74;
   direction: rtl;
   font-family: var(--font-body, 'IBM Plex Sans Arabic', system-ui, sans-serif);
   -webkit-font-smoothing: antialiased;
@@ -572,4 +572,9 @@
     font-size: 9.5px;
     padding-bottom: 10px;
   }
+}
+
+
+@media print {
+  .af-ai-root { display: none !important; }
 }
