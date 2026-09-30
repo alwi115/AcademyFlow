@@ -2,6 +2,7 @@ const router = require('express').Router();
 const rateLimit = require('express-rate-limit');
 const { auth, allowRoles } = require('../middleware/auth');
 const tenant = require('../middleware/tenant');
+const requireOwnerLegalAcceptance = require('../middleware/legal-acceptance');
 const controller = require('../controllers/ai.controller');
 
 const aiLimiter = rateLimit({
@@ -24,7 +25,7 @@ const AI_ROLES = [
   'instructor'
 ];
 
-router.use(auth, tenant, allowRoles(...AI_ROLES), aiLimiter);
+router.use(auth, tenant, allowRoles(...AI_ROLES), requireOwnerLegalAcceptance, aiLimiter);
 
 router.get('/context', controller.context);
 router.post('/chat', controller.chat);
