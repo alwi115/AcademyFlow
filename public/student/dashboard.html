@@ -3237,7 +3237,7 @@ const StudentPortal = (() => {
             <p>${esc(x.description || 'لا توجد تعليمات إضافية.')}</p>
             <div class="student-meta">
               <span>الدرجة: ${esc(x.totalMarks)}</span>
-              <span>التسليم: ${fmtDate(x.dueAt,true)}</span>
+              <span>التسليم: ${esc(x.dueAtDisplay || fmtDate(x.dueAt,true))}</span>
               ${x.submission?.score !== null && x.submission?.score !== undefined ? '<span>درجتك: '+esc(x.submission.score)+'</span>' : ''}
             </div>
             ${x.submission?.feedback ? '<div class="student-card" style="box-shadow:none;margin-top:10px;padding:10px"><small>تعليق المدرب</small><p style="margin:4px 0 0">'+esc(x.submission.feedback)+'</p></div>' : ''}
@@ -3305,7 +3305,7 @@ const StudentPortal = (() => {
             <span>الدرجة: ${esc(x.totalMarks)}</span>
             <span>النجاح: ${esc(x.passingMark)}</span>
             <span>المدة: ${esc(x.durationMinutes || 0)} دقيقة</span>
-            <span>الموعد: ${fmtDate(x.dueAt,true)}</span>
+            <span>الموعد: ${esc(x.dueAtDisplay || fmtDate(x.dueAt,true))}</span>
           </div>
           <div class="student-card" style="box-shadow:none;margin-top:11px;padding:10px">
             <small style="color:var(--text-mute)">واجهة حل الأسئلة التفصيلية ستُفعل عندما تضيف الأكاديمية أسئلة للاختبار.</small>
