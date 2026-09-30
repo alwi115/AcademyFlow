@@ -2,6 +2,7 @@ const router = require('express').Router();
 const rateLimit = require('express-rate-limit');
 const { auth, allowRoles } = require('../middleware/auth');
 const tenant = require('../middleware/tenant');
+const requireOwnerLegalAcceptance = require('../middleware/legal-acceptance');
 const controller = require('../controllers/ai.controller');
 
 const aiLimiter = rateLimit({
@@ -12,7 +13,19 @@ const aiLimiter = rateLimit({
   message: { message: 'وصلت للحد المؤقت لاستخدام AcademyFlow AI. جرّب بعد قليل.' }
 });
 
-router.use(auth, tenant, allowRoles('student', 'instructor'), aiLimiter);
+const AI_ROLES = [
+  'owner',
+  'admin',
+  'branch_manager',
+  'accountant',
+  'reception',
+  'content_manager',
+  'support',
+  'student',
+  'instructor'
+];
+
+router.use(auth, tenant, allowRoles(...AI_ROLES), requireOwnerLegalAcceptance, aiLimiter);
 
 router.get('/context', controller.context);
 router.post('/chat', controller.chat);
