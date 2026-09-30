@@ -12,7 +12,19 @@ const aiLimiter = rateLimit({
   message: { message: 'وصلت للحد المؤقت لاستخدام AcademyFlow AI. جرّب بعد قليل.' }
 });
 
-router.use(auth, tenant, allowRoles('student', 'instructor'), aiLimiter);
+const AI_ROLES = [
+  'owner',
+  'admin',
+  'branch_manager',
+  'accountant',
+  'reception',
+  'content_manager',
+  'support',
+  'student',
+  'instructor'
+];
+
+router.use(auth, tenant, allowRoles(...AI_ROLES), aiLimiter);
 
 router.get('/context', controller.context);
 router.post('/chat', controller.chat);
