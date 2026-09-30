@@ -105,13 +105,15 @@
 
       const badge = document.getElementById('afAiStateBadge');
       if (badge) {
-        badge.textContent = context.enabled ? 'جاهز' : 'غير مفعّل';
+        badge.textContent = context.enabled ? 'جاهز' : (context.liveData ? 'بيانات النظام' : 'غير مفعّل');
         badge.dataset.enabled = context.enabled ? 'true' : 'false';
       }
 
       if (!context.enabled) {
         const keyName = context.provider === 'openai' ? 'OPENAI_API_KEY' : 'GEMINI_API_KEY';
-        addLocalNotice(`AcademyFlow AI مركّب في النظام، لكن يحتاج إضافة ${keyName} في متغيرات الاستضافة عشان يبدأ يرد.`);
+        addLocalNotice(context.liveData
+          ? `بيانات AcademyFlow المباشرة مربوطة، لكن الشرح والتوليد الذكي يحتاج ${keyName} في متغيرات الاستضافة.`
+          : `AcademyFlow AI مركّب في النظام، لكن يحتاج إضافة ${keyName} في متغيرات الاستضافة عشان يبدأ يرد.`);
       } else if (!context.courses?.length) {
         addLocalNotice(role === 'instructor'
           ? 'ما عندك دورات مسندة لك حاليًا عشان يستخدمها المساعد.'
@@ -249,8 +251,8 @@
       <div class="af-ai-quick-actions">
         <button type="button" data-af-ai-action="summary">لخّص الدورة</button>
         ${role === 'student'
-          ? '<button type="button" data-af-ai-action="explain">اشرحها ببساطة</button><button type="button" data-af-ai-action="review">سوّ لي مراجعة</button>'
-          : '<button type="button" data-af-ai-action="ideas">أفكار شرح</button>'}
+          ? '<button type="button" data-af-ai-action="progress">تقدمي</button><button type="button" data-af-ai-action="next-session">موعدي الجاي</button><button type="button" data-af-ai-action="explain">اشرحها ببساطة</button><button type="button" data-af-ai-action="review">سوّ لي مراجعة</button>'
+          : '<button type="button" data-af-ai-action="attendance">ملخص الحضور</button><button type="button" data-af-ai-action="followup">متابعة الطلاب</button><button type="button" data-af-ai-action="ideas">أفكار شرح</button>'}
       </div>
 
       ${role === 'instructor' ? `
@@ -288,8 +290,8 @@
     addMessage(
       'assistant',
       role === 'instructor'
-        ? 'هلا، أنا مساعد AcademyFlow. أقدر ألخّص لك محتوى الدورة، أعطيك أفكار شرح، أو أنشئ لك اختبار كمسودة داخل النظام.'
-        : 'هلا، أنا مساعد AcademyFlow. اسألني عن دوراتك، خلني ألخّص لك المحتوى أو أشرح لك أي نقطة بطريقة أبسط.'
+        ? 'هلا، أنا مساعد AcademyFlow. صرت أقرأ بيانات دوراتك المباشرة مثل أعداد الطلاب، التقدم، الحضور والجلسات القادمة، وبنفس الوقت أقدر أساعدك في الشرح والاختبارات.'
+        : 'هلا، أنا مساعد AcademyFlow. صرت أعرف تقدمك، حضورك والجلسات القادمة من بيانات النظام، وأقدر بعد ألخّص لك الدروس وأشرحها بطريقة أبسط.'
     );
 
     launcher.addEventListener('click', () => {
@@ -316,6 +318,18 @@
     });
 
     root.querySelector('[data-af-ai-action="summary"]')?.addEventListener('click', summarize);
+    root.querySelector('[data-af-ai-action="progress"]')?.addEventListener('click', () => {
+      sendChat('كم نسبة تقدمي في الدورة المحددة؟ لخص لي وضعي الحالي من بيانات AcademyFlow.');
+    });
+    root.querySelector('[data-af-ai-action="next-session"]')?.addEventListener('click', () => {
+      sendChat('متى الجلسة أو الحصة الجاية لي؟ استخدم الموعد الموجود في AcademyFlow.');
+    });
+    root.querySelector('[data-af-ai-action="attendance"]')?.addEventListener('click', () => {
+      sendChat('عطني ملخص الحضور والغياب والتأخر للدورة المحددة من بيانات AcademyFlow.');
+    });
+    root.querySelector('[data-af-ai-action="followup"]')?.addEventListener('click', () => {
+      sendChat('حلل لي وضع الطلاب في الدورة المحددة من ناحية عدد الطلاب ومتوسط التقدم والحضور، وقل لي وين يحتاجون متابعة بدون اختراع بيانات.');
+    });
     root.querySelector('[data-af-ai-action="explain"]')?.addEventListener('click', () => {
       sendChat('اشرح لي محتوى الدورة المحددة بطريقة مبسطة، ثم أعطني مثالًا يساعدني أفهمها.');
     });
