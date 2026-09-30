@@ -11,6 +11,8 @@ router.use(auth, tenant, allowRoles('instructor'));
 
 router.get('/options', core.options);
 router.get('/dashboard', core.dashboard);
+router.get('/calendar', require('../controllers/learning-tools.controller').calendar);
+router.get('/follow-up', require('../controllers/learning-tools.controller').followUp);
 router.get('/courses', core.courses);
 router.patch('/courses/:id', core.updateCourse);
 router.get('/groups', core.groups);

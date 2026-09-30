@@ -9,6 +9,8 @@ const certificate = require('../controllers/certificate.controller');
 router.use(auth, tenant, allowRoles('student'));
 
 router.get('/dashboard', c.dashboard);
+router.get('/calendar', require('../controllers/learning-tools.controller').calendar);
+router.get('/progress', require('../controllers/learning-tools.controller').progress);
 router.get('/courses', c.courses);
 router.get('/courses/:id', c.courseDetails);
 router.post('/lessons/:lessonId/progress', c.setLessonProgress);

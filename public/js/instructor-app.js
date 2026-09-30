@@ -12,6 +12,8 @@ window.InstructorPortal = (() => {
   let toastTimer = null;
 
   const meta = {
+    calendar:['التقويم الموحّد','المحاضرات والواجبات والاختبارات ضمن دوراتك.'],
+    'follow-up':['متابعة الطلاب','مؤشرات الغياب والتسليمات التي تحتاج متابعتك.'],
     dashboard:['لوحة المدرب','ملخص دوراتك وطلابك وما يحتاج متابعتك.'],
     courses:['دوراتي','الدورات المسندة لك ونسب تقدم الطلاب.'],
     lessons:['الدروس','أضف وعدّل الدروس وروابط YouTube.'],
@@ -28,7 +30,7 @@ window.InstructorPortal = (() => {
   };
 
   const navGroups = [
-    {label:'الرئيسية',items:[['dashboard','الرئيسية','⌂']]},
+    {label:'الرئيسية',items:[['dashboard','الرئيسية','⌂'],['calendar','التقويم الموحّد','CAL']]},
     {label:'التعليم',items:[
       ['courses','دوراتي','C'],
       ['lessons','الدروس','▶'],
@@ -38,6 +40,7 @@ window.InstructorPortal = (() => {
       ['quizzes','الاختبارات','Q']
     ]},
     {label:'الطلاب',items:[
+      ['follow-up','متابعة الطلاب','!'],
       ['students','طلابي','S'],
       ['attendance','الحضور','✓'],
       ['grades','دفتر الدرجات','R']
@@ -721,6 +724,8 @@ window.InstructorPortal = (() => {
   async function init() {
     renderShell();
     window.AcademyFlowWorkspace?.enhance(document.getElementById('instructorApp'));
+
+    if (page === 'calendar' || page === 'follow-up') return window.AFLearning[page === 'calendar' ? 'calendar' : 'followUp']({ api, portal: 'instructor', target: document.getElementById('pageContent') });
 
     if (page==='dashboard') return renderDashboard();
     if (page==='courses') return renderCourses();

@@ -23,6 +23,8 @@ const QUIZ_REVIEW_ROLES = ['owner','admin'];
 router.use(auth, tenant, allowRoles(...ACADEMY_ROLES), requireOwnerLegalAcceptance);
 
 router.get('/dashboard', c.dashboard);
+router.get('/calendar', allowRoles(...ADMIN_ROLES), require('../controllers/learning-tools.controller').calendar);
+router.get('/follow-up', allowRoles(...ADMIN_ROLES), require('../controllers/learning-tools.controller').followUp);
 router.get('/options', c.options);
 
 router.get('/users', allowRoles(...PEOPLE_ROLES), c.listUsers);

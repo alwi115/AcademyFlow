@@ -69,3 +69,6 @@ jobs:
         run: node scripts/test-local.js performance-smoke-test.js
       - name: Security and reliability fixes
         run: npm run test:fixes
+
+      - name: Learning calendar, progress and student follow-up
+        run: npm run test:learning

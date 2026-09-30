@@ -84,15 +84,15 @@ function watchedSecondsFromRanges(ranges) {
 }
 
 async function recalcProgress(academyId, studentId, courseId) {
-  const [totalLessons, completedLessons] = await Promise.all([
-    Lesson.countDocuments({ academyId, courseId, status: 'published' }),
-    LessonProgress.countDocuments({
+  const lessons = await Lesson.find({ academyId, courseId, status: 'published' }).select('_id');
+  const totalLessons = lessons.length;
+  const completedLessons = await LessonProgress.countDocuments({
       academyId,
       studentId,
       courseId,
+      lessonId: { $in: lessons.map(row => row._id) },
       completed: true
-    })
-  ]);
+    });
 
   const progress = totalLessons
     ? Math.min(100, Math.round((completedLessons / totalLessons) * 100))

@@ -15,6 +15,8 @@ const StudentPortal = (() => {
   let modalSubmit = null;
 
   const meta = {
+    calendar: ['التقويم الموحّد','محاضراتك ومواعيد الواجبات والاختبارات.'],
+    progress: ['مساري الدراسي','ما أنجزته، وما تبقّى، وخطوتك التالية.'],
     dashboard: ['مرحبًا '+(user.name || 'بالطالب'),'تابع دراستك، تقدمك، ومحاضراتك من مكان واحد.'],
     courses: ['دوراتي','كل الدورات المسجل فيها حسابك ونسبة تقدمك.'],
     course: ['الدورة','شاهد الدروس وأكملها بالتسلسل داخل AcademyFlow.'],
@@ -30,6 +32,8 @@ const StudentPortal = (() => {
 
   const nav = [
     ['dashboard','الرئيسية','⌂'],
+    ['calendar','التقويم الموحّد','CAL'],
+    ['progress','مساري الدراسي','✓'],
     ['courses','دوراتي','C'],
     ['live','المحاضرات','Z'],
     ['assignments','الواجبات','A'],
@@ -765,7 +769,8 @@ const StudentPortal = (() => {
       const lessons = data.lessons || [];
       const completionThreshold = Number(data.videoCompletionPercent || 95);
 
-      let activeId =
+      const requestedLesson = new URLSearchParams(location.search).get('lesson');
+      let activeId = lessons.find(x => x.id === requestedLesson)?.id ||
         lessons.find(x => !x.completed && Number(x.watchedPercent || 0) > 0)?.id ||
         lessons.find(x => !x.completed)?.id ||
         lessons[0]?.id ||
@@ -1346,6 +1351,8 @@ const StudentPortal = (() => {
     renderShell();
     window.AcademyFlowWorkspace?.enhance(document.getElementById('studentApp'));
     startUrgentReminderPolling();
+
+    if (page === 'calendar' || page === 'progress') return window.AFLearning[page]({ api, portal: 'student', target: document.getElementById('studentPageContent') });
 
     if (page === 'quizzes' && window.StudentQuiz) return window.StudentQuiz.renderList();
     if (page === 'quiz' && window.StudentQuiz) return window.StudentQuiz.renderQuizPage();

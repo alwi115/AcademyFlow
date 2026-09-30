@@ -4,7 +4,7 @@ const { spawn } = require('child_process');
 const { MongoMemoryReplSet } = require('mongodb-memory-server');
 async function main() {
   const scripts = process.argv.slice(2);
-  const targets = scripts.length ? scripts : ['security-regression-test.js', 'fixes-regression-test.js', 'mongodb-storage-test.js', 'tenant-isolation-test.js', 'rbac-test.js', 'backup-restore-test.js', 'monitoring-test.js', 'legal-readiness-test.js', 'e2e-test.js', 'performance-smoke-test.js'];
+  const targets = scripts.length ? scripts : ['learning-tools-test.js', 'security-regression-test.js', 'fixes-regression-test.js', 'mongodb-storage-test.js', 'tenant-isolation-test.js', 'rbac-test.js', 'backup-restore-test.js', 'monitoring-test.js', 'legal-readiness-test.js', 'e2e-test.js', 'performance-smoke-test.js'];
   const db = await MongoMemoryReplSet.create({ binary: { downloadDir: path.join(require('./work-directory'), 'mongodb-binaries') }, replSet: { count: 1, storageEngine: 'wiredTiger' } });
   let failed = false;
   try {

@@ -37,7 +37,8 @@ const AF = (() => {
       label: 'الرئيسية',
       items: [
         ['dashboard','لوحة التحكم','⌂'],
-        ['calendar','التقويم','CAL', ['owner','admin']]
+        ['calendar','التقويم الموحّد','CAL', ['owner','admin']],
+        ['follow-up','متابعة الطلاب','!', ['owner','admin']]
       ]
     },
     {
@@ -81,8 +82,9 @@ const AF = (() => {
   ];
 
   const pageMeta = {
+    'follow-up': ['متابعة الطلاب','مؤشرات الغياب والتسليمات التي تحتاج متابعة.'],
     dashboard: ['لوحة التحكم','نظرة شاملة على نشاط الأكاديمية اليوم.'],
-    calendar: ['التقويم','المواعيد والمحاضرات القادمة في مكان واحد.'],
+    calendar: ['التقويم الموحّد','المحاضرات والواجبات والاختبارات في مكان واحد.'],
     students: ['الطلاب','إدارة حسابات الطلاب وبيانات التواصل.'],
     instructors: ['المدربين','إدارة فريق التدريب والحسابات التعليمية.'],
     staff: ['الموظفين','إدارة موظفي الأكاديمية والصلاحيات التشغيلية.'],
@@ -1474,228 +1476,6 @@ const AF = (() => {
     return '<article class="academy-report-card"><small>'+esc(label)+'</small><strong>'+esc(value ?? 0)+'</strong></article>';
   }
 
-  async function renderCalendar() {
-    const target = document.getElementById('pageContent');
-    target.innerHTML = '<div class="academy-empty">جاري تحميل التقويم...</div>';
-
-    try {
-      const rows = await api('/api/live-sessions');
-      const sessions = rows.slice().sort((a,b) => new Date(a.startAt) - new Date(b.startAt));
-      const today = calendarTodayKey();
-      const initialKey = today;
-      let selectedKey = initialKey;
-      let visibleMonth = calendarMonthFromKey(initialKey);
-
-      target.innerHTML = `
-        <section class="academy-card">
-          <div class="academy-calendar-toolbar">
-            <div>
-              <h2 style="margin:0 0 5px">التقويم</h2>
-              <p style="margin:0;color:var(--text-mute);font-size:10.5px">اختَر أي يوم وبتطلع لك كل المحاضرات المجدولة فيه.</p>
-            </div>
-            <a class="btn primary" href="/academy/live.html">إدارة المحاضرات</a>
-          </div>
-
-          <div class="academy-calendar-toolbar">
-            <div class="academy-calendar-month" id="calendarMonthLabel"></div>
-            <div class="academy-calendar-nav">
-              <button class="btn secondary" type="button" id="calendarNextMonth">الشهر التالي</button>
-              <button class="btn soft" type="button" id="calendarToday">اليوم</button>
-              <button class="btn secondary" type="button" id="calendarPrevMonth">الشهر السابق</button>
-            </div>
-          </div>
-
-          <div class="academy-calendar-shell">
-            <div class="academy-calendar-board">
-              <div class="academy-calendar-scroll">
-                <div class="academy-calendar-grid" id="academyCalendarGrid" aria-label="تقويم المحاضرات"></div>
-              </div>
-            </div>
-
-            <aside class="academy-card academy-calendar-agenda" style="box-shadow:none">
-              <h3 class="academy-calendar-agenda-title">مواعيد اليوم</h3>
-              <span class="academy-calendar-agenda-date" id="calendarSelectedDate"></span>
-              <div class="academy-calendar-events" id="calendarDayEvents"></div>
-            </aside>
-          </div>
-        </section>
-      `;
-
-      const grid = document.getElementById('academyCalendarGrid');
-      const monthLabel = document.getElementById('calendarMonthLabel');
-      const selectedDate = document.getElementById('calendarSelectedDate');
-      const eventsTarget = document.getElementById('calendarDayEvents');
-
-      const byDay = sessions.reduce((acc,row) => {
-        const key = calendarSessionKey(row);
-        if (!key) return acc;
-        (acc[key] ||= []).push(row);
-        return acc;
-      }, {});
-
-      function drawMonth() {
-        const year = visibleMonth.getFullYear();
-        const month = visibleMonth.getMonth();
-        monthLabel.textContent = new Intl.DateTimeFormat('ar-OM', {month:'long', year:'numeric'}).format(new Date(year,month,1));
-
-        const weekDays = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
-        const first = new Date(year,month,1);
-        const startDate = new Date(year,month,1-first.getDay());
-
-        let html = weekDays.map(day => '<div class="academy-calendar-weekday">'+day+'</div>').join('');
-
-        for (let i=0;i<42;i++) {
-          const d = new Date(startDate);
-          d.setDate(startDate.getDate()+i);
-          const key = calendarDateKey(d);
-          const dayRows = byDay[key] || [];
-          const outside = d.getMonth() !== month;
-          const previews = dayRows.slice(0,2).map(x => '<span>'+esc(x.title)+'</span>').join('');
-          const more = dayRows.length > 2 ? '<span class="academy-calendar-more">+'+(dayRows.length-2)+' مواعيد</span>' : '';
-
-          html += `
-            <button type="button"
-              class="academy-calendar-day${outside ? ' is-outside' : ''}${key === selectedKey ? ' is-selected' : ''}${key === today ? ' is-today' : ''}"
-              data-calendar-date="${key}"
-              aria-pressed="${key === selectedKey ? 'true' : 'false'}">
-              <span class="academy-calendar-date">${d.getDate()}</span>
-              ${dayRows.length ? '<span class="academy-calendar-count">'+dayRows.length+'</span>' : ''}
-              <span class="academy-calendar-preview">${previews}${more}</span>
-            </button>
-          `;
-        }
-
-        grid.innerHTML = html;
-        grid.querySelectorAll('[data-calendar-date]').forEach(btn => {
-          btn.addEventListener('click', () => {
-            selectedKey = btn.dataset.calendarDate;
-            const picked = calendarMonthFromKey(selectedKey);
-            if (picked.getMonth() !== visibleMonth.getMonth() || picked.getFullYear() !== visibleMonth.getFullYear()) {
-              visibleMonth = picked;
-            }
-            drawMonth();
-            drawDay();
-          });
-        });
-      }
-
-      function drawDay() {
-        const dayRows = (byDay[selectedKey] || []).slice().sort((a,b) => new Date(a.startAt) - new Date(b.startAt));
-        selectedDate.textContent = calendarLongDate(selectedKey);
-
-        if (!dayRows.length) {
-          eventsTarget.innerHTML = '<div class="academy-calendar-empty">ما فيه أي محاضرات مجدولة في هذا اليوم.</div>';
-          return;
-        }
-
-        eventsTarget.innerHTML = dayRows.map(x => {
-          const course = x.courseId?.title || '';
-          const instructor = x.instructorId?.name || '';
-          const group = x.groupId?.name || '';
-          return `
-            <article class="academy-calendar-event">
-              <div class="academy-calendar-event-head">
-                <div>
-                  <h3>${esc(x.title)}</h3>
-                  <div class="academy-calendar-event-meta">
-                    <span>الوقت: ${esc(calendarSessionTime(x))}</span>
-                    <span>المدة: ${esc(x.durationMinutes || 60)} دقيقة</span>
-                    ${course ? '<span>الدورة: '+esc(course)+'</span>' : ''}
-                    ${group ? '<span>المجموعة: '+esc(group)+'</span>' : ''}
-                    ${instructor ? '<span>المدرب: '+esc(instructor)+'</span>' : ''}
-                  </div>
-                </div>
-                ${status(x.status)}
-              </div>
-              ${x.description ? '<p style="margin:9px 0 0;color:var(--text-mute);font-size:9.5px;line-height:1.7">'+esc(x.description)+'</p>' : ''}
-              <div class="academy-calendar-event-actions">
-                ${x.zoomJoinUrl ? '<a class="btn soft" target="_blank" rel="noopener" href="'+esc(x.zoomJoinUrl)+'">فتح Zoom</a>' : ''}
-                <a class="btn secondary" href="/academy/live.html">تفاصيل المحاضرة</a>
-              </div>
-            </article>
-          `;
-        }).join('');
-      }
-
-      document.getElementById('calendarPrevMonth').addEventListener('click', () => {
-        visibleMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth()-1, 1);
-        drawMonth();
-      });
-
-      document.getElementById('calendarNextMonth').addEventListener('click', () => {
-        visibleMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth()+1, 1);
-        drawMonth();
-      });
-
-      document.getElementById('calendarToday').addEventListener('click', () => {
-        selectedKey = today;
-        visibleMonth = calendarMonthFromKey(today);
-        drawMonth();
-        drawDay();
-      });
-
-      drawMonth();
-      drawDay();
-    } catch (err) {
-      target.innerHTML = '<div class="academy-card academy-empty">'+esc(err.message)+'</div>';
-    }
-  }
-
-function calendarTodayKey() {
-    const d = new Date();
-    return calendarDateKey(d);
-  }
-
-function calendarDateKey(date) {
-    const y = date.getFullYear();
-    const m = String(date.getMonth()+1).padStart(2,'0');
-    const d = String(date.getDate()).padStart(2,'0');
-    return y+'-'+m+'-'+d;
-  }
-
-function calendarSessionKey(row) {
-    if (row?.startAtLocal) return String(row.startAtLocal).slice(0,10);
-    if (!row?.startAt) return '';
-    const timezone = row.timezone || 'Asia/Muscat';
-    const parts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: timezone,
-      year:'numeric',
-      month:'2-digit',
-      day:'2-digit'
-    }).formatToParts(new Date(row.startAt));
-    const map = Object.fromEntries(parts.map(x => [x.type,x.value]));
-    return map.year+'-'+map.month+'-'+map.day;
-  }
-
-function calendarMonthFromKey(key) {
-    const parts = String(key).split('-').map(Number);
-    return new Date(parts[0], Math.max(0,(parts[1] || 1)-1), 1);
-  }
-
-function calendarLongDate(key) {
-    const parts = String(key).split('-').map(Number);
-    const d = new Date(parts[0], Math.max(0,(parts[1] || 1)-1), parts[2] || 1);
-    return new Intl.DateTimeFormat('ar-OM', {
-      weekday:'long',
-      day:'numeric',
-      month:'long',
-      year:'numeric'
-    }).format(d);
-  }
-
-function calendarSessionTime(row) {
-    try {
-      const timezone = row.timezone || 'Asia/Muscat';
-      return new Intl.DateTimeFormat('ar-OM', {
-        timeZone: timezone,
-        hour:'numeric',
-        minute:'2-digit'
-      }).format(new Date(row.startAt));
-    } catch (_) {
-      return String(row.startAtDisplay || row.startAtLocal || '').slice(11,16) || '—';
-    }
-  }
-
   async function renderSettings() {
     const target = document.getElementById('pageContent');
     target.innerHTML = '<div class="academy-empty">جاري تحميل الإعدادات...</div>';
@@ -2312,7 +2092,7 @@ function calendarSessionTime(row) {
     if (page === 'live') return renderLive();
     if (page === 'reports') return renderReports();
     if (page === 'settings') return renderSettings();
-    if (page === 'calendar') return renderCalendar();
+    if (page === 'calendar' || page === 'follow-up') return window.AFLearning[page === 'calendar' ? 'calendar' : 'followUp']({ api, portal: 'academy', target: document.getElementById('pageContent') });
     if (page === 'certificates') return renderCertificatesPage();
     return renderGeneric(page);
   }
