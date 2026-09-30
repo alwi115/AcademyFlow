@@ -3,6 +3,8 @@ const Enrollment = require('../models/Enrollment');
 const Attendance = require('../models/Attendance');
 const LiveSession = require('../models/LiveSession');
 const LessonProgress = require('../models/LessonProgress');
+const Course = require('../models/Course');
+const User = require('../models/User');
 const {
   enrollmentAccessFilter,
   attendanceAccessFilter
@@ -237,10 +239,79 @@ async function instructorContext(req, courses) {
   return lines.join('\n');
 }
 
+async function managementContext(req, courses) {
+  const selectedCourse = (courses || []).length === 1 ? courses[0] : null;
+  const courseScope = selectedCourse ? { courseId: selectedCourse._id } : {};
+  const since = new Date(Date.now() - THIRTY_DAYS_MS);
+  const timezone = await timezoneFor(req);
+
+  const [
+    studentCount,
+    instructorCount,
+    courseCount,
+    activeEnrollments,
+    pausedEnrollments,
+    completedEnrollments,
+    presentCount,
+    absentCount,
+    lateCount,
+    excusedCount,
+    upcomingSessions
+  ] = await Promise.all([
+    User.countDocuments({ academyId: req.academyId, role: 'student', active: true }),
+    User.countDocuments({ academyId: req.academyId, role: 'instructor', active: true }),
+    Course.countDocuments({ academyId: req.academyId, status: { $ne: 'archived' } }),
+    Enrollment.countDocuments({ academyId: req.academyId, ...courseScope, status: 'active' }),
+    Enrollment.countDocuments({ academyId: req.academyId, ...courseScope, status: 'paused' }),
+    Enrollment.countDocuments({ academyId: req.academyId, ...courseScope, status: 'completed' }),
+    Attendance.countDocuments({ academyId: req.academyId, ...courseScope, date: { $gte: since }, status: 'present' }),
+    Attendance.countDocuments({ academyId: req.academyId, ...courseScope, date: { $gte: since }, status: 'absent' }),
+    Attendance.countDocuments({ academyId: req.academyId, ...courseScope, date: { $gte: since }, status: 'late' }),
+    Attendance.countDocuments({ academyId: req.academyId, ...courseScope, date: { $gte: since }, status: 'excused' }),
+    LiveSession.find({
+      academyId: req.academyId,
+      ...courseScope,
+      status: { $in: ['scheduled', 'live'] },
+      startAt: { $gte: new Date(Date.now() - 15 * 60 * 1000) }
+    })
+      .select('courseId title startAt status')
+      .sort({ startAt: 1 })
+      .limit(6)
+  ]);
+
+  const lines = [
+    selectedCourse
+      ? 'النطاق الحالي: الدورة المحددة — ' + selectedCourse.title
+      : 'النطاق الحالي: الأكاديمية كاملة.',
+    'إجمالي الحسابات النشطة: ' + studentCount + ' طالب، ' + instructorCount + ' مدرب.',
+    'إجمالي الدورات غير المؤرشفة: ' + courseCount + '.',
+    'التسجيلات' + (selectedCourse ? ' في الدورة المحددة' : '') + ': نشط ' + activeEnrollments +
+      '، متوقف ' + pausedEnrollments + '، مكتمل ' + completedEnrollments + '.',
+    'الحضور آخر 30 يوم' + (selectedCourse ? ' للدورة المحددة' : '') + ': حاضر ' + presentCount +
+      '، غائب ' + absentCount + '، متأخر ' + lateCount + '، بعذر ' + excusedCount + '.'
+  ];
+
+  if (upcomingSessions.length) {
+    lines.push('الجلسات القادمة:');
+    for (const session of upcomingSessions) {
+      lines.push(
+        '- ' + session.title + ' — ' + formatDateTime(session.startAt, timezone) +
+        (session.status === 'live' ? ' (مباشرة الآن)' : '')
+      );
+    }
+  } else {
+    lines.push('الجلسات القادمة: لا توجد جلسات مجدولة ضمن النطاق الحالي.');
+  }
+
+  lines.push('هذه البيانات للقراءة والتحليل فقط؛ لا ينفذ المساعد تغييرات إدارية تلقائيًا.');
+  return lines.join('\n');
+}
+
 async function operationalContext(req, courses) {
   if (req.user.role === 'student') return studentContext(req, courses);
   if (req.user.role === 'instructor') return instructorContext(req, courses);
-  return 'لا توجد بيانات تشغيلية مخصصة لهذا الدور.';
+  if (req.user.role === 'owner' || req.user.role === 'admin') return managementContext(req, courses);
+  return 'لا توجد بيانات تشغيلية إضافية مخصصة لهذا الدور. التزم فقط بسياق المحتوى والصلاحيات المتاحة.';
 }
 
 module.exports = {
