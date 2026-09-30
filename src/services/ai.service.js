@@ -358,7 +358,12 @@ async function chat(req, { message, courseId = '', lessonId = '', history = [] }
     throw err;
   }
 
-  const liveContext = await operationalContext(req, context.courses);
+  let liveContext = 'البيانات التشغيلية المباشرة غير متاحة مؤقتًا.';
+  try {
+    liveContext = await operationalContext(req, context.courses);
+  } catch (err) {
+    console.warn('[academyflow-ai-live-context]', err.message);
+  }
 
   const answer = await providerResponse({
     system: `${baseDeveloperPrompt(req.user.role)}
