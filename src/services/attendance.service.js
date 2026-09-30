@@ -1,15 +1,33 @@
 const Attendance = require('../models/Attendance');
 const { objectId, optionalObjectId, enumValue } = require('../utils/security-input');
 
-const ATTENDANCE_STATUSES = ['present', 'absent', 'late', 'excused'];
+function badRequest(message) {
+  const err = new Error(message);
+  err.status = 400;
+  return err;
+}
 
-function safeNote(value) {
-  if (value === undefined || value === null) return '';
-  if (typeof value !== 'string') {
-    const err = new Error('Invalid attendance note');
-    err.status = 400;
-    throw err;
+function attendanceDate(value) {
+  if (value instanceof Date) {
+    if (!Number.isFinite(value.getTime())) throw badRequest('Invalid attendance date');
+    const date = new Date(value.getTime());
+    date.setUTCHours(0, 0, 0, 0);
+    return date;
   }
+
+  if (typeof value !== 'string' && typeof value !== 'number') {
+    throw badRequest('Invalid attendance date');
+  }
+
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) throw badRequest('Invalid attendance date');
+  date.setUTCHours(0, 0, 0, 0);
+  return date;
+}
+
+function attendanceNote(value) {
+  if (value === undefined || value === null || value === '') return '';
+  if (typeof value !== 'string') throw badRequest('Invalid attendance note');
   return value.trim().slice(0, 2000);
 }
 
@@ -18,33 +36,46 @@ async function saveAttendance(data = {}) {
   const studentId = objectId(data.studentId, 'Invalid student id');
   const courseId = objectId(data.courseId, 'Invalid course id');
   const groupId = optionalObjectId(data.groupId, 'Invalid group id');
-  const status = enumValue(data.status || 'present', ATTENDANCE_STATUSES, 'Invalid attendance status');
+  const date = attendanceDate(data.date);
+  const status = enumValue(
+    data.status || 'present',
+    ['present', 'absent', 'late', 'excused'],
+    'Invalid attendance status'
+  );
+  const note = attendanceNote(data.note);
 
-  const date = new Date(data.date);
-  if (!Number.isFinite(date.getTime())) {
-    const err = new Error('Invalid attendance date');
-    err.status = 400;
-    throw err;
-  }
-  date.setUTCHours(0, 0, 0, 0);
+  const filter = {
+    academyId,
+    studentId,
+    courseId,
+    groupId,
+    date
+  };
 
-  const filter = { academyId, studentId, courseId, groupId, date };
-  const update = { $set: { status, note: safeNote(data.note) } };
+  const update = {
+    $set: {
+      status,
+      note
+    }
+  };
 
   try {
-    return await Attendance.findOneAndUpdate(
-      filter,
-      update,
-      { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true }
-    );
+    return await Attendance.findOneAndUpdate(filter, update, {
+      upsert: true,
+      new: true,
+      runValidators: true,
+      setDefaultsOnInsert: true
+    });
   } catch (err) {
     if (err.code !== 11000) throw err;
-    return Attendance.findOneAndUpdate(
-      filter,
-      update,
-      { new: true, runValidators: true }
-    );
+    return Attendance.findOneAndUpdate(filter, update, {
+      new: true,
+      runValidators: true
+    });
   }
 }
 
-module.exports = { saveAttendance };
+module.exports = {
+  saveAttendance,
+  attendanceDate
+};
