@@ -13,6 +13,8 @@
       ? 'student'
       : storedUser?.role || 'owner';
 
+  if (role === 'superadmin') return;
+
   const managementRoles = new Set([
     'owner',
     'admin',
