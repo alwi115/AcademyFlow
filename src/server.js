@@ -164,6 +164,14 @@ const zoomWebhookLimiter = rateLimit({
   legacyHeaders: false
 });
 
+const stripeWebhookLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 300,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { message: 'Too many payment webhook requests' }
+});
+
 app.post(
   '/api/webhooks/zoom',
   zoomWebhookLimiter,
