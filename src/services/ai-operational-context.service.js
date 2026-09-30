@@ -97,13 +97,29 @@ async function studentContext(req, courses) {
   if (!ids.length) return 'لا توجد بيانات تشغيلية متاحة للطالب حاليًا.';
 
   const since = new Date(Date.now() - THIRTY_DAYS_MS);
-  const [enrollments, attendance, progress, sessions, timezone] = await Promise.all([
+  const [enrollments, timezone] = await Promise.all([
     Enrollment.find({
       academyId: req.academyId,
       studentId: req.user.sub,
       courseId: { $in: ids },
       status: { $in: ACTIVE_ENROLLMENT_STATUSES }
-    }).select('courseId status progress'),
+    }).select('courseId groupId status progress'),
+    timezoneFor(req)
+  ]);
+
+  const sessionScope = enrollments.map(row => (
+    row.groupId
+      ? {
+          courseId: row.courseId,
+          $or: [{ groupId: row.groupId }, { groupId: null }]
+        }
+      : {
+          courseId: row.courseId,
+          groupId: null
+        }
+  ));
+
+  const [attendance, progress, sessions] = await Promise.all([
     Attendance.find({
       academyId: req.academyId,
       studentId: req.user.sub,
@@ -115,16 +131,17 @@ async function studentContext(req, courses) {
       studentId: req.user.sub,
       courseId: { $in: ids }
     }).select('courseId completed watchedPercent'),
-    LiveSession.find({
-      academyId: req.academyId,
-      courseId: { $in: ids },
-      status: { $in: ['scheduled', 'live'] },
-      startAt: { $gte: new Date(Date.now() - 15 * 60 * 1000) }
-    })
-      .select('courseId title startAt status')
-      .sort({ startAt: 1 })
-      .limit(6),
-    timezoneFor(req)
+    sessionScope.length
+      ? LiveSession.find({
+          academyId: req.academyId,
+          status: { $in: ['scheduled', 'live'] },
+          startAt: { $gte: new Date(Date.now() - 15 * 60 * 1000) },
+          $or: sessionScope
+        })
+          .select('courseId groupId title startAt status')
+          .sort({ startAt: 1 })
+          .limit(6)
+      : []
   ]);
 
   const byCourse = courseMap(courses);
@@ -152,10 +169,10 @@ async function studentContext(req, courses) {
       );
     }
   } else {
-    lines.push('الجلسات القادمة: لا توجد جلسات مجدولة ضمن الدورات المحددة.');
+    lines.push('الجلسات القادمة: لا توجد جلسات مجدولة ضمن الدورات والمجموعات المتاحة للطالب.');
   }
 
-  return lines.join('\n');
+  return lines.join('\\n');
 }
 
 async function instructorContext(req, courses) {
