@@ -265,7 +265,11 @@
       return '<button type="button" data-af-ai-action="academy-overview">ملخص الأكاديمية</button><button type="button" data-af-ai-action="academy-attendance">الحضور والغياب</button><button type="button" data-af-ai-action="academy-sessions">الجلسات القادمة</button><button type="button" data-af-ai-action="summary">لخّص الدورة</button>';
     }
 
-    return '<button type="button" data-af-ai-action="role-help">كيف تساعدني؟</button><button type="button" data-af-ai-action="summary">لخّص الدورة</button>';
+    if (role === 'branch_manager' || role === 'reception' || role === 'content_manager') {
+      return '<button type="button" data-af-ai-action="role-help">كيف تساعدني؟</button><button type="button" data-af-ai-action="summary">لخّص الدورة</button>';
+    }
+
+    return '<button type="button" data-af-ai-action="role-help">كيف تساعدني؟</button>';
   }
 
   function inputPlaceholder() {
