@@ -1,3 +1,4 @@
+require('./test-safety').assertSafeTestUri();
 const assert = require('assert');
 const fs = require('fs/promises');
 const os = require('os');
@@ -62,7 +63,7 @@ async function main() {
     'rbac-regression-secret-0123456789-abcdefghijklmnopqrstuvwxyz-ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
   await connectWithRetry();
-  await mongoose.connection.db.dropDatabase();
+  await require('./test-safety').safeDropDatabase(mongoose.connection);
 
   const passwordHash = await bcrypt.hash('StrongTestPassword123!', 4);
 

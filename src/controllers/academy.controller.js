@@ -16,6 +16,8 @@ const Notification = require('../models/Notification');
 const SupportTicket = require('../models/SupportTicket');
 const LiveSession = require('../models/LiveSession');
 const auditService = require('../services/audit.service');
+const { createWithQuota, withQuota } = require('../services/subscription.service');
+const { saveAttendance } = require('../services/attendance.service');
 const { objectId, enumValue } = require('../utils/security-input');
 
 const STAFF_ROLES = ['admin','branch_manager','accountant','reception','content_manager','support'];
@@ -410,7 +412,7 @@ async function createUser(req, res) {
   }
 
   const passwordHash = await bcrypt.hash(String(password), 12);
-  const row = await User.create({
+  const row = await createWithQuota(academyId, { student: 'students', instructor: 'instructors' }[role], User, {
     academyId,
     branchId: resolvedBranchId,
     name: clean(name),
@@ -510,7 +512,13 @@ async function updateUser(req, res) {
   row.role = nextRole;
   row.branchId = nextBranchId;
 
-  await row.save();
+  const resource = nextRole !== before.role ? { student: 'students', instructor: 'instructors' }[nextRole] : null;
+  if (resource) {
+    const changes = { name: row.name, email: row.email, phone: row.phone, active: row.active, role: row.role, branchId: row.branchId };
+    await withQuota(academyId, resource, User, session => User.updateOne({ _id: row._id, academyId }, { $set: changes }, { session, runValidators: true }), row._id);
+  } else {
+    await row.save();
+  }
 
   await auditService.record(req, {
     action: 'academy.user.update',
@@ -559,7 +567,7 @@ async function createBranch(req, res) {
     return res.status(409).json({ message: 'Branch code is already used' });
   }
 
-  const row = await Branch.create({
+  const row = await createWithQuota(req.academyId, 'branches', Branch, {
     academyId: req.academyId,
     name: clean(name),
     code: normalizedCode,
@@ -613,7 +621,7 @@ async function createCourse(req, res) {
     return res.status(409).json({ message: 'Course code is already used' });
   }
 
-  const row = await Course.create({
+  const row = await createWithQuota(academyId, 'courses', Course, {
     academyId,
     title: clean(title),
     code: normalizedCode,
@@ -952,7 +960,7 @@ async function createAttendance(req, res) {
     ? enumValue(status, ['present','absent','late','excused'], 'حالة الحضور غير صحيحة')
     : 'present';
 
-  const row = await Attendance.create({
+  const row = await saveAttendance({
     academyId,
     studentId: safeStudentId,
     courseId: safeCourseId,
@@ -1124,16 +1132,28 @@ async function listNotifications(req, res) {
 async function createNotification(req, res) {
   const { title, message, audience, channel, status } = req.body;
   if (!title || !message) return res.status(400).json({ message: 'Title and message are required' });
+  if (status && !['draft', 'sent'].includes(status)) return res.status(400).json({ message: 'Invalid notification status' });
+  const delivery = require('../services/notification-delivery.service');
+  const selectedChannel = channel || 'in_app';
+  if (status !== 'draft') delivery.assertChannel(selectedChannel);
+  const external = selectedChannel !== 'in_app' && status !== 'draft';
 
   const row = await Notification.create({
     academyId: req.academyId,
     title: clean(title),
     message: clean(message),
     audience: audience || 'all',
-    channel: channel || 'in_app',
-    status: status || 'sent',
-    sentAt: (status || 'sent') === 'sent' ? new Date() : null
+    channel: selectedChannel,
+    status: external ? 'pending' : status || 'sent',
+    sentAt: !external && status !== 'draft' ? new Date() : null
   });
+  if (external) {
+    await delivery.enqueue(row);
+    if (!await require('../models/NotificationDelivery').exists({ notificationId: row._id })) {
+      row.status = 'failed';
+      await row.save();
+    }
+  }
 
   res.status(201).json(row);
 }

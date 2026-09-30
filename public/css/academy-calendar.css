@@ -1,0 +1,43 @@
+.academy-calendar-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.academy-calendar-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.academy-calendar-month{min-width:190px;font-family:var(--font-display);font-size:20px;font-weight:800;color:var(--text)}
+.academy-calendar-shell{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(280px,.75fr);gap:16px;align-items:start}
+.academy-calendar-board{min-width:0}
+.academy-calendar-scroll{overflow-x:auto;padding-bottom:4px;overscroll-behavior-inline:contain}
+.academy-calendar-grid{min-width:0;width:100%;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface-strong)}
+.academy-calendar-weekday{min-height:42px;display:grid;place-items:center;padding:8px;border-left:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--surface-muted);color:var(--text-mute);font-size:11px;font-weight:700}
+.academy-calendar-weekday:nth-child(7){border-left:0}
+.academy-calendar-day{position:relative;min-height:112px;padding:10px;border:0;border-left:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--surface-strong);color:var(--text);text-align:right;cursor:pointer;transition:background .16s,border-color .16s,box-shadow .16s}
+.academy-calendar-day:nth-child(7n){border-left:0}
+.academy-calendar-day:hover{background:var(--surface-muted)}
+.academy-calendar-day.is-outside{background:color-mix(in srgb,var(--surface-muted) 55%,transparent);color:var(--text-mute)}
+.academy-calendar-day.is-selected{background:var(--primary-soft);box-shadow:inset 0 0 0 2px var(--primary)}
+.academy-calendar-day.is-today .academy-calendar-date{background:var(--primary);color:#fff}
+.academy-calendar-date{width:30px;height:30px;display:grid;place-items:center;border-radius:9px;font-size:11px;font-weight:800}
+.academy-calendar-count{position:absolute;top:10px;left:10px;min-width:23px;height:23px;padding:0 6px;display:grid;place-items:center;border-radius:999px;background:var(--surface-muted);border:1px solid var(--line);color:var(--primary);font-size:9px;font-weight:800}
+.academy-calendar-day.is-selected .academy-calendar-count{background:var(--surface-strong)}
+.academy-calendar-preview{display:grid;gap:4px;margin-top:9px}
+.academy-calendar-preview span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px;border-right:2px solid var(--primary);color:var(--text-soft);font-size:8.5px;line-height:1.5}
+.academy-calendar-more{margin-top:4px;color:var(--text-mute)!important;border-right:0!important;padding-right:0!important}
+.academy-calendar-agenda{position:sticky;top:86px;min-width:0}
+.academy-calendar-agenda-title{margin:0;font-size:18px}
+.academy-calendar-agenda-date{display:block;margin-top:5px;color:var(--text-mute);font-size:10px}
+.academy-calendar-events{display:grid;gap:9px;margin-top:14px}
+.academy-calendar-event{padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-muted)}
+.academy-calendar-event-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.academy-calendar-event h3{margin:0;font-size:12px;line-height:1.7}
+.academy-calendar-event-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;color:var(--text-mute);font-size:9px}
+.academy-calendar-event-meta span{padding:5px 7px;border:1px solid var(--line);border-radius:8px;background:var(--surface-strong)}
+.academy-calendar-event-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.academy-calendar-event-actions .btn{min-height:34px;padding:0 10px;font-size:9px}
+.academy-calendar-empty{padding:22px 10px;text-align:center;color:var(--text-mute);font-size:10.5px;line-height:1.8}
+@media(max-width:1200px){.academy-calendar-shell{grid-template-columns:1fr}.academy-calendar-agenda{position:static}}
+@media(max-width:640px){
+  .academy-calendar-toolbar{align-items:flex-start}
+  .academy-calendar-month{min-width:0;width:100%;font-size:17px}
+  .academy-calendar-nav{width:100%}
+  .academy-calendar-nav .btn{flex:1;min-height:40px;padding:0 10px;font-size:10px}
+  .academy-calendar-grid{min-width:650px}
+  .academy-calendar-day{min-height:96px;padding:8px}
+  .academy-calendar-count{top:8px;left:8px}
+}

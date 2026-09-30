@@ -129,6 +129,7 @@ async function sendGridRequest({ to, subject, text, html }) {
   }
 
   const response = await fetch(SENDGRID_API_URL, {
+    signal: AbortSignal.timeout(15000),
     method: 'POST',
     headers: {
       Authorization: `Bearer ${process.env.SENDGRID_API_KEY}`,
@@ -264,6 +265,11 @@ function escapeHtml(value) {
 }
 
 module.exports = {
+  sendNotification: ({ to, title, message }) => sendGridRequest({ to, subject: title, text: message, html: `<div dir="rtl">${escapeHtml(message)}</div>` }),
+  sendPasswordReset: ({ to, token }) => {
+    const url = appBaseUrl() + '/account/reset-password.html#token=' + encodeURIComponent(token);
+    return sendGridRequest({ to, subject: 'AcademyFlow password recovery', text: `Use this link within 30 minutes: ${url}`, html: `<p><a href="${escapeHtml(url)}">Reset password</a></p>` });
+  },
   configured,
   configStatus,
   canSendTo,

@@ -1,3 +1,4 @@
+require('./test-safety').assertSafeTestUri();
 const assert = require('assert');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
@@ -30,7 +31,7 @@ async function main() {
     'backup-regression-encryption-key-0123456789-abcdefghijklmnopqrstuvwxyz';
 
   await connectWithRetry();
-  await mongoose.connection.db.dropDatabase();
+  await require('./test-safety').safeDropDatabase(mongoose.connection);
 
   const academy = await Academy.create({
     code: 'BACKUP-A',

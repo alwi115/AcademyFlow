@@ -1,109 +1,21 @@
 const router = require('express').Router();
-const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const { auth } = require('../middleware/auth');
-const { login, me, acceptLegal, logout } = require('../controllers/auth.controller');
-
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 10,
-  standardHeaders: 'draft-8',
-  legacyHeaders: false,
-  skipSuccessfulRequests: true,
-  message: {
-    message: 'محاولات دخول كثيرة. حاول مرة أخرى بعد عدة دقائق.'
-  }
-});
-
-function allowedRequestOrigin(req) {
-  const origin = String(req.get('origin') || '').trim();
-  if (!origin) return true;
-
-  const configured = String(process.env.ALLOWED_ORIGINS || '')
-    .split(',')
-    .map(value => value.trim())
-    .filter(Boolean);
-
-  const requestOrigin = `${req.protocol}://${req.get('host')}`;
-  return origin === requestOrigin || configured.includes(origin);
-}
-
-function requireTrustedOrigin(req, res, next) {
-  if (!allowedRequestOrigin(req)) {
-    return res.status(403).json({ message: 'Cross-site request blocked' });
-  }
-  next();
-}
-
-const CSRF_COOKIE_NAME = 'af_csrf';
-
-function secureCookie() {
-  return process.env.NODE_ENV === 'production' ||
-    Boolean(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_ENVIRONMENT_ID);
-}
-
-function cookieValue(req, expectedName) {
-  const raw = String(req.get('cookie') || '');
-  for (const part of raw.split(';')) {
-    const separator = part.indexOf('=');
-    if (separator === -1) continue;
-
-    const name = part.slice(0, separator).trim();
-    if (name !== expectedName) continue;
-
-    const value = part.slice(separator + 1).trim();
-    try {
-      return decodeURIComponent(value);
-    } catch {
-      return value;
-    }
-  }
-
-  return '';
-}
-
-function csrfCookieOptions() {
-  return {
-    httpOnly: true,
-    secure: secureCookie(),
-    sameSite: 'strict',
-    path: '/api/auth',
-    maxAge: 30 * 60 * 1000
-  };
-}
-
-function safeTokenEqual(left, right) {
-  if (typeof left !== 'string' || typeof right !== 'string') return false;
-  const a = Buffer.from(left);
-  const b = Buffer.from(right);
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
-}
-
-function requireCsrf(req, res, next) {
-  const cookieToken = cookieValue(req, CSRF_COOKIE_NAME);
-  const submittedToken = String(req.body?._csrf || req.get('x-csrf-token') || '');
-
-  if (!safeTokenEqual(cookieToken, submittedToken)) {
-    return res.status(403).json({ message: 'Invalid CSRF token' });
-  }
-
-  next();
-}
-
-router.get('/csrf', (req, res) => {
-  const csrfToken = crypto.randomBytes(32).toString('base64url');
-
-  res.cookie(CSRF_COOKIE_NAME, csrfToken, csrfCookieOptions());
-  res.set({
-    'Cache-Control': 'no-store, max-age=0',
-    Pragma: 'no-cache'
-  });
-  res.json({ csrfToken });
-});
-
-router.post('/login', requireTrustedOrigin, loginLimiter, requireCsrf, login);
-router.get('/me', auth, me);
-router.post('/legal-acceptance', requireTrustedOrigin, auth, requireCsrf, acceptLegal);
-router.post('/logout', requireTrustedOrigin, logout);
-
+const { requireCsrf, requireTrustedOrigin, issueCsrf } = require('../middleware/csrf');
+const c = require('../controllers/auth.controller');
+const security = require('../controllers/account-security.controller');
+const limiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: 'draft-8', legacyHeaders: false, skipSuccessfulRequests: true });
+router.get('/csrf', issueCsrf);
+router.post('/login', requireTrustedOrigin, limiter, requireCsrf, c.login);
+router.get('/me', auth, c.me);
+router.post('/legal-acceptance', requireTrustedOrigin, auth, requireCsrf, c.acceptLegal);
+router.post('/logout', requireTrustedOrigin, requireCsrf, auth, c.logout);
+router.post('/forgot-password', requireTrustedOrigin, limiter, requireCsrf, security.forgotPassword);
+router.post('/reset-password', requireTrustedOrigin, limiter, requireCsrf, security.resetPassword);
+router.post('/password', requireTrustedOrigin, requireCsrf, auth, limiter, security.changePassword);
+router.get('/security', auth, security.status);
+router.post('/preferences', requireTrustedOrigin, requireCsrf, auth, security.preferences);
+router.post('/mfa/setup', requireTrustedOrigin, requireCsrf, auth, limiter, security.setupMfa);
+router.post('/mfa/confirm', requireTrustedOrigin, requireCsrf, auth, limiter, security.confirmMfa);
+router.post('/mfa/disable', requireTrustedOrigin, requireCsrf, auth, limiter, security.disableMfa);
 module.exports = router;

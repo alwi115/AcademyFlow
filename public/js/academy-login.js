@@ -10,6 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
  remember.addEventListener('change',()=>{if(!remember.checked){try{localStorage.removeItem('af_login_hint');}catch{}}});
  form.addEventListener('submit',()=>{try{if(remember.checked)localStorage.setItem('af_login_hint',JSON.stringify({academyCode:code.value,email:email.value}));else localStorage.removeItem('af_login_hint');}catch{}});
  const dialog=document.getElementById('recoveryDialog');
- document.getElementById('forgotPassword').addEventListener('click',()=>dialog.showModal());
+ document.getElementById('forgotPassword').addEventListener('click',()=>location.assign('/account/forgot-password.html'));
  dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close();}});
 });

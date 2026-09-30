@@ -1,3 +1,4 @@
+require('./test-safety').assertSafeTestUri();
 const assert = require('assert');
 const mongoose = require('mongoose');
 const storage = require('../src/services/certificate-storage.service');
@@ -8,7 +9,7 @@ async function main() {
   }
 
   await mongoose.connect(process.env.MONGODB_URI);
-  await mongoose.connection.db.dropDatabase();
+  await require('./test-safety').safeDropDatabase(mongoose.connection);
 
   const pdf = Buffer.from(
     '%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF\n',

@@ -78,6 +78,14 @@ async function academyFlowLogin(event, kind){
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
+      if (data.code === 'MFA_REQUIRED' && !form.querySelector('[name="otp"]')) {
+        const label = document.createElement('label');
+        label.textContent = 'رمز تطبيق المصادقة';
+        const input = document.createElement('input');
+        input.name = 'otp'; input.inputMode = 'numeric'; input.autocomplete = 'one-time-code';
+        input.pattern = '[0-9]{6}'; input.maxLength = 6; input.required = true;
+        label.appendChild(input); form.insertBefore(label, button); input.focus();
+      }
       if (response.status === 403 && csrfInput) csrfInput.value = '';
       if (message) {
         message.textContent = data.message || 'تعذر تسجيل الدخول';
@@ -147,6 +155,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (form.dataset.loginBound === '1') return;
 
     form.dataset.loginBound = '1';
+    if (!document.getElementById('forgotPassword')) {
+      const link = document.createElement('a');
+      link.href = '/account/forgot-password.html'; link.textContent = 'نسيت كلمة المرور؟';
+      form.appendChild(link);
+    }
     form.addEventListener('submit', event => {
       academyFlowLogin(event, form.dataset.loginKind || 'academy');
     });

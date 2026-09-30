@@ -1,5 +1,8 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const RevokedSession = require('../models/RevokedSession');
+const { academyAccess } = require('../services/subscription.service');
 const User = require('../models/User');
 const Academy = require('../models/Academy');
 const { COOKIE_NAME } = require('../middleware/auth');
@@ -31,13 +34,14 @@ function clearLegacySessionCookies(res) {
   }
 }
 
-function sign(user) {
+function sign(user, epoch = '') {
   return jwt.sign(
     {
       sub: user._id.toString(),
       role: user.role,
       academyId: user.academyId ? user.academyId.toString() : null,
-      branchId: user.branchId ? user.branchId.toString() : null
+      branchId: user.branchId ? user.branchId.toString() : null,
+      sv: Number(user.sessionVersion || 0), jti: crypto.randomUUID(), epoch
     },
     process.env.JWT_SECRET,
     {
@@ -120,7 +124,7 @@ async function login(req, res) {
       return invalidCredentials(res);
     }
 
-    if (['frozen','suspended'].includes(academy.status)) {
+    if (!academyAccess(academy)) {
       return res.status(403).json({
         message: 'هذا الحساب غير متاح حاليًا. تواصل مع إدارة المنصة.'
       });
@@ -131,7 +135,7 @@ async function login(req, res) {
       email,
       active: true,
       role: { $ne: 'superadmin' }
-    }).select('+passwordHash +failedLoginAttempts +lockUntil');
+    }).select('+passwordHash +failedLoginAttempts +lockUntil +sessionVersion +mfaSecretEncrypted +mfaLastStep');
   } else {
     if (!/^[a-z0-9._-]{3,40}$/.test(username)) {
       return invalidCredentials(res);
@@ -142,7 +146,7 @@ async function login(req, res) {
       username,
       active: true,
       role: 'superadmin'
-    }).select('+passwordHash +failedLoginAttempts +lockUntil');
+    }).select('+passwordHash +failedLoginAttempts +lockUntil +sessionVersion +mfaSecretEncrypted +mfaLastStep');
   }
 
   if (user?.lockUntil && user.lockUntil.getTime() > Date.now()) {
@@ -165,13 +169,17 @@ async function login(req, res) {
     return invalidCredentials(res);
   }
 
+  if (user.mfaEnabled && !await require('../services/account-security.service').verifyMfa(user, req.body.otp)) {
+    await registerFailure(user);
+    return res.status(401).json({ code: 'MFA_REQUIRED', message: 'A valid authenticator code is required' });
+  }
   user.failedLoginAttempts = 0;
   user.lockUntil = null;
   user.lastLoginAt = new Date();
   await user.save();
 
   clearLegacySessionCookies(res);
-  res.cookie(COOKIE_NAME, sign(user), cookieOptions());
+  res.cookie(COOKIE_NAME, sign(user, await require('../services/session-epoch.service').currentEpoch()), cookieOptions());
 
   res.set({
     'Cache-Control': 'no-store',
@@ -269,7 +277,14 @@ async function acceptLegal(req, res) {
   });
 }
 
-function logout(req, res) {
+async function logout(req, res) {
+  if (req.session.jti) {
+    await RevokedSession.updateOne({ jti: req.session.jti }, {
+      $set: { expiresAt: new Date(req.session.exp * 1000) }
+    }, { upsert: true });
+  } else {
+    await User.updateOne({ _id: req.user.sub }, { $inc: { sessionVersion: 1 } });
+  }
   clearLegacySessionCookies(res);
 
   res.set({
@@ -280,4 +295,4 @@ function logout(req, res) {
   res.json({ ok: true });
 }
 
-module.exports = { login, me, acceptLegal, logout };
+module.exports = { login, me, acceptLegal, logout, sign, cookieOptions };

@@ -1,5 +1,15 @@
 (function(){
   const THEME_KEY = 'af_theme';
+  const APPEARANCE_KEY = 'af_appearance';
+
+  function savedTheme() {
+    try {
+      const appearance = localStorage.getItem(APPEARANCE_KEY);
+      if (appearance === 'light' || appearance === 'dark') return appearance;
+      const legacy = localStorage.getItem(THEME_KEY);
+      return legacy === 'light' || legacy === 'dark' ? legacy : null;
+    } catch { return null; }
+  }
   const DARK = 'dark';
   const LIGHT = 'light';
 
@@ -12,7 +22,7 @@
   }
 
   function currentTheme(){
-    return normalizeTheme(document.documentElement.getAttribute('data-theme') || localStorage.getItem(THEME_KEY) || systemTheme());
+    return normalizeTheme(document.documentElement.getAttribute('data-theme') || savedTheme() || systemTheme());
   }
 
   function updateThemeColor(theme){
@@ -43,7 +53,13 @@
     const next = normalizeTheme(theme);
     document.documentElement.setAttribute('data-theme', next);
 
-    if(persist) localStorage.setItem(THEME_KEY, next);
+    document.documentElement.setAttribute('data-appearance', next);
+    if(persist) {
+      try {
+        localStorage.setItem(APPEARANCE_KEY, next);
+        localStorage.setItem(THEME_KEY, next);
+      } catch { /* Theme still works when browser storage is unavailable. */ }
+    }
 
     updateThemeColor(next);
     refreshThemeControls();
@@ -59,11 +75,16 @@
     return applyTheme(currentTheme() === DARK ? LIGHT : DARK, true);
   }
 
+  window.refreshAcademyFlowThemeControls = refreshThemeControls;
   window.toggleTheme = toggleTheme;
   window.setAcademyFlowTheme = applyTheme;
   window.getAcademyFlowTheme = currentTheme;
 
-  applyTheme(localStorage.getItem(THEME_KEY) || systemTheme(), false);
+  applyTheme(savedTheme() || systemTheme(), false);
+
+  window.addEventListener('storage', event => {
+    if ([APPEARANCE_KEY, THEME_KEY, null].includes(event.key)) applyTheme(savedTheme() || systemTheme(), false);
+  });
 
   function toggleSidebar(){
     const sidebar = document.getElementById('sidebar');
@@ -141,7 +162,7 @@
   if(window.matchMedia){
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     const onSystemChange = event => {
-      if(!localStorage.getItem(THEME_KEY)){
+      if(!savedTheme()){
         applyTheme(event.matches ? DARK : LIGHT, false);
       }
     };

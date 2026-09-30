@@ -5,8 +5,10 @@ const Assessment = require('../models/Assessment');
 const AssignmentSubmission = require('../models/AssignmentSubmission');
 const { objectId } = require('../utils/security-input');
 const Notification = require('../models/Notification');
+const { saveAttendance } = require('../services/attendance.service');
 const {
   manageableCourseIds,
+  instructorScope,
   assertCourse,
   assertDirectCourse,
   attendanceAccessFilter,
@@ -211,7 +213,7 @@ async function createAttendance(req, res) {
     resolvedGroupId = group._id;
   }
 
-  const row = await Attendance.create({
+  const row = await saveAttendance({
     academyId: req.academyId,
     studentId,
     courseId,
@@ -408,13 +410,15 @@ async function gradeAssignment(req, res) {
 }
 
 async function notifications(req, res) {
-  const courseIds = await manageableCourseIds(req);
+  const scope = await instructorScope(req);
 
   const rows = await Notification.find({
     academyId: req.academyId,
     $or: [
-      { createdBy: req.user.sub },
-      { courseId: { $in: courseIds } }
+      { recipientId: req.user.sub },
+      { recipientId: null, courseId: { $in: scope.directCourseIds } },
+      { recipientId: null, groupId: { $in: scope.assignedGroupIds } },
+      { recipientId: null, groupId: null, courseId: { $in: scope.groupCourseIds } }
     ]
   })
     .populate('courseId', 'title code')

@@ -4,6 +4,7 @@ const LiveSession = require('../models/LiveSession');
 const LiveAttendance = require('../models/LiveAttendance');
 const User = require('../models/User');
 const Enrollment = require('../models/Enrollment');
+const ZoomWebhookReceipt = require('../models/ZoomWebhookReceipt');
 const {
   recordZoomJoin,
   recordZoomLeave
@@ -252,6 +253,26 @@ async function handle(req, res) {
   const session = await LiveSession.findOne({ zoomMeetingId: meetingId });
   if (!session) return res.json({ ok: true });
 
+  const fingerprint = crypto.createHash('sha256').update(parsed.raw).digest('hex');
+  try {
+    await ZoomWebhookReceipt.create({ _id: fingerprint, status: 'processing', expiresAt: new Date(Date.now() + 30 * 86400000) });
+  } catch (err) {
+    if (err.code !== 11000) throw err;
+    const existing = await ZoomWebhookReceipt.findById(fingerprint);
+    if (existing?.status === 'done') return res.json({ ok: true, duplicate: true });
+    return res.status(503).json({ message: 'Event is already being processed; retry later' });
+  }
+  const locks = require('mongoose').connection.db.collection('academyflow_zoom_event_locks');
+  const owner = crypto.randomUUID();
+  try {
+    await locks.insertOne({ _id: String(session._id), owner, createdAt: new Date() });
+  } catch (err) {
+    await ZoomWebhookReceipt.deleteOne({ _id: fingerprint });
+    if (err.code === 11000) return res.status(503).json({ message: 'Meeting event is busy; retry later' });
+    throw err;
+  }
+  try {
+
   if (event === 'meeting.started') {
     session.status = 'live';
     await session.save();
@@ -269,6 +290,11 @@ async function handle(req, res) {
   if (event === 'meeting.participant_left' && participant) {
     await handleParticipantLeft(session, participant);
   }
+  await ZoomWebhookReceipt.updateOne({ _id: fingerprint }, { $set: { status: 'done' } });
+  } catch (err) {
+    await ZoomWebhookReceipt.deleteOne({ _id: fingerprint });
+    throw err;
+  } finally { await locks.deleteOne({ _id: String(session._id), owner }); }
 
   res.json({ ok: true });
 }

@@ -1,3 +1,4 @@
+require('./test-safety').assertSafeTestUri();
 const assert = require('assert');
 const fs = require('fs/promises');
 const path = require('path');
@@ -52,7 +53,7 @@ async function main() {
     'legal-readiness-secret-0123456789-abcdefghijklmnopqrstuvwxyz-ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
   await connectWithRetry();
-  await mongoose.connection.db.dropDatabase();
+  await require('./test-safety').safeDropDatabase(mongoose.connection);
 
   await SystemSetting.create({
     key: 'platform',

@@ -54,16 +54,18 @@ jobs:
           node --check scripts/legal-readiness-test.js
 
       - name: Monitoring alert regression
-        run: npm run test:monitoring
+        run: node scripts/test-local.js monitoring-test.js
 
       - name: MongoDB GridFS certificate storage
-        run: npm run test:mongodb-storage
+        run: node scripts/test-local.js mongodb-storage-test.js
 
       - name: Legal readiness and privacy rights
-        run: npm run test:legal
+        run: node scripts/test-local.js legal-readiness-test.js
 
       - name: End-to-end academy journey
-        run: npm run test:e2e
+        run: node scripts/test-local.js e2e-test.js
 
       - name: Safe performance smoke
-        run: npm run test:performance
+        run: node scripts/test-local.js performance-smoke-test.js
+      - name: Security and reliability fixes
+        run: npm run test:fixes

@@ -9,6 +9,8 @@ const PaymentSchema = new mongoose.Schema({
   method: { type: String, enum: ['cash','card','bank'], default: 'cash' },
   status: { type: String, enum: ['pending','paid','refunded','failed'], default: 'paid' },
   reference: String,
+  stripeCheckoutId: { type: String, unique: true, sparse: true },
+  stripePaymentIntentId: String,
   paidAt: { type: Date, default: Date.now },
   notes: String
 }, { timestamps: true });

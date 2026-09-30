@@ -1,4 +1,3 @@
-const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const Academy = require('../models/Academy');
 const Course = require('../models/Course');
@@ -692,6 +691,11 @@ async function submitAssignment(req, res) {
     return res.status(404).json({ message: 'Assignment is not available for submission' });
   }
 
+  const now = new Date();
+  if ((assessment.availableFrom && assessment.availableFrom > now) || (assessment.dueAt && assessment.dueAt < now)) {
+    return res.status(403).json({ message: 'Assignment submission window is closed' });
+  }
+
   const enrollment = await studentEnrollment(
     academyId,
     studentId,
@@ -702,8 +706,10 @@ async function submitAssignment(req, res) {
     return res.status(403).json({ message: 'You are not enrolled in this course' });
   }
 
-  const submission = await AssignmentSubmission.findOneAndUpdate(
-    { academyId, studentId, assessmentId },
+  let submission;
+  try {
+    submission = await AssignmentSubmission.findOneAndUpdate(
+    { academyId, studentId, assessmentId, status: { $ne: 'graded' } },
     {
       $set: {
         courseId: assessment.courseId,
@@ -716,8 +722,12 @@ async function submitAssignment(req, res) {
         gradedAt: null
       }
     },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true }
   );
+  } catch (err) {
+    if (err.code !== 11000) throw err;
+    return res.status(409).json({ message: 'A graded assignment cannot be resubmitted, or submission changed. Refresh and retry.' });
+  }
 
   res.status(201).json(submission);
 }
@@ -737,7 +747,9 @@ async function payments(req, res) {
     return acc;
   }, { paid: 0, pending: 0, refunded: 0 });
 
-  res.json({ summary, rows });
+  const onlinePaymentsEnabled = process.env.PAYMENTS_ENABLED === 'true' && Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET);
+  const allowedCurrencies = String(process.env.STRIPE_CURRENCIES || 'usd,eur,gbp,aed').split(',');
+  res.json({ summary, rows: rows.map(row => ({ ...row.toObject(), canCheckout: onlinePaymentsEnabled && row.status === 'pending' && allowedCurrencies.includes(row.currency.toLowerCase()) })), onlinePaymentsEnabled });
 }
 
 async function certificates(req, res) {
@@ -899,31 +911,7 @@ async function updateProfile(req, res) {
 }
 
 async function changePassword(req, res) {
-  const { currentPassword, newPassword } = req.body;
-
-  if (!currentPassword || !newPassword) {
-    return res.status(400).json({ message: 'Current and new passwords are required' });
-  }
-
-  if (String(newPassword).length < 10) {
-    return res.status(400).json({ message: 'New password must be at least 10 characters' });
-  }
-
-  const user = await User.findOne({
-    _id: req.user.sub,
-    academyId: req.academyId,
-    role: 'student',
-    active: true
-  }).select('+passwordHash');
-
-  if (!user || !(await bcrypt.compare(currentPassword, user.passwordHash))) {
-    return res.status(400).json({ message: 'Current password is incorrect' });
-  }
-
-  user.passwordHash = await bcrypt.hash(String(newPassword), 12);
-  await user.save();
-
-  res.json({ ok: true });
+  return require('./account-security.controller').changePassword(req, res);
 }
 
 module.exports = {
