@@ -8,6 +8,7 @@ const {
   recordZoomJoin,
   recordZoomLeave
 } = require('../services/live-attendance.service');
+const { ensureSessionCompensations } = require('../services/engagement.service');
 
 function secret() {
   return String(process.env.ZOOM_WEBHOOK_SECRET_TOKEN || '');
@@ -239,6 +240,7 @@ async function handle(req, res) {
   if (body.event === 'meeting.ended') {
     session.status = 'ended';
     await session.save();
+    await ensureSessionCompensations(session);
   }
 
   if (body.event === 'meeting.participant_joined' && participant) {

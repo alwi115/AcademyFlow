@@ -22,6 +22,11 @@ const AcademySchema = new mongoose.Schema({
     secondaryColor: { type: String, default: '#111827' },
     coverUrl: String
   },
+  engagementFeatures: {
+    compensationEnabled: { type: Boolean, default: true },
+    gapMapEnabled: { type: Boolean, default: true },
+    compensationPassingPercentage: { type: Number, default: 60, min: 0, max: 100 }
+  },
   zoomIntegration: {
     connected: { type: Boolean, default: false },
     zoomUserId: { type: String, default: '' },

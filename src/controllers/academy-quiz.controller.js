@@ -2,6 +2,7 @@ const Assessment = require('../models/Assessment');
 const Course = require('../models/Course');
 const QuizQuestion = require('../models/QuizQuestion');
 const QuizAttempt = require('../models/QuizAttempt');
+const { getSettings: getEngagementSettings } = require('../services/engagement.service');
 const {
   recalcQuizMarks,
   normalizeQuestionPayload,
@@ -281,6 +282,21 @@ async function updateQuiz(req, res) {
 
       if (!count) {
         return res.status(400).json({ message: 'أضف سؤالًا واحدًا على الأقل قبل نشر الاختبار' });
+      }
+
+      const engagementSettings = await getEngagementSettings(req.academyId);
+      if (engagementSettings.gapMapEnabled) {
+        const unmapped = await QuizQuestion.countDocuments({
+          academyId: req.academyId,
+          assessmentId: quiz._id,
+          lessonId: null
+        });
+
+        if (unmapped) {
+          return res.status(400).json({
+            message: `اربط كل أسئلة الاختبار بالدروس قبل النشر. باقي ${unmapped} سؤال بدون درس.`
+          });
+        }
       }
     }
 
