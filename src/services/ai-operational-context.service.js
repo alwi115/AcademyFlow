@@ -68,9 +68,8 @@ function studentCourseLine(course, enrollment, attendanceRows, progressRows) {
       '، غائب ' + attendance.absent +
       '، متأخر ' + attendance.late +
       '، بعذر ' + attendance.excused,
-    'الدروس المكتملة: ' + completedLessons +
-      (progressRows.length ? ' من ' + progressRows.length : ''),
-    progressRows.length ? 'متوسط المشاهدة: ' + watchedAverage + '%' : ''
+    'الدروس المكتملة المسجلة: ' + completedLessons,
+    progressRows.length ? 'متوسط المشاهدة للدروس التي بدأها الطالب: ' + watchedAverage + '%' : ''
   ].filter(Boolean).join(' | ');
 }
 
