@@ -41,6 +41,9 @@ function validateRange(startAt, endAt, label) {
 }
 
 async function updateCourse(req, res) {
+  if (!['owner', 'admin', 'content_manager'].includes(req.user.role)) {
+    return res.status(403).json({ message: 'Course editing is not allowed for this role' });
+  }
   const courseId = objectId(req.params.id, 'معرف الدورة غير صحيح');
   const row = await Course.findOne({
     _id: courseId,
@@ -72,16 +75,6 @@ async function updateCourse(req, res) {
 
   if (req.body.instructorId !== undefined) {
     if (req.body.instructorId) {
-      if (
-        req.user.role === 'branch_manager' &&
-        String(req.body.instructorId) !== String(row.instructorId || '') &&
-        !branchManagerScope.instructorIds.includes(String(req.body.instructorId))
-      ) {
-        return res.status(403).json({
-          message: 'مدير الفرع لا يستطيع تعيين مدرب خارج نطاق فرعه'
-        });
-      }
-
       await assertInstructor(req.body.instructorId, req.academyId);
       row.instructorId = req.body.instructorId;
     } else {

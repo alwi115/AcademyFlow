@@ -10,4 +10,5 @@ const AttendanceSchema = new mongoose.Schema({
   note: String
 }, { timestamps: true });
 
+AttendanceSchema.index({ academyId: 1, studentId: 1, courseId: 1, groupId: 1, date: 1 }, { unique: true });
 module.exports = mongoose.model('Attendance', AttendanceSchema);

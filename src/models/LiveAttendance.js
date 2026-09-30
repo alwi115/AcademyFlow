@@ -35,7 +35,8 @@ const LiveAttendanceSchema = new mongoose.Schema({
   },
   manualOverride: { type: Boolean, default: false },
   note: { type: String, default: '', maxlength: 2000 },
-  lastEventAt: Date
+  lastEventAt: Date,
+  lastZoomEventAt: Date
 }, { timestamps: true });
 
 LiveAttendanceSchema.index(

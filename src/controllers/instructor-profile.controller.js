@@ -1,4 +1,3 @@
-const bcrypt = require('bcryptjs');
 const Academy = require('../models/Academy');
 const User = require('../models/User');
 
@@ -53,35 +52,7 @@ async function updateProfile(req, res) {
 }
 
 async function changePassword(req, res) {
-  const { currentPassword, newPassword } = req.body;
-
-  if (!currentPassword || !newPassword) {
-    return res.status(400).json({
-      message: 'كلمة المرور الحالية والجديدة مطلوبة'
-    });
-  }
-
-  if (String(newPassword).length < 10) {
-    return res.status(400).json({
-      message: 'كلمة المرور الجديدة يجب ألا تقل عن 10 أحرف'
-    });
-  }
-
-  const row = await User.findOne({
-    _id: req.user.sub,
-    academyId: req.academyId,
-    role: 'instructor',
-    active: true
-  }).select('+passwordHash');
-
-  if (!row || !(await bcrypt.compare(currentPassword, row.passwordHash))) {
-    return res.status(400).json({ message: 'كلمة المرور الحالية غير صحيحة' });
-  }
-
-  row.passwordHash = await bcrypt.hash(String(newPassword), 12);
-  await row.save();
-
-  res.json({ ok: true });
+  return require('./account-security.controller').changePassword(req, res);
 }
 
 module.exports = {

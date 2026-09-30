@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const { promisify } = require('util');
 const mongoose = require('mongoose');
 const { EJSON } = require('bson');
+const externalBackup = require('./external-backup.service');
 
 const gzip = promisify(zlib.gzip);
 const gunzip = promisify(zlib.gunzip);
@@ -12,7 +13,10 @@ const BACKUP_RECORDS = 'academyflow_backup_records';
 const INTERNAL_COLLECTIONS = new Set([
   BACKUP_RECORDS,
   BACKUP_BUCKET + '.files',
-  BACKUP_BUCKET + '.chunks'
+  BACKUP_BUCKET + '.chunks',
+  'academyflow_operation_locks',
+  'academyflow_auth_state',
+  'academyflow_zoom_event_locks'
 ]);
 
 let busy = false;
@@ -195,13 +199,19 @@ async function snapshotPayload(reason = 'manual') {
   const names = await userCollections();
   const data = {};
   const collections = [];
+  const session = mongoose.connection.getClient().startSession({ snapshot: true });
+  let bytes = 0;
+  try {
 
   for (const name of names) {
     const collection = db.collection(name);
-    const [docs, indexes] = await Promise.all([
-      collection.find({}).toArray(),
-      collectionIndexes(collection)
-    ]);
+    const docs = [];
+    const indexes = await collectionIndexes(collection);
+    for await (const doc of collection.find({}, { session })) {
+      bytes += Buffer.byteLength(EJSON.stringify(doc, { relaxed: false }));
+      if (bytes > maximumBytes()) throw Object.assign(new Error('Logical backup exceeds BACKUP_MAX_BYTES; use a managed database snapshot'), { status: 413 });
+      docs.push(doc);
+    }
 
     data[name] = docs;
     collections.push({
@@ -210,6 +220,7 @@ async function snapshotPayload(reason = 'manual') {
       indexes
     });
   }
+  } finally { await session.endSession(); }
 
   return {
     format: 'academyflow-logical-backup',
@@ -221,6 +232,10 @@ async function snapshotPayload(reason = 'manual') {
     collections,
     data
   };
+}
+
+function maximumBytes() {
+  return Math.min(Math.max(Number(process.env.BACKUP_MAX_BYTES) || 32 * 1024 * 1024, 1024 * 1024), 256 * 1024 * 1024);
 }
 
 async function uploadBuffer(id, buffer) {
@@ -255,7 +270,12 @@ async function downloadBuffer(fileId) {
   );
 
   return new Promise((resolve, reject) => {
-    stream.on('data', chunk => chunks.push(chunk));
+    let bytes = 0;
+    stream.on('data', chunk => {
+      bytes += chunk.length;
+      if (bytes > maximumBytes() * 2) stream.destroy(Object.assign(new Error('Backup exceeds configured size limit'), { status: 413 }));
+      else chunks.push(chunk);
+    });
     stream.once('error', err => {
       const missing = new Error('Backup data is missing from MongoDB GridFS');
       missing.status = 409;
@@ -283,6 +303,7 @@ async function writeBackup(reason = 'manual') {
   const id = timestampId();
   const payload = await snapshotPayload(reason);
   const raw = Buffer.from(EJSON.stringify(payload, { relaxed: false }), 'utf8');
+  if (raw.length > maximumBytes() * 2) throw Object.assign(new Error('Backup exceeds configured size limit'), { status: 413 });
   const compressed = await gzip(raw, { level: 9 });
   const protectedData = encryptBuffer(compressed);
   const digest = sha256(protectedData.buffer);
@@ -313,6 +334,7 @@ async function writeBackup(reason = 'manual') {
   };
 
   try {
+    metadata.external = await externalBackup.mirrorBackup({ id, buffer: protectedData.buffer, metadata: publicMetadata(metadata) });
     await records().insertOne(metadata);
   } catch (err) {
     await deleteGridFsFile(storageFileId).catch(() => {});
@@ -377,6 +399,7 @@ async function pruneBackups() {
 }
 
 async function createBackup({ reason = 'manual' } = {}) {
+  if (await restoreInProgress()) throw Object.assign(new Error('Restore is in progress'), { status: 409 });
   if (busy) {
     const err = new Error(`Backup system is busy with ${busyOperation}`);
     err.status = 409;
@@ -423,7 +446,7 @@ async function validateBackup(id) {
   try {
     const compressed = decryptBuffer(protectedData, metadata);
     payload = EJSON.parse(
-      (await gunzip(compressed)).toString('utf8'),
+      (await gunzip(compressed, { maxOutputLength: maximumBytes() * 2 })).toString('utf8'),
       { relaxed: true }
     );
   } catch (err) {
@@ -460,12 +483,12 @@ async function validateBackup(id) {
   return { metadata, payload };
 }
 
-async function insertInBatches(collection, docs) {
+async function insertInBatches(collection, docs, session) {
   const batchSize = 500;
   for (let i = 0; i < docs.length; i += batchSize) {
     await collection.insertMany(
       docs.slice(i, i + batchSize),
-      { ordered: true }
+      { ordered: true, session }
     );
   }
 }
@@ -530,8 +553,13 @@ async function restoreBackup(id) {
 
   busy = true;
   busyOperation = 'restore';
+  let restoreSession;
+  let lock;
 
   try {
+    const hello = await mongoose.connection.db.command({ hello: 1 });
+    if (!hello.setName && hello.msg !== 'isdbgrid') throw Object.assign(new Error('Atomic restore requires a MongoDB replica set or sharded cluster'), { status: 503 });
+    lock = await acquireRestoreLock();
     const { metadata, payload } = await validateBackup(id);
 
     // Stored in the MongoDB backup bucket, which is deliberately excluded from
@@ -550,9 +578,18 @@ async function restoreBackup(id) {
       );
     const currentNames = await userCollections();
     const namesToClear = [...new Set([...currentNames, ...payloadNames])];
+    await db.collection('academyflow_auth_state').updateOne({ _id: 'sessions' }, { $setOnInsert: { epoch: '' } }, { upsert: true });
 
+    // Index/collection preparation is non-destructive; any failure occurs before deletion.
+    for (const name of payloadNames) {
+      if (!currentNames.includes(name)) await db.createCollection(name);
+      await restoreIndexes(db.collection(name), manifest.get(name)?.indexes || []);
+    }
+    restoreSession = await mongoose.startSession();
+    await restoreSession.withTransaction(async () => {
+    await db.collection('academyflow_operation_locks').updateOne({ _id: 'restore', owner: lock }, { $set: { touchedAt: new Date() } }, { session: restoreSession });
     for (const name of namesToClear) {
-      await db.collection(name).deleteMany({});
+      await db.collection(name).deleteMany({}, { session: restoreSession });
     }
 
     for (const name of payloadNames) {
@@ -562,14 +599,13 @@ async function restoreBackup(id) {
         : [];
 
       if (docs.length) {
-        await insertInBatches(collection, docs);
+        await insertInBatches(collection, docs, restoreSession);
       }
 
-      await restoreIndexes(
-        collection,
-        manifest.get(name)?.indexes || []
-      );
     }
+    // Restoring old users/revocation records must never resurrect an old JWT.
+    await db.collection('academyflow_auth_state').updateOne({ _id: 'sessions' }, { $set: { epoch: crypto.randomUUID() } }, { session: restoreSession });
+    }, { readConcern: { level: 'snapshot' }, writeConcern: { w: 'majority' } });
 
     await pruneBackups();
 
@@ -583,9 +619,26 @@ async function restoreBackup(id) {
       )
     };
   } finally {
+    if (restoreSession) await restoreSession.endSession();
+    if (lock) await mongoose.connection.db.collection('academyflow_operation_locks').deleteOne({ _id: 'restore', owner: lock });
     busy = false;
     busyOperation = '';
   }
+}
+
+async function acquireRestoreLock() {
+  const owner = crypto.randomUUID();
+  try {
+    await mongoose.connection.db.collection('academyflow_operation_locks').insertOne({ _id: 'restore', owner, createdAt: new Date() });
+  } catch (err) {
+    if (err.code === 11000) throw Object.assign(new Error('A restore lock already exists. Verify the operation has stopped before clearing a stale lock.'), { status: 409 });
+    throw err;
+  }
+  return owner;
+}
+async function restoreInProgress() {
+  if (mongoose.connection.readyState !== 1 || !mongoose.connection.db) return false;
+  return Boolean(await mongoose.connection.db.collection('academyflow_operation_locks').findOne({ _id: 'restore' }));
 }
 
 async function storageStatus() {
@@ -600,7 +653,8 @@ async function storageStatus() {
     freeBytes: null,
     totalBytes: null,
     usedBytes: null,
-    error: ''
+    error: '',
+    external: externalBackup.configStatus()
   };
 
   try {
@@ -639,6 +693,20 @@ function operation() {
 }
 
 module.exports = {
+  importExternalBackup: async id => {
+    const clean = safeBackupId(id);
+    if (!clean) throw new Error('Invalid backup ID');
+    const { metadata, buffer } = await externalBackup.fetchBackup(clean, maximumBytes() * 2);
+    if (!metadata.encrypted || sha256(buffer) !== metadata.sha256) throw new Error('External backup integrity check failed');
+    if (await records().findOne({ id: clean })) throw new Error('Backup already exists');
+    const storageFileId = await uploadBuffer(clean, buffer);
+    const row = { ...metadata, storageFileId, storageBucket: BACKUP_BUCKET };
+    await records().insertOne(row);
+    try { await validateBackup(clean); }
+    catch (err) { await deleteBackup(clean); throw err; }
+    return publicMetadata(row);
+  },
+  restoreInProgress,
   BACKUP_BUCKET,
   createBackup,
   restoreBackup,

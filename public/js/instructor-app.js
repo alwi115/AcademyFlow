@@ -707,7 +707,8 @@ window.InstructorPortal = (() => {
         title:'تغيير كلمة المرور',
         fields:[
           {name:'currentPassword',label:'كلمة المرور الحالية',type:'password',required:true},
-          {name:'newPassword',label:'كلمة المرور الجديدة',type:'password',required:true}
+          {name:'newPassword',label:'كلمة المرور الجديدة',type:'password',required:true},
+          {name:'otp',label:'رمز تطبيق المصادقة، إن كان مفعّلاً',type:'text',required:false}
         ],
         onSubmit:async data2=>{
           await api('/api/instructor/profile/password',{method:'POST',body:JSON.stringify(data2)});
@@ -719,6 +720,7 @@ window.InstructorPortal = (() => {
 
   async function init() {
     renderShell();
+    window.AcademyFlowWorkspace?.enhance(document.getElementById('instructorApp'));
 
     if (page==='dashboard') return renderDashboard();
     if (page==='courses') return renderCourses();

@@ -1,3 +1,4 @@
+require('./test-safety').assertSafeTestUri();
 const assert = require('assert');
 const express = require('express');
 const mongoose = require('mongoose');
@@ -35,7 +36,7 @@ async function main() {
     'performance-test-secret-0123456789-abcdefghijklmnopqrstuvwxyz-ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
   await connect();
-  await mongoose.connection.db.dropDatabase();
+  await require('./test-safety').safeDropDatabase(mongoose.connection);
 
   const hash = await bcrypt.hash('PerformancePassword123!', 4);
   const academy = await Academy.create({

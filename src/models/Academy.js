@@ -17,6 +17,7 @@ const AcademySchema = new mongoose.Schema({
   graceEndsAt: Date,
   subscriptionEndsAt: Date,
   planId: { type: mongoose.Schema.Types.ObjectId, ref: 'Plan' },
+  quotaRevision: { type: Number, default: 0, select: false },
   branding: {
     primaryColor: { type: String, default: '#8B1E2D' },
     secondaryColor: { type: String, default: '#111827' },

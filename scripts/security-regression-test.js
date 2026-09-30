@@ -3,8 +3,11 @@ const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
+const mongoose = require('mongoose');
+require('./test-safety').assertSafeTestUri();
 
 async function main() {
+  await mongoose.connect(process.env.MONGODB_URI);
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'academyflow-security-'));
   process.env.CERTIFICATE_STORAGE_DIR = root;
   process.env.ZOOM_WEBHOOK_SECRET_TOKEN = crypto.randomBytes(32).toString('hex');
@@ -48,15 +51,12 @@ async function main() {
     oversized.write('%PDF-');
     await assert.rejects(storage.savePdf({ buffer: oversized }), error => error.status === 413);
     const pdf = Buffer.from('%PDF-1.4\n%%EOF\n');
-    const key = await storage.savePdf({ buffer: pdf, academyId: '../../etc', certificateId: '../outside' });
-    assert.equal(path.dirname(storage.pathFor(key)), root);
-    assert.deepEqual(await fs.readFile(storage.pathFor(key)), pdf);
-    assert.equal((await fs.stat(storage.pathFor(key))).mode & 0o777, 0o600);
-    assert.throws(() => storage.pathFor('../outside'));
-    // Previously issued certificates retain their academy subdirectory keys.
-    await fs.mkdir(path.join(root, 'legacy-academy'));
-    await fs.writeFile(path.join(root, 'legacy-academy', 'old.pdf'), pdf);
-    assert.equal((await storage.stat('legacy-academy/old.pdf')).size, pdf.length);
+    const key = await storage.savePdf({ buffer: pdf, academyId: id, certificateId: id });
+    assert.ok(key.startsWith('gridfs:'));
+    assert.deepEqual(await storage.read(key), pdf);
+    assert.equal((await storage.stat(key)).size, pdf.length);
+    await assert.rejects(storage.read('../outside'));
+    await assert.rejects(storage.stat('legacy-academy/old.pdf'), error => error.code === 'LEGACY_STORAGE_KEY');
     await storage.remove(key);
     await storage.remove(key);
 
@@ -76,6 +76,7 @@ async function main() {
     assert.equal(challenge.body.encryptedToken, crypto.createHmac('sha256', process.env.ZOOM_WEBHOOK_SECRET_TOKEN).update('challenge').digest('hex'));
     console.log('Security regressions passed: query inputs, PDF storage/legacy paths, signed Zoom events.');
   } finally {
+    await mongoose.disconnect();
     Academy.find = originalFind;
     await fs.rm(root, { recursive: true, force: true });
   }

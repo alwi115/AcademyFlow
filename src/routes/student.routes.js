@@ -27,6 +27,7 @@ router.post('/quiz-attempts/:attemptId/submit', q.submitQuiz);
 router.get('/quiz-attempts/:attemptId/result', q.quizResult);
 
 router.get('/payments', c.payments);
+router.post('/payments/:id/checkout', require('../controllers/payment-checkout.controller').checkout);
 router.get('/certificates', certificate.listStudent);
 router.get('/certificates/:id/file', certificate.studentFile);
 router.get('/notifications/urgent', c.urgentNotification);
@@ -34,6 +35,6 @@ router.get('/notifications', c.notifications);
 
 router.get('/profile', c.profile);
 router.patch('/profile', c.updateProfile);
-router.post('/profile/password', c.changePassword);
+router.post('/profile/password', require('../controllers/account-security.controller').changePassword);
 
 module.exports = router;

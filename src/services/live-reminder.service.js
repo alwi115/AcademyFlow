@@ -88,7 +88,7 @@ async function sendEmail({ academy, session, student, courseTitle, minutes }) {
   if (['sent','skipped'].includes(delivery.status)) return delivery.status;
   if (delivery.status === 'failed' && Number(delivery.attempts || 0) >= 3) return 'failed_final';
 
-  if (!student.email) {
+  if (!student.email || student.notificationPreferences?.email === false) {
     delivery.status = 'skipped';
     delivery.error = 'Student has no email';
     delivery.lastAttemptAt = new Date();
@@ -201,7 +201,7 @@ async function processSession(session) {
   if (claimed.groupId) enrollmentQuery.groupId = claimed.groupId;
 
   const enrollments = await Enrollment.find(enrollmentQuery)
-    .populate('studentId', 'name email active')
+    .populate('studentId', 'name email active notificationPreferences')
     .select('studentId groupId');
 
   const students = enrollments.filter(row => row.studentId?.active !== false);
@@ -257,7 +257,7 @@ async function processSession(session) {
 }
 
 async function runOnce() {
-  if (running) return;
+  if (running || await require('./backup.service').restoreInProgress()) return;
   running = true;
 
   try {

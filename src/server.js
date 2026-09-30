@@ -1,4 +1,4 @@
-require('dotenv').config();
+if (process.env.ACADEMYFLOW_ISOLATED_DEMO !== 'true') require('dotenv').config();
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
@@ -14,6 +14,8 @@ const backupService = require('./services/backup.service');
 const SystemError = require('./models/SystemError');
 const systemMonitor = require('./services/system-monitor.service');
 const auditMiddleware = require('./middleware/audit');
+const mongoose = require('mongoose');
+const { protectMutations } = require('./middleware/csrf');
 
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 64) {
   throw new Error('JWT_SECRET must be at least 64 characters');
@@ -115,12 +117,13 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use((req, res, next) => {
-  if (!backupService.isBusy() || !req.path.startsWith('/api/')) {
+app.use(async (req, res, next) => {
+  const restoring = req.path !== '/api/health' && req.path.startsWith('/api/') && await backupService.restoreInProgress();
+  if ((!backupService.isBusy() && !restoring) || !req.path.startsWith('/api/')) {
     return next();
   }
 
-  const operation = backupService.operation();
+  const operation = restoring ? 'restore' : backupService.operation();
   const isSuperAdminBackupRoute = req.path.startsWith('/api/superadmin/backups');
   const mutating = ['POST','PUT','PATCH','DELETE'].includes(req.method);
 
@@ -168,8 +171,10 @@ app.post(
   require('./controllers/zoom-webhook.controller').handle
 );
 
+app.post('/api/webhooks/stripe', express.raw({ type: 'application/json', limit: '1mb' }), require('./controllers/payment-checkout.controller').webhook);
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false, limit: '16kb' }));
+app.use('/api', protectMutations);
 
 app.use(auditMiddleware);
 
@@ -223,7 +228,8 @@ app.use(async (req, res, next) => {
 
   try {
     const source = await fs.promises.readFile(htmlFile, 'utf8');
-    const withNonce = injectCspNonce(source, res.locals.cspNonce);
+    const securedSource = source.replace(/<head([^>]*)>/i, '<head$1><script src="/js/secure-fetch.js"></script><script src="/js/account-navigation.js" defer></script>');
+    const withNonce = injectCspNonce(securedSource, res.locals.cspNonce);
     const html = injectAcademyAiAssets(withNonce, req.path, res.locals.cspNonce);
 
     res.type('html');
@@ -249,9 +255,18 @@ app.use(express.static(publicRoot, {
   }
 }));
 
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
+  let ok = false;
+  try {
+    if (mongoose.connection.readyState === 1) {
+      await mongoose.connection.db.command({ ping: 1 }, { timeoutMS: 3000 });
+      ok = true;
+    }
+  } catch {}
+  res.status(ok ? 200 : 503);
+  res.set('Cache-Control', 'no-store');
   res.json({
-    ok: true,
+    ok,
     service: 'academyflow',
     time: new Date().toISOString()
   });
@@ -283,7 +298,7 @@ app.use((req, res) => {
 
 app.use((err, req, res, next) => {
   console.error(err);
-  const status = Number(err.status || 500);
+  const status = Number(err.status || (err.code === 11000 ? 409 : ['ValidationError', 'CastError'].includes(err.name) ? 400 : 500));
 
   if (status >= 500) {
     SystemError.create({
@@ -309,8 +324,10 @@ const port = Number(process.env.PORT || 3000);
 
 async function start() {
   await connectDB();
+  await Promise.all(Object.values(mongoose.models).map(model => model.init()));
   await bootstrapSuperAdmin();
   liveReminderWorker.start();
+  require('./services/notification-delivery.service').start();
   backupWorker.start();
   systemMonitor.start();
 
@@ -319,7 +336,10 @@ async function start() {
   });
 }
 
-start().catch(err => {
-  console.error(err);
-  process.exit(1);
-});
+if (require.main === module) {
+  start().catch(err => {
+    console.error(err);
+    process.exit(1);
+  });
+}
+module.exports = { app, start };

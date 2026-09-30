@@ -1,3 +1,4 @@
+require('./test-safety').assertSafeTestUri();
 const assert = require('assert');
 const mongoose = require('mongoose');
 
@@ -39,7 +40,7 @@ async function main() {
   delete process.env.SUPERADMIN_EMAIL;
 
   await connectWithRetry();
-  await mongoose.connection.db.dropDatabase();
+  await require('./test-safety').safeDropDatabase(mongoose.connection);
 
   const firstIssues = await monitor.run();
   const firstKeys = new Set(firstIssues.map(row => row.key));

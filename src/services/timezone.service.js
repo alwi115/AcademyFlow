@@ -51,6 +51,10 @@ function zonedLocalToUtc(dateString, timeString, timeZone) {
   }
 
   const zone = safeTimeZone(timeZone);
+  const calendar = new Date(Date.UTC(year, month - 1, day));
+  if (calendar.getUTCFullYear() !== year || calendar.getUTCMonth() !== month - 1 || calendar.getUTCDate() !== day) {
+    throw badRequest('Invalid calendar date');
+  }
   const wantedUtc = Date.UTC(year, month - 1, day, hour, minute, second);
   let guess = wantedUtc;
 
@@ -71,6 +75,10 @@ function zonedLocalToUtc(dateString, timeString, timeZone) {
 
   if (Number.isNaN(result.getTime())) {
     throw badRequest('موعد المحاضرة غير صحيح');
+  }
+  const actual = zonedParts(result, zone);
+  if (actual.year !== year || actual.month !== month || actual.day !== day || actual.hour !== hour || actual.minute !== minute) {
+    throw badRequest('Local time does not exist in this timezone');
   }
 
   return result;

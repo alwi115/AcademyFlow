@@ -1,0 +1,254 @@
+/* AcademyFlow interiors — the same visual language as homepage.css and academy-login.css.
+   Loaded last by internal pages; the existing role styles keep their functional layouts. */
+:root,
+html[data-theme='light'] {
+  --font-body: 'IBM Plex Sans Arabic', Tahoma, Arial, sans-serif;
+  --font-display: var(--font-body);
+  --brand: #162e46;
+  --ink2: #23496b;
+  --bg: #f6f8fc;
+  --bg-elevated: #fff;
+  --bg-soft: #eaf0f8;
+  --surface: #fff;
+  --surface-strong: #fff;
+  --surface-muted: #f6f8fc;
+  --surface-contrast: #162e46;
+  --text: #19334b;
+  --text-soft: #254758;
+  --text-mute: #53667a;
+  --line: #d9e2ed;
+  --line-strong: #adbdcf;
+  --primary: #3262c8;
+  --primary-strong: #244b9b;
+  --primary-soft: #eaf0fc;
+  --accent: #3262c8;
+  --accent-soft: #a9c4ff;
+  --field: #fcfdff;
+  --field-line: #adbdcf;
+  --success: #216847;
+  --warning: #8d601a;
+  --danger: #af3f42;
+  --sidebar: #f6f8fc;
+  --shadow-card: none;
+  --shadow-soft: 0 8px 24px rgb(19 46 64 / 4%);
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  color-scheme: light;
+}
+html[data-theme='dark'] {
+  --brand: #203d5d;
+  --ink2: #2e527c;
+  --bg: #101b29;
+  --bg-elevated: #172638;
+  --bg-soft: #1b2c40;
+  --surface: #172638;
+  --surface-strong: #172638;
+  --surface-muted: #122033;
+  --surface-contrast: #e5edf9;
+  --text: #e5edf9;
+  --text-soft: #d5dfec;
+  --text-mute: #acbdd1;
+  --line: #34465b;
+  --line-strong: #60758d;
+  --primary: #8ab3ff;
+  --primary-strong: #b1cbff;
+  --primary-soft: #203854;
+  --accent: #8ab3ff;
+  --accent-soft: #b1cbff;
+  --field: #122033;
+  --field-line: #60758d;
+  --sidebar: #101b29;
+  --shadow-card: none;
+  --shadow-soft: 0 8px 24px rgb(0 0 0 / 10%);
+  color-scheme: dark;
+}
+body.af-workspace { background: var(--bg); font: 400 15px/1.8 var(--font-body); color: var(--text); }
+body.af-workspace::before { content: none; }
+.af-workspace :is(h1,h2,h3) { font-family: var(--font-body); font-weight: 500; letter-spacing: 0; }
+body.af-workspace p { font-size: 14px; line-height: 1.8; }
+body.af-workspace small { font-size: 12px; }
+.af-workspace :is(button,input,select,textarea) { font-family: inherit; }
+.af-workspace :is(a,button,input,select,textarea):focus-visible { outline: 3px solid var(--primary); outline-offset: 4px; }
+.af-workspace :is(button,a) { touch-action: manipulation; }
+.af-workspace button:disabled { cursor: not-allowed; opacity: .55; }
+.af-workspace [hidden] { display: none !important; }
+.af-workspace :is(.academy-layout,.student-layout,.instructor-layout,.sa-layout) { display: grid; grid-template-columns: 264px minmax(0,1fr); min-height: 100dvh; }
+.af-workspace :is(.academy-sidebar,.student-sidebar,.instructor-sidebar,.sa-sidebar) {
+  position: sticky; top: 0; height: 100dvh; padding: 30px 18px 22px;
+  border-inline-end: 1px solid var(--line); background: var(--sidebar); backdrop-filter: none;
+  box-shadow: none; overflow-y: auto; scrollbar-width: thin; z-index: 80;
+}
+.af-workspace .brand { gap: 10px; direction: ltr; justify-content: center; padding: 0 0 27px; margin-bottom: 22px; border-bottom: 1px solid var(--line); color: var(--text); }
+.af-workspace .brand-symbol { width: 42px; height: 42px; flex: 0 0 42px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--brand); color: #fff; font: italic 31px/1 Georgia,serif; letter-spacing: -5px; padding-right: 6px; }
+.af-workspace .brand-symbol span { color: var(--accent-soft); }
+.af-workspace .brand-text b { font: 600 19px/1.4 var(--font-body); letter-spacing: -.6px; }
+.af-workspace .brand-light { font-weight: 400; }
+.af-workspace .brand-text small { margin-top: 4px; font: 400 10px/1.8 var(--font-body); letter-spacing: 0; direction: rtl; }
+.af-workspace :is(.academy-nav-section,.student-nav-title,.instructor-nav-title,.sa-nav-title) { margin: 23px 12px 9px; font-size: 11px; font-weight: 500; color: var(--text-mute); letter-spacing: 0; }
+.af-workspace :is(.academy-nav,.student-nav,.instructor-nav,.sa-nav) { gap: 4px; }
+.af-workspace :is(.academy-nav,.student-nav,.instructor-nav,.sa-nav) a { position: relative; min-height: 45px; padding: 9px 12px; gap: 12px; border: 1px solid transparent; border-radius: 4px; font-size: 13px; font-weight: 400; color: var(--text-soft); }
+.af-workspace :is(.academy-nav,.student-nav,.instructor-nav,.sa-nav) a:hover { background: var(--surface); border-color: var(--line); }
+.af-workspace :is(.academy-nav,.student-nav,.instructor-nav,.sa-nav) a.active { background: var(--primary-soft); color: var(--primary); border-color: transparent; box-shadow: none; font-weight: 600; }
+.af-workspace :is(.academy-nav,.student-nav,.instructor-nav,.sa-nav) a.active::before { content: ''; position: absolute; inset-inline-start: -1px; top: 14px; bottom: 14px; height: auto; width: 2px; background: var(--primary); border-radius: 0; }
+.af-workspace :is(.academy-nav-icon,.student-nav-icon,.instructor-nav-icon,.sa-nav-icon),
+.af-workspace :is(.academy-nav,.student-nav,.instructor-nav,.sa-nav) a.active :is(.academy-nav-icon,.student-nav-icon,.instructor-nav-icon,.sa-nav-icon) { width: 23px; height: 23px; border: 0; border-radius: 0; color: currentColor; background: transparent; font-size: 13px; }
+.af-workspace .af-icon { display: block; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.af-workspace :is(.academy-sidebar-footer,.student-sidebar-card,.instructor-sidebar-card,.sa-sidebar-foot) { padding: 18px 12px 0; margin: 28px 0 0; background: transparent; border: 0; border-top: 1px solid var(--line); border-radius: 0; font-size: 12px; }
+.af-workspace :is(.student-sidebar-card,.instructor-sidebar-card) :is(b,small) { font-size: 12px; }
+.af-workspace :is(.academy-main,.student-main,.instructor-main,.sa-main) { min-width: 0; padding: 30px clamp(22px,3.5vw,58px) 28px; background: var(--bg); }
+.af-workspace :is(.academy-content,.student-content,.instructor-content,.sa-content) { max-width: 1480px; width: 100%; margin-inline: auto; }
+.af-workspace :is(.academy-topbar,.student-topbar,.instructor-topbar,.sa-topbar) { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between; min-height: 80px; padding: 0 0 25px; margin-bottom: 32px; border-bottom: 1px solid var(--line); }
+.af-workspace :is(.academy-heading,.student-heading,.instructor-heading,.sa-heading) h1 { margin: 5px 0 6px; font-size: clamp(26px,2.3vw,36px); line-height: 1.4; font-weight: 500; }
+.af-workspace :is(.academy-heading,.student-heading,.instructor-heading,.sa-heading) p { font-size: 13px; color: var(--text-mute); line-height: 1.8; max-width: 600px; }
+.af-workspace :is(.eyebrow,.student-eyebrow,.instructor-eyebrow,.sa-eyebrow) { display: block; font: 500 10px/1.6 Arial,sans-serif; letter-spacing: 2px; color: var(--primary); direction: ltr; text-align: right; }
+.af-workspace :is(.academy-toolbar,.student-top-actions,.instructor-top-actions,.sa-top-actions) { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.af-workspace :is(.academy-user,.student-user,.instructor-user,.sa-user) { gap: 9px; padding: 0 12px; border: 0; border-inline: 1px solid var(--line); border-radius: 0; background: transparent; min-width: 0; }
+.af-workspace :is(.academy-user,.student-user,.instructor-user,.sa-user) b { font-size: 12px; font-weight: 500; }
+.af-workspace :is(.academy-user,.student-user,.instructor-user,.sa-user) span { font-size: 11px; }
+.af-workspace :is(.academy-user-avatar,.student-avatar,.instructor-avatar,.sa-avatar) { width: 36px; height: 36px; border-radius: 50%; background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+.af-workspace .btn { min-height: 44px; padding: 10px 18px; gap: 10px; border-radius: 3px; font-size: 13px; font-weight: 500; line-height: 1.6; box-shadow: none; white-space: normal; text-align: center; }
+.af-workspace .btn.primary { background: var(--brand); border: 1px solid var(--brand); color: #fff; }
+.af-workspace .btn.primary:hover { background: var(--ink2); border-color: var(--ink2); transform: translateY(-1px); }
+.af-workspace .btn.soft { background: var(--primary-soft); border: 1px solid transparent; color: var(--primary); }
+.af-workspace .btn.ghost,.af-workspace .btn.secondary { background: transparent; border: 1px solid var(--line); color: var(--text); }
+.af-workspace .btn.ghost:hover,.af-workspace .btn.secondary:hover { background: var(--surface); border-color: var(--line-strong); }
+.af-workspace :is(.theme-toggle,.icon-btn,.af-menu-close) { min-width: 44px; min-height: 44px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--text); display: inline-grid; place-items: center; box-shadow: none; }
+.af-workspace .theme-toggle { font-size: 20px; }
+.af-workspace :is(.academy-mobile-menu,.student-menu-btn,.instructor-menu-btn,.sa-menu-btn) { min-width: 44px; min-height: 44px; border-radius: 4px; }
+.af-workspace .af-menu-close { display: none; }
+.af-workspace :is(.academy-kpis,.student-kpis,.instructor-kpis,.sa-kpis) { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 0; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; overflow: hidden; margin: 0 0 28px; }
+.af-workspace :is(.academy-kpi,.student-kpi,.instructor-kpi,.sa-kpi) { min-width: 0; min-height: 166px; padding: 24px; background: transparent; border: 0; border-inline-end: 1px solid var(--line); border-radius: 0; box-shadow: none; }
+.af-workspace :is(.academy-kpi,.student-kpi,.instructor-kpi,.sa-kpi):last-child { border-inline-end: 0; }
+.af-workspace :is(.academy-kpi,.student-kpi,.instructor-kpi,.sa-kpi)::after { content: none; }
+.af-workspace :is(.academy-kpi,.student-kpi,.instructor-kpi,.sa-kpi) small { font-size: 13px; color: var(--text-mute); }
+.af-workspace :is(.academy-kpi,.student-kpi,.instructor-kpi,.sa-kpi) strong { display: block; margin-top: 12px; font-size: clamp(30px,3vw,42px); font-weight: 500; line-height: 1.3; font-variant-numeric: tabular-nums; color: var(--text); overflow-wrap: anywhere; }
+.af-workspace :is(.academy-kpi-icon,.sa-kpi-icon) { color: var(--primary); background: transparent; border: 0; border-radius: 0; }
+.af-workspace .academy-kpi-description { display: block; margin-top: 9px; font-size: 11px; color: var(--text-mute); }
+.af-workspace :is(.academy-grid-2,.student-grid-2,.instructor-grid-2,.sa-grid-2,.academy-dashboard-grid) { gap: 24px; }
+.af-workspace :is(.academy-card,.student-card,.instructor-card,.sa-card) { min-width: 0; padding: 25px; border: 1px solid var(--line); border-radius: 6px; box-shadow: none; background: var(--surface); }
+.af-workspace :is(.academy-card-head,.student-card-head,.instructor-card-head,.sa-card-head) { gap: 16px; margin-bottom: 22px; align-items: flex-start; }
+.af-workspace :is(.academy-card-head,.student-card-head,.instructor-card-head,.sa-card-head) h2 { font-size: 21px; line-height: 1.5; font-weight: 500; }
+.af-workspace :is(.academy-card-head,.student-card-head,.instructor-card-head,.sa-card-head) p { margin-top: 6px; font-size: 13px; line-height: 1.8; color: var(--text-mute); }
+.af-workspace :is(.academy-section,.student-section,.instructor-section,.sa-section) { margin-top: 24px; }
+.af-workspace .academy-dashboard-side { gap: 24px; }
+.af-workspace :is(.academy-section-label,.academy-dashboard-kicker) { font-size: 11px; font-weight: 500; color: var(--primary); }
+.af-workspace :is(.af-overview,.academy-dashboard-intro) { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 24px; margin: 0 0 28px; padding: 28px 32px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg-soft); }
+.af-workspace :is(.af-overview,.academy-dashboard-intro)::after { content: ''; position: absolute; z-index: -1; width: 220px; height: 220px; left: -52px; top: -110px; border: 1px solid var(--line-strong); border-radius: 50%; box-shadow: 0 0 0 36px var(--bg-soft),0 0 0 37px var(--line); opacity: .45; pointer-events: none; }
+.af-workspace :is(.af-overview,.academy-dashboard-intro) h2 { margin: 8px 0 10px; font-size: clamp(27px,3vw,40px); line-height: 1.5; font-weight: 500; }
+.af-workspace :is(.af-overview,.academy-dashboard-intro) h2 span { color: var(--primary); }
+.af-workspace :is(.af-overview,.academy-dashboard-intro) p { color: var(--text-mute); font-size: 14px; line-height: 1.9; margin: 0; max-width: 660px; }
+.af-workspace .af-overview-kicker { font-size: 11px; color: var(--primary); }
+.af-workspace .af-overview-link { display: inline-flex; gap: 20px; align-items: center; font-size: 14px; color: var(--primary); text-decoration: none; border-bottom: 1px solid var(--line-strong); padding-block: 8px; }
+.af-workspace :is(.academy-list,.student-list,.instructor-list,.sa-list) { gap: 0; }
+.af-workspace :is(.academy-list-row,.student-list-row,.instructor-list-row,.sa-list-row,.academy-session-row) { border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 17px 0; background: transparent; gap: 16px; }
+.af-workspace :is(.academy-list-row,.student-list-row,.instructor-list-row,.sa-list-row,.academy-session-row):last-child { border-bottom: 0; }
+.af-workspace :is(.academy-list-row,.student-list-row,.instructor-list-row,.sa-list-row,.academy-session-main) b { font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+.af-workspace :is(.academy-list-row,.student-list-row,.instructor-list-row,.sa-list-row,.academy-session-main) :is(span,small) { font-size: 12px; line-height: 1.8; }
+.af-workspace :is(.academy-empty,.student-empty,.instructor-empty,.sa-empty,.academy-calendar-empty) { padding: 44px 20px; font-size: 14px; line-height: 1.9; color: var(--text-mute); }
+.af-workspace :is(.academy-table-wrap,.student-table-wrap,.instructor-table-wrap,.sa-table-wrap) { max-width: 100%; overflow: auto; border: 1px solid var(--line); border-radius: 4px; overscroll-behavior-inline: contain; }
+.af-workspace :is(.academy-table,.student-table,.instructor-table,.sa-table) { width: 100%; border-collapse: collapse; }
+.af-workspace :is(.academy-table,.student-table,.instructor-table,.sa-table) :is(th,td) { padding: 16px; font-size: 13px; line-height: 1.8; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.af-workspace :is(.academy-table,.student-table,.instructor-table,.sa-table) th { background: var(--surface-muted); color: var(--text-mute); font-size: 12px; font-weight: 500; }
+.af-workspace :is(.academy-table,.student-table,.instructor-table,.sa-table) tbody tr:hover { background: var(--surface-muted); }
+.af-workspace :is(.academy-status,.student-status,.instructor-status,.sa-status) { font-size: 11px; padding: 5px 10px; font-weight: 500; }
+.af-workspace :is(.field input,.field select,.field textarea,.academy-search,.student-search,.instructor-search,.sa-search) { min-height: 48px; border: 1px solid var(--field-line); border-radius: 3px; background: var(--field); color: var(--text); padding: 11px 14px; font-size: 14px; box-shadow: none; max-width: 100%; }
+.af-workspace .field label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 8px; }
+.af-workspace .field :is(input,select,textarea):focus { border-color: var(--primary); }
+.af-workspace .field { margin-bottom: 18px; min-width: 0; }
+.af-workspace :is(input[type='checkbox'],input[type='radio']) { accent-color: var(--primary); }
+.af-workspace :is(.academy-form-grid,.instructor-form-grid,.sa-form-grid) { column-gap: 20px; }
+.af-workspace :is(.academy-modal-card,.student-modal-card,.instructor-modal-card,.sa-modal-card) { padding: 28px; border-radius: 8px; border-color: var(--line); background: var(--surface); }
+.af-workspace :is(.academy-modal-head,.student-modal-head,.instructor-modal-head,.sa-modal-head) { gap: 20px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
+.af-workspace :is(.academy-modal-head,.student-modal-head,.instructor-modal-head,.sa-modal-head) h2 { font-size: 25px; font-weight: 500; }
+.af-workspace :is(.academy-modal-head,.student-modal-head,.instructor-modal-head,.sa-modal-head) p { font-size: 13px; }
+.af-workspace :is(.academy-note,.student-note,.instructor-note,.sa-note) { padding: 16px; border-radius: 4px; font-size: 13px; line-height: 1.9; background: var(--surface-muted); }
+.af-workspace :is(.student-course,.instructor-course,.student-live-card,.instructor-live-card,.sa-plan-card) { padding: 22px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); box-shadow: none; }
+.af-workspace .student-course { padding: 0; }
+.af-workspace .student-course-body { padding: 22px; }
+.af-workspace .student-course-cover { background: var(--bg-soft); font-weight: 500; }
+.af-workspace :is(.student-course,.instructor-course,.student-live-card,.instructor-live-card) h3 { font-size: 20px; font-weight: 500; line-height: 1.5; }
+.af-workspace :is(.student-course,.instructor-course,.student-live-card,.instructor-live-card) p { font-size: 13px; line-height: 1.9; }
+.af-workspace :is(.student-meta,.instructor-meta) span { font-size: 11px; border-radius: 3px; }
+.af-workspace :is(.student-course-grid,.instructor-course-grid,.student-live-grid,.instructor-live-grid) { gap: 20px; }
+.af-workspace .academy-quick { min-height: 78px; border-radius: 3px; padding: 15px; background: var(--surface-muted); }
+.af-workspace .academy-quick i { border-radius: 50%; background: var(--primary-soft); color: var(--primary); }
+.af-workspace .academy-quick b { font-size: 14px; font-weight: 500; }
+.af-workspace .academy-quick span span { font-size: 11px; }
+.af-workspace .academy-finance-value { font-size: 38px; font-weight: 500; color: var(--primary); }
+.af-workspace .academy-finance-foot { font-size: 12px; }
+.af-workspace .academy-calendar-grid { border-radius: 4px; }
+.af-workspace .academy-calendar-date { border-radius: 50%; font-size: 13px; font-weight: 500; }
+.af-workspace .academy-calendar-day.is-today .academy-calendar-date { background: var(--brand); }
+.af-workspace .academy-calendar-preview span { font-size: 11px; }
+.af-workspace .academy-calendar-event { border-radius: 4px; padding: 18px; }
+.af-workspace .academy-calendar-event h3 { font-size: 15px; }
+.af-workspace .academy-calendar-event-meta span { font-size: 11px; }
+.af-workspace :is(.academy-footer,.student-footer,.instructor-footer,.sa-footer) { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; margin-top: 40px; padding-top: 22px; border-top: 1px solid var(--line); font-size: 11px; color: var(--text-mute); }
+.af-workspace .af-footer-wordmark { font-size: 17px; letter-spacing: -.5px; color: var(--text); direction: ltr; }
+.af-workspace .af-footer-links { display: flex; flex-wrap: wrap; gap: 20px; }
+.af-workspace .af-footer-links a { color: var(--text-mute); text-decoration: none; }
+.af-workspace .af-footer-links a:hover { color: var(--primary); }
+.af-workspace .af-skip { position: fixed; top: -100px; right: 24px; z-index: 500; background: var(--brand); color: #fff; padding: 12px 20px; }
+.af-workspace .af-skip:focus { top: 12px; }
+.af-workspace.af-menu-open { overflow: hidden; }
+.af-workspace .af-standalone-header { width: min(1080px,calc(100% - 40px)); margin: 26px auto; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--line); padding-bottom: 20px; }
+.af-workspace .af-standalone-header .brand { padding: 0; margin: 0; border: 0; }
+.af-workspace .account-main { max-width: 760px; padding-bottom: 40px; }
+.af-workspace .account-main h1 { font-size: 36px; font-weight: 500; }
+.af-workspace .account-main section { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 28px; margin-block: 20px; }
+.af-workspace .account-main input:not([type='checkbox']) { border-radius: 3px; border-color: var(--field-line); background: var(--field); min-height: 48px; }
+.af-workspace :is(.legal-hero,.legal-card,.legal-section) { border-radius: 6px; box-shadow: none; }
+@media (max-width: 1180px) {
+  .af-workspace :is(.academy-layout,.student-layout,.instructor-layout,.sa-layout) { grid-template-columns: 238px minmax(0,1fr); }
+  .af-workspace :is(.academy-main,.student-main,.instructor-main,.sa-main) { padding: 26px 24px; }
+  .af-workspace :is(.academy-kpis,.student-kpis,.instructor-kpis,.sa-kpis) { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .af-workspace :is(.academy-kpi,.student-kpi,.instructor-kpi,.sa-kpi):nth-child(2n) { border-inline-end: 0; }
+  .af-workspace :is(.academy-kpi,.student-kpi,.instructor-kpi,.sa-kpi):nth-child(n+3) { border-top: 1px solid var(--line); }
+}
+@media (max-width: 900px) {
+  .af-workspace :is(.academy-layout,.student-layout,.instructor-layout,.sa-layout) { display: block; }
+  .af-workspace :is(.academy-sidebar,.student-sidebar,.instructor-sidebar,.sa-sidebar) { position: fixed; top: 0; right: 0; width: min(300px,86vw); transform: translateX(105%); transition: transform .2s ease; box-shadow: var(--shadow-soft); }
+  .af-workspace :is(.academy-sidebar,.student-sidebar,.instructor-sidebar,.sa-sidebar).open { transform: none; }
+  .af-workspace :is(.academy-overlay,.student-overlay,.instructor-overlay,.sa-overlay) { position: fixed; inset: 0; z-index: 75; background: rgb(8 20 35 / 40%); display: none; }
+  .af-workspace :is(.academy-overlay,.student-overlay,.instructor-overlay,.sa-overlay).show { display: block; }
+  .af-workspace :is(.academy-mobile-menu,.student-menu-btn,.instructor-menu-btn,.sa-menu-btn) { display: grid; }
+  .af-workspace .af-menu-close { display: grid; margin: -14px 0 18px; margin-inline-start: auto; font-size: 24px; }
+  .af-workspace :is(.academy-grid-2,.student-grid-2,.instructor-grid-2,.sa-grid-2,.academy-dashboard-grid) { grid-template-columns: minmax(0,1fr); }
+}
+@media (max-width: 640px) {
+  .af-workspace :is(.academy-main,.student-main,.instructor-main,.sa-main) { padding: max(18px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 28px max(16px,env(safe-area-inset-left)); }
+  .af-workspace :is(.academy-topbar,.student-topbar,.instructor-topbar,.sa-topbar) { gap: 16px; margin-bottom: 22px; padding-bottom: 18px; }
+  .af-workspace :is(.academy-heading,.student-heading,.instructor-heading,.sa-heading) h1 { font-size: 26px; }
+  .af-workspace :is(.academy-heading,.student-heading,.instructor-heading,.sa-heading) p { display: block; font-size: 12px; }
+  .af-workspace :is(.academy-user,.student-user,.instructor-user,.sa-user) { display: none; }
+  .af-workspace :is(.academy-toolbar,.student-top-actions,.instructor-top-actions,.sa-top-actions) { width: 100%; justify-content: flex-end; gap: 10px; }
+  .af-workspace :is(.af-overview,.academy-dashboard-intro) { padding: 24px 20px; gap: 18px; }
+  .af-workspace :is(.af-overview,.academy-dashboard-intro) h2 { font-size: 29px; }
+  .af-workspace :is(.af-overview,.academy-dashboard-intro) p { font-size: 13px; }
+  .af-workspace :is(.academy-kpi,.student-kpi,.instructor-kpi,.sa-kpi) { min-height: 145px; padding: 19px 16px; }
+  .af-workspace :is(.academy-kpi,.student-kpi,.instructor-kpi,.sa-kpi) small { font-size: 12px; }
+  .af-workspace :is(.academy-kpi,.student-kpi,.instructor-kpi,.sa-kpi) strong { font-size: 32px; }
+  .af-workspace :is(.academy-card,.student-card,.instructor-card,.sa-card) { padding: 20px 16px; }
+  .af-workspace :is(.academy-card-head,.student-card-head,.instructor-card-head,.sa-card-head) { flex-direction: column; align-items: stretch; }
+  .af-workspace :is(.academy-search,.student-search,.instructor-search,.sa-search) { width: 100%; min-width: 0; }
+  .af-workspace :is(input,select,textarea,.field input,.field select,.field textarea,.academy-search,.student-search,.instructor-search,.sa-search) { font-size: 16px; }
+  .af-workspace :is(.academy-form-grid,.instructor-form-grid,.sa-form-grid,.student-course-grid,.instructor-course-grid,.student-live-grid,.instructor-live-grid) { grid-template-columns: minmax(0,1fr); }
+  .af-workspace :is(.academy-modal-card,.student-modal-card,.instructor-modal-card,.sa-modal-card) { padding: 22px 18px; border-radius: 8px 8px 0 0; max-height: 92dvh; }
+  .af-workspace :is(.academy-list-row,.student-list-row,.instructor-list-row,.sa-list-row) { align-items: flex-start; flex-direction: column; }
+  .af-workspace .account-main section { padding: 20px 16px; }
+  .af-workspace .af-standalone-header { width: calc(100% - 32px); }
+}
+@media (max-width: 359px) {
+  .af-workspace :is(.academy-kpis,.student-kpis,.instructor-kpis,.sa-kpis) { grid-template-columns: minmax(0,1fr); }
+  .af-workspace :is(.academy-kpi,.student-kpi,.instructor-kpi,.sa-kpi) { border-inline-end: 0; }
+  .af-workspace :is(.academy-kpi,.student-kpi,.instructor-kpi,.sa-kpi)+article { border-top: 1px solid var(--line); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .af-workspace *, .af-workspace *::before, .af-workspace *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
+}
+@media print {
+  .af-workspace :is(.academy-sidebar,.student-sidebar,.instructor-sidebar,.sa-sidebar,.academy-toolbar,.student-top-actions,.instructor-top-actions,.sa-top-actions,.af-menu-close) { display: none !important; }
+  .af-workspace :is(.academy-layout,.student-layout,.instructor-layout,.sa-layout) { display: block; }
+  .af-workspace :is(.academy-main,.student-main,.instructor-main,.sa-main) { padding: 0; }
+}

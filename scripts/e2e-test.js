@@ -1,3 +1,4 @@
+require('./test-safety').assertSafeTestUri();
 const assert = require('assert');
 const express = require('express');
 const mongoose = require('mongoose');
@@ -56,7 +57,7 @@ async function main() {
   delete process.env.ZOOM_REDIRECT_URI;
 
   await connectWithRetry();
-  await mongoose.connection.db.dropDatabase();
+  await require('./test-safety').safeDropDatabase(mongoose.connection);
 
   const passwordHash = await bcrypt.hash('OwnerRegressionPassword123!', 4);
 

@@ -22,23 +22,18 @@ async function getOrCreate({
   courseId,
   groupId = null
 }) {
-  let row = await LiveAttendance.findOne({
+  const filter = {
     academyId,
     liveSessionId: session._id,
     studentId
-  });
-
-  if (!row) {
-    row = new LiveAttendance({
-      academyId,
-      liveSessionId: session._id,
-      studentId,
-      courseId,
-      groupId
-    });
+  };
+  try {
+    return await LiveAttendance.findOneAndUpdate(filter, { $setOnInsert: { courseId, groupId } },
+      { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true });
+  } catch (err) {
+    if (err.code !== 11000) throw err;
+    return LiveAttendance.findOne(filter);
   }
-
-  return row;
 }
 
 async function recordPortalJoin({
@@ -91,6 +86,9 @@ async function recordZoomJoin({
     groupId
   });
 
+  if (!Number.isFinite(new Date(at).getTime())) return row;
+  if (row.lastZoomEventAt && new Date(at) <= new Date(row.lastZoomEventAt)) return row;
+
   if (!row.firstJoinedAt || new Date(at) < row.firstJoinedAt) {
     row.firstJoinedAt = at;
   }
@@ -98,6 +96,7 @@ async function recordZoomJoin({
   row.lastJoinedAt = at;
   row.leftAt = null;
   row.zoomJoinCount = Number(row.zoomJoinCount || 0) + 1;
+  row.lastZoomEventAt = at;
   row.verifiedByZoom = true;
   row.lastEventAt = at;
   row.source = row.firstPortalAt ? 'portal_zoom' : 'zoom';
@@ -124,6 +123,7 @@ async function recordZoomLeave({
   at = new Date()
 }) {
   if (!row) return null;
+  if (!Number.isFinite(new Date(at).getTime()) || !row.lastJoinedAt || row.leftAt || new Date(at) < new Date(row.lastJoinedAt)) return row;
 
   if (row.lastJoinedAt) {
     const start = new Date(row.lastJoinedAt).getTime();
@@ -136,6 +136,7 @@ async function recordZoomLeave({
   }
 
   row.leftAt = at;
+  row.lastZoomEventAt = at;
   row.lastEventAt = at;
   row.verifiedByZoom = true;
   row.source = row.firstPortalAt ? 'portal_zoom' : 'zoom';

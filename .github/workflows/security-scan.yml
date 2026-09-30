@@ -160,7 +160,7 @@ jobs:
           find src scripts -name '*.js' -print0 | xargs -0 -n1 node --check
 
       - name: Run tenant isolation regression tests
-        run: npm run test:tenant-isolation
+        run: node scripts/test-local.js tenant-isolation-test.js
 
 
   rbac:
@@ -192,7 +192,7 @@ jobs:
           find src scripts public/js -name '*.js' -print0 | xargs -0 -n1 node --check
 
       - name: Run RBAC regression tests
-        run: npm run test:rbac
+        run: node scripts/test-local.js rbac-test.js
 
 
   backup_restore:
@@ -229,7 +229,7 @@ jobs:
           node --check scripts/backup-restore-test.js
 
       - name: Run destructive backup restore regression
-        run: npm run test:backup-restore
+        run: node scripts/test-local.js backup-restore-test.js
 
   dast:
     name: DAST - OWASP ZAP baseline

@@ -1139,7 +1139,7 @@ const StudentPortal = (() => {
                     <td>${esc(x.courseId?.title || 'عام')}</td>
                     <td><b>${fmtMoney(x.amount,x.currency || 'OMR')}</b></td>
                     <td>${esc(x.method)}</td>
-                    <td>${status(x.status)}</td>
+                    <td>${status(x.status)}${x.canCheckout ? '<button type="button" class="btn soft" data-checkout="'+esc(x._id)+'">ادفع الآن</button>' : ''}</td>
                     <td>${esc(x.reference || '—')}</td>
                     <td>${fmtDate(x.paidAt)}</td>
                   </tr>
@@ -1153,6 +1153,18 @@ const StudentPortal = (() => {
       target.innerHTML = '<div class="student-card student-empty">'+esc(err.message)+'</div>';
     }
   }
+
+  document.addEventListener('click', async event => {
+    const button = event.target.closest('[data-checkout]');
+    if (!button) return;
+    button.disabled = true;
+    try {
+      const result = await api('/api/student/payments/' + button.dataset.checkout + '/checkout', { method: 'POST' });
+      const url = new URL(result.url);
+      if (url.protocol !== 'https:' || url.hostname !== 'checkout.stripe.com') throw new Error('Invalid checkout destination');
+      location.assign(url.href);
+    } catch (err) { alert(err.message); button.disabled = false; }
+  });
 
   async function renderCertificates() {
     const target = document.getElementById('studentPageContent');
@@ -1314,7 +1326,8 @@ const StudentPortal = (() => {
       subtitle:'استخدم كلمة مرور جديدة لا تقل عن 10 أحرف.',
       html:`
         <div class="field"><label>كلمة المرور الحالية</label><input name="currentPassword" type="password" autocomplete="current-password" required></div>
-        <div class="field"><label>كلمة المرور الجديدة</label><input name="newPassword" type="password" autocomplete="new-password" minlength="10" required></div>
+        <div class="field"><label>كلمة المرور الجديدة</label><input name="newPassword" type="password" autocomplete="new-password" minlength="12" maxlength="72" required></div>
+        <div class="field"><label>رمز تطبيق المصادقة، إن كان مفعّلاً</label><input name="otp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6"></div>
         <div class="student-form-message"></div>
         <div class="student-actions" style="justify-content:flex-end"><button class="btn primary" type="submit">تغيير كلمة المرور</button></div>
       `,
@@ -1331,6 +1344,7 @@ const StudentPortal = (() => {
 
   async function init() {
     renderShell();
+    window.AcademyFlowWorkspace?.enhance(document.getElementById('studentApp'));
     startUrgentReminderPolling();
 
     if (page === 'quizzes' && window.StudentQuiz) return window.StudentQuiz.renderList();

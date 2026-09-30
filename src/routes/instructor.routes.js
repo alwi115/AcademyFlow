@@ -57,6 +57,6 @@ router.patch('/quizzes/:id/attempts/:attemptId/questions/:questionId/grade', qui
 
 router.get('/profile', profile.profile);
 router.patch('/profile', profile.updateProfile);
-router.post('/profile/password', profile.changePassword);
+router.post('/profile/password', require('../controllers/account-security.controller').changePassword);
 
 module.exports = router;

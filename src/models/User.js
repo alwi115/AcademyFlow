@@ -31,6 +31,18 @@ const UserSchema = new mongoose.Schema({
     required: true
   },
   active: { type: Boolean, default: true },
+  sessionVersion: { type: Number, default: 0, select: false },
+  passwordResetHash: { type: String, select: false },
+  passwordResetExpiresAt: { type: Date, select: false },
+  mfaSecretEncrypted: { type: String, select: false },
+  mfaPendingEncrypted: { type: String, select: false },
+  mfaPendingExpiresAt: { type: Date, select: false },
+  mfaEnabled: { type: Boolean, default: false },
+  mfaLastStep: { type: Number, default: -1, select: false },
+  notificationPreferences: {
+    email: { type: Boolean, default: true },
+    whatsapp: { type: Boolean, default: false }
+  },
   failedLoginAttempts: { type: Number, default: 0, select: false, min: 0 },
   lockUntil: { type: Date, default: null, select: false },
   lastLoginAt: Date,
@@ -43,6 +55,15 @@ const UserSchema = new mongoose.Schema({
     acceptedUserAgent: { type: String, default: '', maxlength: 500 }
   }
 }, { timestamps: true });
+
+UserSchema.pre('save', function () {
+  if (!this.isNew && this.isModified('passwordHash')) {
+    // Increment on the server even when a controller did not select the hidden field.
+    this.$inc('sessionVersion', 1);
+    this.passwordResetHash = undefined;
+    this.passwordResetExpiresAt = undefined;
+  }
+});
 
 UserSchema.index({ academyId: 1, email: 1 }, { unique: true });
 UserSchema.index(

@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Academy = require('../models/Academy');
+const RevokedSession = require('../models/RevokedSession');
+const { academyAccess } = require('../services/subscription.service');
 
 const COOKIE_NAME = 'af_session';
 
@@ -67,12 +69,20 @@ async function auth(req, res, next) {
     const user = await User.findOne({
       _id: payload.sub,
       active: true
-    }).select('_id role academyId branchId active legalAcceptance');
+    }).select('_id role academyId branchId active legalAcceptance +sessionVersion');
 
     if (!user) {
       clearSessionCookie(res);
       return res.status(401).json({ message: 'Session account is no longer active' });
     }
+
+    if (String(payload.epoch || '') !== await require('../services/session-epoch.service').currentEpoch() ||
+        Number(payload.sv || 0) !== Number(user.sessionVersion || 0) ||
+        (payload.jti && await RevokedSession.exists({ jti: payload.jti }))) {
+      clearSessionCookie(res);
+      return res.status(401).json({ message: 'Session revoked. Sign in again.' });
+    }
+    req.session = payload;
 
     const currentAcademyId = user.academyId ? String(user.academyId) : null;
     const tokenAcademyId = payload.academyId ? String(payload.academyId) : null;
@@ -115,14 +125,14 @@ async function auth(req, res, next) {
       return res.status(403).json({ message: 'Branch manager is not assigned to a branch' });
     }
 
-    const academy = await Academy.findById(currentAcademyId).select('_id status');
+    const academy = await Academy.findById(currentAcademyId).select('_id status trialEndsAt graceEndsAt subscriptionEndsAt');
 
     if (!academy) {
       clearSessionCookie(res);
       return res.status(403).json({ message: 'Academy context is no longer valid' });
     }
 
-    if (['frozen','suspended'].includes(academy.status)) {
+    if (!academyAccess(academy)) {
       clearSessionCookie(res);
       return res.status(403).json({ message: 'Account unavailable' });
     }
@@ -135,7 +145,7 @@ async function auth(req, res, next) {
       legalAcceptance: user.legalAcceptance || null
     };
 
-    return next();
+    return require('./maintenance')(req, res, next);
   } catch (err) {
     return next(err);
   }
@@ -150,4 +160,4 @@ function allowRoles(...roles) {
   };
 }
 
-module.exports = { auth, allowRoles, COOKIE_NAME };
+module.exports = { auth, allowRoles, COOKIE_NAME, clearSessionCookie };

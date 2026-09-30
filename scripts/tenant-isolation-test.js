@@ -1,3 +1,4 @@
+require('./test-safety').assertSafeTestUri();
 const assert = require('assert');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
@@ -89,7 +90,7 @@ async function main() {
     'tenant-test-secret-0123456789-abcdefghijklmnopqrstuvwxyz-ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
   await connectWithRetry();
-  await mongoose.connection.db.dropDatabase();
+  await require('./test-safety').safeDropDatabase(mongoose.connection);
 
   const passwordHash = await bcrypt.hash('StrongTestPassword123!', 4);
 

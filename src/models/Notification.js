@@ -13,8 +13,9 @@ const NotificationSchema = new mongoose.Schema({
   message: { type: String, required: true },
   audience: { type: String, enum: ['all','students','instructors','staff'], default: 'all' },
   channel: { type: String, enum: ['in_app','email','whatsapp'], default: 'in_app' },
-  status: { type: String, enum: ['draft','sent'], default: 'sent' },
-  sentAt: Date
+  status: { type: String, enum: ['draft','pending','sent','failed'], default: 'sent' },
+  sentAt: Date,
+  queueReady: { type: Boolean, default: false }
 }, { timestamps: true });
 
 NotificationSchema.index({ academyId: 1, courseId: 1, sentAt: -1 });

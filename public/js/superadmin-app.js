@@ -1620,6 +1620,7 @@ const SA = (() => {
 
   async function init() {
     renderShell();
+    window.AcademyFlowWorkspace?.enhance(document.getElementById('superAdminApp'));
 
     if (page === 'dashboard') return renderDashboard();
     if (page === 'academies') return renderAcademies();
