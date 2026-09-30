@@ -4,6 +4,12 @@ const zoom = require('./zoom.service');
 const Academy = require('../models/Academy');
 const { safeTimeZone, zonedLocalToUtc } = require('./timezone.service');
 
+function badRequest(message) {
+  const err = new Error(message);
+  err.status = 400;
+  return err;
+}
+
 function dateStringsBetween(startDate, endDate) {
   const [sy,sm,sd] = String(startDate).split('-').map(Number);
   const [ey,em,ed] = String(endDate).split('-').map(Number);
