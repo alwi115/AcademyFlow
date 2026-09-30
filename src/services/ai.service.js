@@ -2,6 +2,7 @@ const Course = require('../models/Course');
 const Lesson = require('../models/Lesson');
 const Enrollment = require('../models/Enrollment');
 const { manageableCourseIds } = require('./instructor-scope.service');
+const { operationalContext } = require('./ai-operational-context.service');
 
 const ACTIVE_ENROLLMENT_STATUSES = ['active', 'paused', 'completed'];
 const DEFAULT_PROVIDER = 'gemini';
@@ -357,14 +358,33 @@ async function chat(req, { message, courseId = '', lessonId = '', history = [] }
     throw err;
   }
 
+  let liveContext = 'البيانات التشغيلية المباشرة غير متاحة مؤقتًا.';
+  try {
+    liveContext = await operationalContext(req, context.courses);
+  } catch (err) {
+    console.warn('[academyflow-ai-live-context]', err.message);
+  }
+
   const answer = await providerResponse({
-    system: `${baseDeveloperPrompt(req.user.role)}\n\nسياق المقررات:\n${context.text}`,
+    system: `${baseDeveloperPrompt(req.user.role)}
+    
+سياق المقررات:
+${context.text}
+
+بيانات تشغيلية مباشرة من AcademyFlow:
+${liveContext}
+
+تعليمات البيانات التشغيلية:
+- اعتبر الأرقام والمواعيد أعلاه هي المصدر المعتمد للأسئلة المتعلقة بحالة المستخدم داخل النظام.
+- لا تخترع أرقامًا أو مواعيد أو أسماء غير موجودة في البيانات.
+- إذا سأل المستخدم عن معلومة تشغيلية غير موجودة في السياق، قل إنها غير متوفرة حاليًا في البيانات المرسلة.
+- لا تعرض بيانات طالب آخر للطالب، ولا تتجاوز نطاق المدرب المسموح له.`,
     history,
     user: safeMessage,
     maxOutputTokens: 1400
   });
 
-  return { answer, provider: aiProvider(), model: aiModel() };
+  return { answer, provider: aiProvider(), model: aiModel(), liveData: true };
 }
 
 async function summarize(req, { courseId = '', lessonId = '' }) {
@@ -451,6 +471,7 @@ async function contextOptions(req) {
     provider: aiProvider(),
     model: aiModel(),
     role: req.user.role,
+    liveData: true,
     courses: courses.map(course => ({
       id: String(course._id),
       title: course.title,
