@@ -11,19 +11,9 @@
     ? 'instructor'
     : location.pathname.startsWith('/student/')
       ? 'student'
-      : storedUser?.role || 'owner';
+      : storedUser?.role || '';
 
-  if (role === 'superadmin') return;
-
-  const managementRoles = new Set([
-    'owner',
-    'admin',
-    'branch_manager',
-    'accountant',
-    'reception',
-    'content_manager',
-    'support'
-  ]);
+  if (!role || role === 'superadmin') return;
   const state = {
     open: false,
     busy: false,
