@@ -4,6 +4,7 @@ const Group = require('../models/Group');
 const Assessment = require('../models/Assessment');
 const AssignmentSubmission = require('../models/AssignmentSubmission');
 const Notification = require('../models/Notification');
+const Academy = require('../models/Academy');
 const {
   manageableCourseIds,
   assertCourse,
@@ -12,6 +13,7 @@ const {
   studentCourseAccessFilter,
   assertStudentEnrollment
 } = require('../services/instructor-scope.service');
+const { safeTimeZone, parseAcademyDateTime, formatAcademyInput, formatAcademyDisplay } = require('../services/timezone.service');
 
 function clean(value) {
   return typeof value === 'string' ? value.trim() : value;
@@ -218,6 +220,8 @@ async function createAttendance(req, res) {
 
 async function assignments(req, res) {
   const courseIds = await manageableCourseIds(req);
+  const academy = await Academy.findById(req.academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
 
   const rows = await Assessment.find({
     academyId: req.academyId,
@@ -250,6 +254,9 @@ async function assignments(req, res) {
 
     return {
       ...assignment.toObject(),
+      dueAtLocal: formatAcademyInput(assignment.dueAt, timezone),
+      dueAtDisplay: formatAcademyDisplay(assignment.dueAt, timezone),
+      timezone,
       submissionCount,
       pendingCount,
       gradedCount
@@ -271,13 +278,17 @@ async function createAssignment(req, res) {
 
   await assertDirectCourse(req, courseId);
 
+  const academy = await Academy.findById(req.academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
+  const normalizedDueAt = dueAt ? parseAcademyDateTime(dueAt, timezone) : null;
+
   const row = await Assessment.create({
     academyId: req.academyId,
     courseId,
     type: 'assignment',
     title: clean(title),
     description: clean(description),
-    dueAt: dueAt || null,
+    dueAt: normalizedDueAt,
     totalMarks: Math.max(1, Number(totalMarks || 100)),
     passingMark: Math.max(0, Number(passingMark || 50)),
     status: ['draft','published','closed'].includes(status)
@@ -313,7 +324,11 @@ async function updateAssignment(req, res) {
 
   if (req.body.title !== undefined) row.title = clean(req.body.title);
   if (req.body.description !== undefined) row.description = clean(req.body.description);
-  if (req.body.dueAt !== undefined) row.dueAt = req.body.dueAt || null;
+  if (req.body.dueAt !== undefined) {
+    const academy = await Academy.findById(req.academyId).select('timezone');
+    const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
+    row.dueAt = req.body.dueAt ? parseAcademyDateTime(req.body.dueAt, timezone) : null;
+  }
 
   if (req.body.totalMarks !== undefined) {
     const next = Math.max(1, Number(req.body.totalMarks || 1));
@@ -335,7 +350,15 @@ async function updateAssignment(req, res) {
   }
 
   await row.save();
-  res.json(row);
+
+  const academy = await Academy.findById(req.academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
+  res.json({
+    ...row.toObject(),
+    dueAtLocal: formatAcademyInput(row.dueAt, timezone),
+    dueAtDisplay: formatAcademyDisplay(row.dueAt, timezone),
+    timezone
+  });
 }
 
 async function assignmentSubmissions(req, res) {

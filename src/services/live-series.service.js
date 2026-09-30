@@ -2,71 +2,12 @@ const LiveSeries = require('../models/LiveSeries');
 const LiveSession = require('../models/LiveSession');
 const zoom = require('./zoom.service');
 const Academy = require('../models/Academy');
+const { safeTimeZone, zonedLocalToUtc } = require('./timezone.service');
 
 function badRequest(message) {
   const err = new Error(message);
   err.status = 400;
   return err;
-}
-
-function safeTimeZone(value) {
-  const timeZone = String(value || 'Asia/Muscat');
-  try {
-    new Intl.DateTimeFormat('en-US', { timeZone }).format(new Date());
-    return timeZone;
-  } catch {
-    throw badRequest('المنطقة الزمنية في إعدادات الأكاديمية غير صحيحة');
-  }
-}
-
-function zonedParts(date, timeZone) {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year:'numeric',
-    month:'2-digit',
-    day:'2-digit',
-    hour:'2-digit',
-    minute:'2-digit',
-    second:'2-digit',
-    hourCycle:'h23'
-  }).formatToParts(date);
-
-  const out = {};
-  for (const part of parts) {
-    if (part.type !== 'literal') out[part.type] = Number(part.value);
-  }
-  return out;
-}
-
-function zonedLocalToUtc(dateString, timeString, timeZone) {
-  const [year,month,day] = String(dateString).split('-').map(Number);
-  const [hour,minute] = String(timeString).split(':').map(Number);
-
-  if (
-    ![year,month,day,hour,minute].every(Number.isFinite) ||
-    hour < 0 || hour > 23 ||
-    minute < 0 || minute > 59
-  ) {
-    throw badRequest('التاريخ أو الوقت المحدد للجدول غير صحيح');
-  }
-
-  const wantedUtc = Date.UTC(year, month - 1, day, hour, minute, 0);
-  let guess = wantedUtc;
-
-  for (let i = 0; i < 3; i++) {
-    const p = zonedParts(new Date(guess), timeZone);
-    const representedUtc = Date.UTC(
-      p.year,
-      p.month - 1,
-      p.day,
-      p.hour,
-      p.minute,
-      p.second || 0
-    );
-    guess += wantedUtc - representedUtc;
-  }
-
-  return new Date(guess);
 }
 
 function dateStringsBetween(startDate, endDate) {

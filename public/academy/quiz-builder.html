@@ -4524,8 +4524,8 @@ window.AcademyQuizAdmin = (() => {
         ${opts.courses.map(c => '<option value="'+esc(c._id)+'" '+(String(row?.courseId?._id || row?.courseId || '')===String(c._id)?'selected':'')+'>'+esc(c.title+(c.code?' · '+c.code:''))+'</option>').join('')}
       </select></div>
       <div class="field"><label>عنوان الاختبار</label><input name="title" value="${esc(row?.title || '')}" required></div>
-      <div class="field"><label>متاح من</label><input name="availableFrom" type="datetime-local" value="${esc(localDateTime(row?.availableFrom))}"></div>
-      <div class="field"><label>آخر موعد</label><input name="dueAt" type="datetime-local" value="${esc(localDateTime(row?.dueAt))}"></div>
+      <div class="field"><label>متاح من</label><input name="availableFrom" type="datetime-local" value="${esc((row?.availableFromLocal || localDateTime(row?.availableFrom)))}"></div>
+      <div class="field"><label>آخر موعد</label><input name="dueAt" type="datetime-local" value="${esc((row?.dueAtLocal || localDateTime(row?.dueAt)))}"></div>
       <div class="field"><label>المدة بالدقائق <small>0 = بدون مؤقت مستقل</small></label><input name="durationMinutes" type="number" min="0" max="1440" value="${esc(row?.durationMinutes ?? 30)}"></div>
       <div class="field"><label>عدد المحاولات</label><input name="maxAttempts" type="number" min="1" max="100" value="${esc(row?.maxAttempts ?? 1)}"></div>
       <div class="field"><label>نسبة النجاح %</label><input name="passingPercentage" type="number" min="0" max="100" value="${esc(row?.passingPercentage ?? 50)}"></div>
@@ -4640,7 +4640,7 @@ window.AcademyQuizAdmin = (() => {
                 <span>المدة: ${esc(row.durationMinutes || 0)} د</span>
                 <span>المحاولات: ${esc(row.maxAttempts || 1)}</span>
                 <span>النجاح: ${esc(row.passingPercentage ?? 50)}%</span>
-                <span>الإغلاق: ${fmtDate(row.dueAt,true)}</span>
+                <span>الإغلاق: ${esc(row.dueAtDisplay || fmtDate(row.dueAt,true))}</span>
               </div>
               <a class="btn primary" href="${portalPath('quiz-builder.html')}?id=${encodeURIComponent(row._id)}">إدارة الاختبار</a>
             </article>

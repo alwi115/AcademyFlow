@@ -2,6 +2,7 @@ const Assessment = require('../models/Assessment');
 const Enrollment = require('../models/Enrollment');
 const QuizQuestion = require('../models/QuizQuestion');
 const QuizAttempt = require('../models/QuizAttempt');
+const Academy = require('../models/Academy');
 const {
   shuffle,
   orderedQuestions,
@@ -10,6 +11,7 @@ const {
   finalizeAttempt,
   correctAnswerPayload
 } = require('../services/quiz.service');
+const { safeTimeZone, formatAcademyInput, formatAcademyDisplay } = require('../services/timezone.service');
 
 async function enrolledCourseIds(academyId, studentId) {
   const rows = await Enrollment.find({
@@ -142,6 +144,8 @@ async function expireIfNeeded(attempt, quiz, questions) {
 async function listQuizzes(req, res) {
   const academyId = req.academyId;
   const studentId = req.user.sub;
+  const academy = await Academy.findById(academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
   const courseIds = await enrolledCourseIds(academyId, studentId);
 
   const quizzes = await Assessment.find({
@@ -192,7 +196,12 @@ async function listQuizzes(req, res) {
       description: quiz.description,
       course: quiz.courseId,
       availableFrom: quiz.availableFrom,
+      availableFromLocal: formatAcademyInput(quiz.availableFrom, timezone),
+      availableFromDisplay: formatAcademyDisplay(quiz.availableFrom, timezone),
       dueAt: quiz.dueAt,
+      dueAtLocal: formatAcademyInput(quiz.dueAt, timezone),
+      dueAtDisplay: formatAcademyDisplay(quiz.dueAt, timezone),
+      timezone,
       durationMinutes: quiz.durationMinutes,
       maxAttempts: quiz.maxAttempts,
       passingPercentage: quiz.passingPercentage,

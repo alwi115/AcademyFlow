@@ -4980,7 +4980,7 @@ const AF = (() => {
       ],
       columns:[
         [isQuiz ? 'الاختبار':'الواجب','title'],['الدورة','courseId.title'],
-        ['الدرجة','totalMarks'],['الموعد','dueAt',v => fmtDate(v,true)],['الحالة','status',status]
+        ['الدرجة','totalMarks'],['الموعد','dueAt',(v,row) => esc(row?.dueAtDisplay || fmtDate(v,true))],['الحالة','status',status]
       ]
     };
   }
@@ -5063,7 +5063,14 @@ const AF = (() => {
       : (config.fields || []);
 
     for (const field of formFields) {
-      fields.push(await fieldHtml(field, editing ? val(row, field[0]) : ''));
+      const fieldName = field[0];
+      const fieldType = field[2];
+      const currentValue = editing
+        ? (fieldType === 'datetime-local' && row?.[fieldName + 'Local']
+            ? row[fieldName + 'Local']
+            : val(row, fieldName))
+        : '';
+      fields.push(await fieldHtml(field, currentValue));
     }
 
     form.innerHTML = fields.join('') + `
@@ -5136,6 +5143,7 @@ const AF = (() => {
     if (value === null || value === undefined || value === '') return '—';
     if (name === 'startAt' && row.startAtDisplay) return row.startAtDisplay;
     if (type === 'date') return fmtDate(value);
+    if (type === 'datetime-local' && row?.[name + 'Display']) return row[name + 'Display'];
     if (type === 'datetime-local') return fmtDate(value,true);
 
     if (typeof value === 'object') {
@@ -5188,7 +5196,7 @@ const AF = (() => {
       'حدد الموعد الجديد ثم احفظ.';
 
     form.innerHTML =
-      await fieldHtml(field, val(row,fieldName)) +
+      await fieldHtml(field, row?.[fieldName + 'Local'] || val(row,fieldName)) +
       '<div class="academy-form-message" id="academyFormMessage"></div>'+
       '<div class="academy-form-actions"><button class="btn ghost" id="academyExtendCancel" type="button">إلغاء</button><button class="btn primary" type="submit">حفظ التمديد</button></div>';
 
@@ -5473,8 +5481,7 @@ const AF = (() => {
               ${d.upcomingSessions?.length ? d.upcomingSessions.map(x => `
                 <div class="academy-session-row">
                   <div class="academy-session-time">
-                    <strong>${esc(new Date(x.startAt).toLocaleTimeString('ar-OM',{hour:'2-digit',minute:'2-digit'}))}</strong>
-                    <span>${fmtDate(x.startAt)}</span>
+                    <strong>${esc(x.startAtDisplay || fmtDate(x.startAt,true))}</strong>
                   </div>
                   <div class="academy-session-main">
                     <b>${esc(x.title)}</b>

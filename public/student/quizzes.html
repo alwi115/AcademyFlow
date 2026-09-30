@@ -2254,8 +2254,8 @@ window.StudentQuiz = (() => {
               </div>
 
               <div class="student-quiz-date">
-                <span>متاح: ${fmtDate(q.availableFrom,true)}</span>
-                <span>ينتهي: ${fmtDate(q.dueAt,true)}</span>
+                <span>متاح: ${esc(q.availableFromDisplay || fmtDate(q.availableFrom,true))}</span>
+                <span>ينتهي: ${esc(q.dueAtDisplay || fmtDate(q.dueAt,true))}</span>
               </div>
 
               <div class="student-quiz-actions">
