@@ -221,6 +221,65 @@ async function buildCompensationModule(session, passingPercentage = 60) {
   return module;
 }
 
+async function ensureSessionCompensations(session) {
+  const featureSettings = await getSettings(session.academyId);
+  if (!featureSettings.compensationEnabled || !session.courseId) return 0;
+
+  const enrollmentQuery = {
+    academyId: session.academyId,
+    courseId: session.courseId,
+    status: { $in: ACTIVE_ENROLLMENT_STATUSES }
+  };
+
+  if (session.groupId) enrollmentQuery.groupId = session.groupId;
+
+  const enrollments = await Enrollment.find(enrollmentQuery).select('studentId courseId groupId');
+  if (!enrollments.length) return 0;
+
+  const attendanceRows = await LiveAttendance.find({
+    academyId: session.academyId,
+    liveSessionId: session._id,
+    studentId: { $in: enrollments.map(row => row.studentId) }
+  }).select('studentId attendanceStatus verifiedByZoom manualOverride');
+
+  const attendanceMap = new Map(
+    attendanceRows.map(row => [String(row.studentId), row])
+  );
+
+  const missed = enrollments.filter(enrollment =>
+    !attendanceCoversSession(attendanceMap.get(String(enrollment.studentId)))
+  );
+
+  if (!missed.length) return 0;
+
+  const module = await buildCompensationModule(
+    session,
+    featureSettings.compensationPassingPercentage
+  );
+
+  for (const enrollment of missed) {
+    await CompensationProgress.findOneAndUpdate(
+      {
+        academyId: session.academyId,
+        liveSessionId: session._id,
+        studentId: enrollment.studentId
+      },
+      {
+        $setOnInsert: {
+          moduleId: module._id,
+          courseId: session.courseId,
+          status: 'pending',
+          attempts: 0,
+          bestPercentage: 0
+        }
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+  }
+
+  return missed.length;
+}
+
 async function syncStudentCompensations(academyId, studentId) {
   const featureSettings = await getSettings(academyId);
   if (!featureSettings.compensationEnabled) return [];
@@ -1053,5 +1112,6 @@ module.exports = {
   instructorInsights,
   withdrawalRisk,
   quizLessonMapping,
-  updateQuestionLesson
+  updateQuestionLesson,
+  ensureSessionCompensations
 };
