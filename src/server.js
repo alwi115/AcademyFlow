@@ -187,11 +187,22 @@ function injectCspNonce(html, nonce) {
 }
 
 function injectAcademyAiAssets(html, requestPath, nonce) {
+  const blockedPaths = new Set([
+    '/academy/login.html',
+    '/academy/legal-acceptance.html'
+  ]);
+
+  if (blockedPaths.has(requestPath)) return html;
+
   const portal = requestPath.startsWith('/student/')
     ? 'student'
     : requestPath.startsWith('/instructor/')
       ? 'instructor'
-      : '';
+      : requestPath.startsWith('/academy/')
+        ? 'academy'
+        : requestPath.startsWith('/account/')
+          ? 'account'
+          : '';
 
   if (!portal || html.includes('/js/academy-ai.js')) return html;
 
