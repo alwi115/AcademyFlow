@@ -26,6 +26,7 @@ const LiveSession = require('../src/models/LiveSession');
 const academyRoutes = require('../src/routes/academy.routes');
 const instructorRoutes = require('../src/routes/instructor.routes');
 const liveRoutes = require('../src/routes/live.routes');
+const aiRoutes = require('../src/routes/ai.routes');
 
 async function connectWithRetry() {
   const uri = process.env.MONGODB_URI;
@@ -279,6 +280,7 @@ async function main() {
   app.use('/api/academy', academyRoutes);
   app.use('/api/instructor', instructorRoutes);
   app.use('/api/live-sessions', liveRoutes);
+  app.use('/api/ai', aiRoutes);
   app.use((err, req, res, next) => {
     res.status(Number(err.status || 500)).json({
       message: Number(err.status || 500) >= 500 ? 'Internal server error' : err.message
@@ -530,6 +532,11 @@ async function main() {
     assert.strictEqual(String(branchOptions.body.courses[0]._id), String(course._id));
     assert(!branchOptions.body.groups.some(row => String(row._id) === String(groupB._id)));
     assert(!branchOptions.body.students.some(row => String(row._id) === String(branchBStudent._id)));
+
+    const branchAiContext = await expect('branch_manager', 'GET', '/api/ai/context', 200);
+    assert.strictEqual(branchAiContext.body.courses.length, 1);
+    assert.strictEqual(String(branchAiContext.body.courses[0].id), String(course._id));
+    assert(!branchAiContext.body.courses.some(row => String(row.id) === String(courseB._id)));
 
     const branchDashboard = await expect('branch_manager', 'GET', '/api/academy/dashboard', 200);
     assert.strictEqual(branchDashboard.body.groups, 3);
