@@ -2908,6 +2908,17 @@ const StudentPortal = (() => {
     try {
       const data = await api('/api/student/courses/'+encodeURIComponent(courseId));
       const lessons = data.lessons || [];
+      const liveSessions = [...(data.liveSessions || [])].sort((a,b) => {
+        const rank = value => value === 'live' ? 0 : value === 'scheduled' ? 1 : 2;
+        const rankDiff = rank(a.status) - rank(b.status);
+        if (rankDiff) return rankDiff;
+
+        const aTime = new Date(a.startAt || 0).getTime();
+        const bTime = new Date(b.startAt || 0).getTime();
+
+        return a.status === 'ended' ? bTime - aTime : aTime - bTime;
+      });
+      const videoCount = lessons.filter(x => x.youtubeId).length;
       const completionThreshold = Number(data.videoCompletionPercent || 95);
 
       let activeId =
@@ -2984,6 +2995,19 @@ const StudentPortal = (() => {
               </div>
             </div>
             <div id="courseProgressWrap">${progressBar(data.progress.progress)}</div>
+          </section>
+
+          <section class="student-card" style="margin-bottom:11px">
+            <div class="student-card-head">
+              <div>
+                <h2>فيديوهات ودروس الدورة</h2>
+                <p>كل المحتوى هنا تابع لدورة «${esc(data.course.title)}».</p>
+              </div>
+              <div class="student-meta">
+                <span>${esc(videoCount)} فيديو</span>
+                <span>${esc(lessons.length)} درس</span>
+              </div>
+            </div>
           </section>
 
           ${lessons.length ? `
@@ -3064,7 +3088,42 @@ const StudentPortal = (() => {
               </aside>
             </section>
           ` : '<div class="student-card student-empty">لم تنشر الأكاديمية دروسًا في هذه الدورة حتى الآن.</div>'}
+
+          <section class="student-card student-section">
+            <div class="student-card-head">
+              <div>
+                <h2>حصص Zoom للدورة</h2>
+                <p>هذه الحصص مرتبطة بدورة «${esc(data.course.title)}» وبمجموعتك الدراسية.</p>
+              </div>
+              <a class="btn soft" href="/student/live.html">كل المحاضرات</a>
+            </div>
+
+            <div class="student-list">
+              ${liveSessions.length ? liveSessions.map(session => `
+                <div class="student-list-row">
+                  <div>
+                    <b>${esc(session.title)}</b>
+                    <span>
+                      ${esc(session.startAtDisplay || fmtDate(session.startAt,true))}
+                      ${session.instructor?.name ? ' · '+esc(session.instructor.name) : ''}
+                      ${session.group?.name ? ' · '+esc(session.group.name) : ''}
+                    </span>
+                    ${session.description ? '<small style="display:block;margin-top:4px">'+esc(session.description)+'</small>' : ''}
+                  </div>
+
+                  <div class="student-actions">
+                    ${status(session.status)}
+                    ${session.joinAvailable
+                      ? '<button class="btn primary student-join-live" data-session-id="'+esc(session.id)+'" type="button">دخول Zoom</button>'
+                      : ''}
+                  </div>
+                </div>
+              `).join('') : '<div class="student-empty">لا توجد حصص Zoom مرتبطة بهذه الدورة حتى الآن.</div>'}
+            </div>
+          </section>
         `;
+
+        bindLiveJoinButtons();
 
         document.querySelectorAll('.student-lesson').forEach(btn => {
           btn.onclick = () => {
