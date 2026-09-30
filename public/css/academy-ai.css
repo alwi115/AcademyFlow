@@ -432,15 +432,16 @@
     position: fixed;
     left: 8px;
     right: 8px;
-    top: max(8px, env(safe-area-inset-top));
+    top: auto;
     bottom: max(8px, env(safe-area-inset-bottom));
     width: auto;
     height: auto;
     min-height: 0;
-    max-height: none;
+    max-height: calc(100dvh - 16px);
     border-radius: 22px;
     transform-origin: bottom center;
-    grid-template-rows: auto auto auto auto minmax(180px, 1fr) auto auto auto;
+    grid-template-rows: auto auto auto auto minmax(0, auto) auto auto auto;
+    align-content: start;
   }
 
   .af-ai-head {
@@ -484,6 +485,7 @@
   .af-ai-messages {
     padding: 14px;
     gap: 10px;
+    max-height: 42dvh;
   }
 
   .af-ai-bubble {
@@ -512,8 +514,9 @@
   .af-ai-panel {
     left: 5px;
     right: 5px;
-    top: max(5px, env(safe-area-inset-top));
+    top: auto;
     bottom: max(5px, env(safe-area-inset-bottom));
+    max-height: calc(100dvh - 10px);
     border-radius: 18px;
   }
 
