@@ -9,7 +9,7 @@ const LiveAttendanceSchema = new mongoose.Schema({
 
   attendanceStatus: {
     type: String,
-    enum: ['present','late','absent','excused'],
+    enum: ['present','late','absent','excused','compensated'],
     default: 'present',
     index: true
   },
@@ -30,7 +30,7 @@ const LiveAttendanceSchema = new mongoose.Schema({
   verifiedByZoom: { type: Boolean, default: false, index: true },
   source: {
     type: String,
-    enum: ['portal','zoom','portal_zoom','manual'],
+    enum: ['portal','zoom','portal_zoom','manual','compensation'],
     default: 'portal'
   },
   manualOverride: { type: Boolean, default: false },
