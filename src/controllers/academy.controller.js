@@ -913,12 +913,16 @@ async function createAttendance(req, res) {
     resolvedGroupId = group._id;
   }
 
+  const academy = await Academy.findById(academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
+  const attendanceDate = parseAcademyDateTime(date, timezone);
+
   const row = await Attendance.create({
     academyId,
     studentId,
     courseId,
     groupId: resolvedGroupId,
-    date,
+    date: attendanceDate,
     status: status || 'present',
     note: clean(note)
   });
