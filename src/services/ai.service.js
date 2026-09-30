@@ -1,6 +1,7 @@
 const Course = require('../models/Course');
 const Lesson = require('../models/Lesson');
 const Enrollment = require('../models/Enrollment');
+const Group = require('../models/Group');
 const { manageableCourseIds } = require('./instructor-scope.service');
 const { operationalContext } = require('./ai-operational-context.service');
 
@@ -10,7 +11,7 @@ const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash-lite';
 const DEFAULT_OPENAI_MODEL = 'gpt-5.6-mini';
 const MAX_CONTEXT_COURSES = 8;
 const MAX_CONTEXT_LESSONS = 48;
-const COURSE_VIEW_ROLES = new Set(['owner', 'admin', 'branch_manager', 'reception', 'content_manager']);
+const COURSE_VIEW_ROLES = new Set(['owner', 'admin', 'reception', 'content_manager']);
 const LESSON_VIEW_ROLES = new Set(['owner', 'admin', 'content_manager']);
 
 function clean(value) {
@@ -63,6 +64,18 @@ async function allowedCourseIds(req) {
 
   if (req.user.role === 'instructor') {
     return (await manageableCourseIds(req)).map(String);
+  }
+
+  if (req.user.role === 'branch_manager') {
+    if (!req.user.branchId) return [];
+
+    const rows = await Group.find({
+      academyId: req.academyId,
+      branchId: req.user.branchId,
+      status: { $ne: 'cancelled' }
+    }).select('courseId');
+
+    return [...new Set(rows.map(row => String(row.courseId || '')).filter(Boolean))];
   }
 
   if (COURSE_VIEW_ROLES.has(req.user.role)) {
