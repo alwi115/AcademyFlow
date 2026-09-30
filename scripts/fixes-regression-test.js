@@ -99,6 +99,19 @@ async function main() {
   const attendanceData = { academyId: academy._id, studentId: student._id, courseId: course._id, groupId: ownGroup._id, date: '2026-09-30', status: 'present' };
   await Promise.all(Array.from({ length: 4 }, () => attendance.saveAttendance(attendanceData)));
   assert.equal(await require('../src/models/Attendance').countDocuments({ studentId: student._id }), 1);
+  for (const unsafeAttendance of [
+    { ...attendanceData, academyId: { $ne: null } },
+    { ...attendanceData, studentId: { $gt: '' } },
+    { ...attendanceData, courseId: ['0123456789abcdef01234567'] },
+    { ...attendanceData, groupId: { $exists: true } },
+    { ...attendanceData, status: { $ne: 'absent' } },
+    { ...attendanceData, note: { $where: 'true' } }
+  ]) {
+    await assert.rejects(
+      attendance.saveAttendance(unsafeAttendance),
+      error => error && error.status === 400
+    );
+  }
   const liveAttendance = require('../src/services/live-attendance.service');
   const row = { lastJoinedAt: new Date('2026-09-30T10:00:00Z'), totalDurationSeconds: 0, save: async () => {} };
   await liveAttendance.recordZoomLeave({ row, at: new Date('2026-09-30T10:05:00Z') });

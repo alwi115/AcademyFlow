@@ -171,7 +171,20 @@ app.post(
   require('./controllers/zoom-webhook.controller').handle
 );
 
-app.post('/api/webhooks/stripe', express.raw({ type: 'application/json', limit: '1mb' }), require('./controllers/payment-checkout.controller').webhook);
+const stripeWebhookLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 120,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { message: 'Too many Stripe webhook requests. Retry shortly.' }
+});
+
+app.post(
+  '/api/webhooks/stripe',
+  stripeWebhookLimiter,
+  express.raw({ type: 'application/json', limit: '1mb' }),
+  require('./controllers/payment-checkout.controller').webhook
+);
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false, limit: '16kb' }));
 app.use('/api', protectMutations);
