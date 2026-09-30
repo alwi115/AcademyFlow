@@ -143,6 +143,8 @@ async function branchScope(req) {
 async function dashboard(req, res) {
   const academyId = req.academyId;
   const objectId = new mongoose.Types.ObjectId(academyId);
+  const academy = await Academy.findById(academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
   const now = new Date();
   const role = req.user.role;
 
@@ -178,6 +180,8 @@ async function dashboard(req, res) {
         id: x._id,
         title: x.title,
         startAt: x.startAt,
+        startAtDisplay: formatAcademyDisplay(x.startAt, timezone),
+        timezone,
         durationMinutes: x.durationMinutes,
         course: x.courseId?.title || '',
         instructor: x.instructorId?.name || '',
@@ -245,6 +249,8 @@ async function dashboard(req, res) {
       id: x._id,
       title: x.title,
       startAt: x.startAt,
+      startAtDisplay: formatAcademyDisplay(x.startAt, timezone),
+      timezone,
       durationMinutes: x.durationMinutes,
       course: x.courseId?.title || '',
       instructor: x.instructorId?.name || '',
