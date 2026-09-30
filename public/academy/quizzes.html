@@ -4836,7 +4836,7 @@ window.AcademyQuizAdmin = (() => {
     form.innerHTML=`
       <div class="field full">
         <label>آخر موعد جديد</label>
-        <input name="dueAt" type="datetime-local" value="${esc(localDateTime(quiz.dueAt))}" required>
+        <input name="dueAt" type="datetime-local" value="${esc(quiz.dueAtLocal || localDateTime(quiz.dueAt))}" required>
       </div>
       <div class="academy-form-message" id="quizExtendMessage"></div>
       <div class="academy-form-actions">
