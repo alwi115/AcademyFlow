@@ -15,7 +15,8 @@
     "test:performance": "node scripts/performance-smoke-test.js",
     "test:legal": "node scripts/legal-readiness-test.js",
     "migrate:storage": "node scripts/migrate-storage-to-mongodb.js",
-    "test:mongodb-storage": "node scripts/mongodb-storage-test.js"
+    "test:mongodb-storage": "node scripts/mongodb-storage-test.js",
+    "test:timezone": "node scripts/timezone-test.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
