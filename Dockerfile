@@ -11,4 +11,6 @@ COPY . .
 
 EXPOSE 8080
 
+USER node
+
 CMD ["node", "src/server.js"]

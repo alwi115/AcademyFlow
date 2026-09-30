@@ -144,6 +144,21 @@ async function main() {
   } finally { global.fetch = originalFetch; process.env.SENDGRID_API_KEY = ''; }
   passed.push('durable notification delivery, actual acceptance state, preference opt-out and no duplicate send');
   const accountSecurity = require('../src/services/account-security.service');
+  const encryptedSecret = accountSecurity.encrypt('JBSWY3DPEHPK3PXP');
+  assert.equal(accountSecurity.decrypt(encryptedSecret), 'JBSWY3DPEHPK3PXP');
+  const encryptedBytes = Buffer.from(encryptedSecret, 'base64');
+  // The existing IV + 16-byte tag + ciphertext format stays readable.
+  const compatibleCipher = crypto.createDecipheriv('aes-256-gcm',
+    crypto.createHash('sha256').update('mfa:' + process.env.JWT_SECRET).digest(),
+    encryptedBytes.subarray(0, 12), { authTagLength: 16 });
+  compatibleCipher.setAuthTag(encryptedBytes.subarray(12, 28));
+  assert.equal(Buffer.concat([compatibleCipher.update(encryptedBytes.subarray(28)), compatibleCipher.final()]).toString(), 'JBSWY3DPEHPK3PXP');
+  const alteredTag = Buffer.from(encryptedBytes); alteredTag[12] ^= 1;
+  assert.throws(() => accountSecurity.decrypt(alteredTag.toString('base64')));
+  const alteredBody = Buffer.from(encryptedBytes); alteredBody[28] ^= 1;
+  assert.throws(() => accountSecurity.decrypt(alteredBody.toString('base64')));
+  assert.throws(() => accountSecurity.decrypt(encryptedBytes.subarray(0, 24).toString('base64')));
+  passed.push('MFA ciphertext compatibility, tag/ciphertext tampering and truncated tag rejection');
   const resetToken = crypto.randomBytes(32).toString('hex');
   await User.updateOne({ _id: student._id }, { $set: { passwordResetHash: accountSecurity.resetHash(resetToken), passwordResetExpiresAt: new Date(Date.now() + 60000) } });
   const resetBody = { token: resetToken, newPassword: 'ResetRegressionPassword123!' };
