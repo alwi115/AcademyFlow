@@ -14,6 +14,7 @@ async function main() {
   process.env.ZOOM_CLIENT_ID = 'test-client';
   const storage = require('../src/services/certificate-storage.service');
   const { objectId, enumValue } = require('../src/utils/security-input');
+  const { saveAttendance, attendanceDate } = require('../src/services/attendance.service');
   const Academy = require('../src/models/Academy');
   const webhook = require('../src/controllers/zoom-webhook.controller');
   const originalFind = Academy.find;
@@ -43,6 +44,40 @@ async function main() {
     }
     assert.equal(enumValue('active', ['active', 'paused']), 'active');
     assert.throws(() => enumValue({ $ne: '' }, ['active', 'paused']));
+
+    const normalizedAttendanceDate = attendanceDate('2026-09-30T15:40:00.000Z');
+    assert.equal(normalizedAttendanceDate.toISOString(), '2026-09-30T00:00:00.000Z');
+
+    const attendanceBase = {
+      academyId: id,
+      studentId: id,
+      courseId: id,
+      groupId: null,
+      date: '2026-09-30',
+      status: 'present',
+      note: 'ok'
+    };
+
+    for (const override of [
+      { academyId: { $ne: null } },
+      { studentId: { $gt: '' } },
+      { courseId: ['0123456789abcdef01234567'] },
+      { groupId: { $exists: true } },
+      { date: { $ne: null } },
+      { status: { $ne: 'absent' } },
+      { note: { $where: 'sleep(1000)' } }
+    ]) {
+      await assert.rejects(
+        saveAttendance({ ...attendanceBase, ...override }),
+        error => error.status === 400
+      );
+    }
+
+    const serverSource = await fs.readFile(path.join(__dirname, '..', 'src', 'server.js'), 'utf8');
+    assert.match(
+      serverSource,
+      /app\.post\(\s*['"]\/api\/webhooks\/stripe['"]\s*,\s*stripeWebhookLimiter\s*,/
+    );
 
     for (const buffer of [null, { type: 'Buffer', data: [37, 80, 68, 70, 45] }, Buffer.from('not pdf')]) {
       await assert.rejects(storage.savePdf({ buffer }));
@@ -74,7 +109,7 @@ async function main() {
     assert.equal(deauthorizationLookups, 1);
     const challenge = await invoke({ event: 'endpoint.url_validation', payload: { plainToken: 'challenge' } });
     assert.equal(challenge.body.encryptedToken, crypto.createHmac('sha256', process.env.ZOOM_WEBHOOK_SECRET_TOKEN).update('challenge').digest('hex'));
-    console.log('Security regressions passed: query inputs, PDF storage/legacy paths, signed Zoom events.');
+    console.log('Security regressions passed: query inputs, attendance sanitization, webhook rate limits, PDF storage/legacy paths, signed Zoom events.');
   } finally {
     await mongoose.disconnect();
     Academy.find = originalFind;
