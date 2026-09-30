@@ -4,7 +4,16 @@
   if (window.__academyFlowAIInitialized) return;
   window.__academyFlowAIInitialized = true;
 
-  const role = location.pathname.startsWith('/instructor/') ? 'instructor' : 'student';
+  let storedUser = null;
+  try { storedUser = JSON.parse(localStorage.getItem('af_user') || 'null'); } catch {}
+
+  const role = location.pathname.startsWith('/instructor/')
+    ? 'instructor'
+    : location.pathname.startsWith('/student/')
+      ? 'student'
+      : storedUser?.role || '';
+
+  if (!role || role === 'superadmin') return;
   const state = {
     open: false,
     busy: false,
@@ -86,7 +95,11 @@
     select.innerHTML = '';
     const all = document.createElement('option');
     all.value = '';
-    all.textContent = role === 'instructor' ? 'كل دوراتي المتاحة' : 'كل دوراتي';
+    all.textContent = role === 'instructor'
+      ? 'كل دوراتي المتاحة'
+      : role === 'student'
+        ? 'كل دوراتي'
+        : 'كل الدورات المتاحة';
     select.appendChild(all);
 
     for (const course of courses || []) {
@@ -105,17 +118,23 @@
 
       const badge = document.getElementById('afAiStateBadge');
       if (badge) {
-        badge.textContent = context.enabled ? 'جاهز' : 'غير مفعّل';
+        badge.textContent = context.enabled ? 'جاهز' : (context.liveData ? 'بيانات النظام' : 'غير مفعّل');
         badge.dataset.enabled = context.enabled ? 'true' : 'false';
       }
 
       if (!context.enabled) {
         const keyName = context.provider === 'openai' ? 'OPENAI_API_KEY' : 'GEMINI_API_KEY';
-        addLocalNotice(`AcademyFlow AI مركّب في النظام، لكن يحتاج إضافة ${keyName} في متغيرات الاستضافة عشان يبدأ يرد.`);
+        addLocalNotice(context.liveData
+          ? `بيانات AcademyFlow المباشرة مربوطة، لكن الشرح والتوليد الذكي يحتاج ${keyName} في متغيرات الاستضافة.`
+          : `AcademyFlow AI مركّب في النظام، لكن يحتاج إضافة ${keyName} في متغيرات الاستضافة عشان يبدأ يرد.`);
       } else if (!context.courses?.length) {
-        addLocalNotice(role === 'instructor'
-          ? 'ما عندك دورات مسندة لك حاليًا عشان يستخدمها المساعد.'
-          : 'ما عندك دورات مسجل فيها حاليًا عشان يستخدمها المساعد.');
+        addLocalNotice(
+          role === 'instructor'
+            ? 'ما عندك دورات مسندة لك حاليًا عشان يستخدمها المساعد.'
+            : role === 'student'
+              ? 'ما عندك دورات مسجل فيها حاليًا عشان يستخدمها المساعد.'
+              : 'ما توجد دورات متاحة لهذا الدور حاليًا، لكن تقدر تستخدم المساعد في الأسئلة العامة المسموحة لك.'
+        );
       }
     } catch (err) {
       addLocalNotice(err.message);
@@ -218,6 +237,64 @@
     }
   }
 
+  function roleSubtitle() {
+    const labels = {
+      owner: 'مساعد مالك الأكاديمية',
+      admin: 'مساعد إدارة الأكاديمية',
+      branch_manager: 'مساعد مدير الفرع',
+      accountant: 'مساعد المحاسب',
+      reception: 'مساعد الاستقبال',
+      content_manager: 'مساعد إدارة المحتوى',
+      support: 'مساعد الدعم',
+      instructor: 'مساعد المدرب',
+      student: 'مساعد الطالب'
+    };
+    return labels[role] || 'المساعد الذكي';
+  }
+
+  function quickActionsMarkup() {
+    if (role === 'student') {
+      return '<button type="button" data-af-ai-action="summary">لخّص الدورة</button><button type="button" data-af-ai-action="progress">تقدمي</button><button type="button" data-af-ai-action="next-session">موعدي الجاي</button><button type="button" data-af-ai-action="explain">اشرحها ببساطة</button><button type="button" data-af-ai-action="review">سوّ لي مراجعة</button>';
+    }
+
+    if (role === 'instructor') {
+      return '<button type="button" data-af-ai-action="summary">لخّص الدورة</button><button type="button" data-af-ai-action="attendance">ملخص الحضور</button><button type="button" data-af-ai-action="followup">متابعة الطلاب</button><button type="button" data-af-ai-action="ideas">أفكار شرح</button>';
+    }
+
+    if (role === 'owner' || role === 'admin') {
+      return '<button type="button" data-af-ai-action="academy-overview">ملخص الأكاديمية</button><button type="button" data-af-ai-action="academy-attendance">الحضور والغياب</button><button type="button" data-af-ai-action="academy-sessions">الجلسات القادمة</button><button type="button" data-af-ai-action="summary">لخّص الدورة</button>';
+    }
+
+    if (role === 'branch_manager' || role === 'reception' || role === 'content_manager') {
+      return '<button type="button" data-af-ai-action="role-help">كيف تساعدني؟</button><button type="button" data-af-ai-action="summary">لخّص الدورة</button>';
+    }
+
+    return '<button type="button" data-af-ai-action="role-help">كيف تساعدني؟</button>';
+  }
+
+  function inputPlaceholder() {
+    if (role === 'instructor') return 'مثال: كيف أشرح هذا الدرس بطريقة أسهل؟';
+    if (role === 'student') return 'اسأل عن درسك أو اطلب شرح نقطة معينة...';
+    if (role === 'owner' || role === 'admin') return 'مثال: عطني ملخص الأكاديمية اليوم أو حلل الحضور...';
+    return 'اسأل AcademyFlow AI ضمن صلاحيات حسابك...';
+  }
+
+  function welcomeMessage() {
+    if (role === 'instructor') {
+      return 'هلا، أنا مساعد AcademyFlow. أقرأ بيانات دوراتك المباشرة مثل أعداد الطلاب والتقدم والحضور والجلسات القادمة، وأقدر أساعدك في الشرح والاختبارات.';
+    }
+
+    if (role === 'student') {
+      return 'هلا، أنا مساعد AcademyFlow. أعرف تقدمك وحضورك والجلسات القادمة من بيانات النظام، وأقدر ألخّص لك الدروس وأشرحها بطريقة أبسط.';
+    }
+
+    if (role === 'owner' || role === 'admin') {
+      return 'هلا، أنا مساعد AcademyFlow الإداري. أقدر ألخّص لك حالة الأكاديمية، التسجيلات، الحضور والجلسات القادمة من بيانات النظام، وأحللها للقراءة فقط بدون تنفيذ تغييرات تلقائية.';
+    }
+
+    return 'هلا، أنا مساعد AcademyFlow. بساعدك ضمن صلاحيات حسابك فقط، وما بعرض لك أي بيانات خارج نطاق دورك.';
+  }
+
   function buildWidget() {
     const root = el('div', 'af-ai-root');
     root.id = 'afAiRoot';
@@ -233,7 +310,7 @@
       <div class="af-ai-head">
         <div class="af-ai-brand">
           <span class="af-ai-logo">AI</span>
-          <div><strong>AcademyFlow AI</strong><small>${role === 'instructor' ? 'مساعد المدرب' : 'مساعد الطالب'}</small></div>
+          <div><strong>AcademyFlow AI</strong><small>${roleSubtitle()}</small></div>
         </div>
         <div class="af-ai-head-actions">
           <span class="af-ai-state" id="afAiStateBadge">يتحقق...</span>
@@ -247,10 +324,7 @@
       </div>
 
       <div class="af-ai-quick-actions">
-        <button type="button" data-af-ai-action="summary">لخّص الدورة</button>
-        ${role === 'student'
-          ? '<button type="button" data-af-ai-action="explain">اشرحها ببساطة</button><button type="button" data-af-ai-action="review">سوّ لي مراجعة</button>'
-          : '<button type="button" data-af-ai-action="ideas">أفكار شرح</button>'}
+        ${quickActionsMarkup()}
       </div>
 
       ${role === 'instructor' ? `
@@ -275,7 +349,7 @@
       <div class="af-ai-status" id="afAiStatus"></div>
 
       <form class="af-ai-composer" id="afAiForm">
-        <textarea id="afAiInput" maxlength="2400" rows="2" placeholder="${role === 'instructor' ? 'مثال: كيف أشرح هذا الدرس بطريقة أسهل؟' : 'اسأل عن درسك أو اطلب شرح نقطة معينة...'}"></textarea>
+        <textarea id="afAiInput" maxlength="2400" rows="2" placeholder="${inputPlaceholder()}"></textarea>
         <button id="afAiSend" type="submit">إرسال</button>
       </form>
       <div class="af-ai-foot">الإجابات الذكية قد تخطئ؛ راجع المحتوى المهم قبل الاعتماد عليه.</div>
@@ -285,12 +359,7 @@
     root.appendChild(panel);
     document.body.appendChild(root);
 
-    addMessage(
-      'assistant',
-      role === 'instructor'
-        ? 'هلا، أنا مساعد AcademyFlow. أقدر ألخّص لك محتوى الدورة، أعطيك أفكار شرح، أو أنشئ لك اختبار كمسودة داخل النظام.'
-        : 'هلا، أنا مساعد AcademyFlow. اسألني عن دوراتك، خلني ألخّص لك المحتوى أو أشرح لك أي نقطة بطريقة أبسط.'
-    );
+    addMessage('assistant', welcomeMessage());
 
     launcher.addEventListener('click', () => {
       state.open = !state.open;
@@ -316,6 +385,18 @@
     });
 
     root.querySelector('[data-af-ai-action="summary"]')?.addEventListener('click', summarize);
+    root.querySelector('[data-af-ai-action="progress"]')?.addEventListener('click', () => {
+      sendChat('كم نسبة تقدمي في الدورة المحددة؟ لخص لي وضعي الحالي من بيانات AcademyFlow.');
+    });
+    root.querySelector('[data-af-ai-action="next-session"]')?.addEventListener('click', () => {
+      sendChat('متى الجلسة أو الحصة الجاية لي؟ استخدم الموعد الموجود في AcademyFlow.');
+    });
+    root.querySelector('[data-af-ai-action="attendance"]')?.addEventListener('click', () => {
+      sendChat('عطني ملخص الحضور والغياب والتأخر للدورة المحددة من بيانات AcademyFlow.');
+    });
+    root.querySelector('[data-af-ai-action="followup"]')?.addEventListener('click', () => {
+      sendChat('حلل لي وضع الطلاب في الدورة المحددة من ناحية عدد الطلاب ومتوسط التقدم والحضور، وقل لي وين يحتاجون متابعة بدون اختراع بيانات.');
+    });
     root.querySelector('[data-af-ai-action="explain"]')?.addEventListener('click', () => {
       sendChat('اشرح لي محتوى الدورة المحددة بطريقة مبسطة، ثم أعطني مثالًا يساعدني أفهمها.');
     });
@@ -324,6 +405,18 @@
     });
     root.querySelector('[data-af-ai-action="ideas"]')?.addEventListener('click', () => {
       sendChat('عطني أفكار عملية ومختصرة لشرح محتوى الدورة المحددة للطلاب بشكل أوضح وأكثر تفاعلًا.');
+    });
+    root.querySelector('[data-af-ai-action="academy-overview"]')?.addEventListener('click', () => {
+      sendChat('عطني ملخصًا إداريًا واضحًا عن حالة الأكاديمية الآن من بيانات AcademyFlow: عدد الطلاب والمدربين والدورات والتسجيلات والحضور والجلسات القادمة، بدون اختراع أي أرقام.');
+    });
+    root.querySelector('[data-af-ai-action="academy-attendance"]')?.addEventListener('click', () => {
+      sendChat('حلل لي الحضور والغياب والتأخر خلال آخر 30 يوم من بيانات AcademyFlow. إذا اخترت دورة من القائمة ركز عليها، وإلا لخص الأكاديمية كاملة.');
+    });
+    root.querySelector('[data-af-ai-action="academy-sessions"]')?.addEventListener('click', () => {
+      sendChat('عطني الجلسات أو المحاضرات القادمة المسجلة في AcademyFlow، ورتبها بشكل مختصر وواضح.');
+    });
+    root.querySelector('[data-af-ai-action="role-help"]')?.addEventListener('click', () => {
+      sendChat('وضح لي باختصار وش تقدر تساعدني فيه داخل AcademyFlow حسب صلاحيات حسابي الحالية.');
     });
     root.querySelector('[data-af-ai-action="quiz"]')?.addEventListener('click', createQuizDraft);
   }

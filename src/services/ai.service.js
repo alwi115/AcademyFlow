@@ -1,7 +1,9 @@
 const Course = require('../models/Course');
 const Lesson = require('../models/Lesson');
 const Enrollment = require('../models/Enrollment');
+const Group = require('../models/Group');
 const { manageableCourseIds } = require('./instructor-scope.service');
+const { operationalContext } = require('./ai-operational-context.service');
 
 const ACTIVE_ENROLLMENT_STATUSES = ['active', 'paused', 'completed'];
 const DEFAULT_PROVIDER = 'gemini';
@@ -9,6 +11,8 @@ const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash-lite';
 const DEFAULT_OPENAI_MODEL = 'gpt-5.6-mini';
 const MAX_CONTEXT_COURSES = 8;
 const MAX_CONTEXT_LESSONS = 48;
+const COURSE_VIEW_ROLES = new Set(['owner', 'admin', 'reception', 'content_manager']);
+const LESSON_VIEW_ROLES = new Set(['owner', 'admin', 'content_manager']);
 
 function clean(value) {
   return typeof value === 'string' ? value.trim() : '';
@@ -62,6 +66,30 @@ async function allowedCourseIds(req) {
     return (await manageableCourseIds(req)).map(String);
   }
 
+  if (req.user.role === 'branch_manager') {
+    if (!req.user.branchId) return [];
+
+    const rows = await Group.find({
+      academyId: req.academyId,
+      branchId: req.user.branchId,
+      status: { $ne: 'cancelled' }
+    }).select('courseId');
+
+    return [...new Set(rows.map(row => String(row.courseId || '')).filter(Boolean))];
+  }
+
+  if (COURSE_VIEW_ROLES.has(req.user.role)) {
+    const rows = await Course.find({
+      academyId: req.academyId,
+      status: { $ne: 'archived' }
+    })
+      .select('_id')
+      .sort({ title: 1 })
+      .limit(250);
+
+    return rows.map(row => String(row._id));
+  }
+
   return [];
 }
 
@@ -95,6 +123,17 @@ async function courseContext(req, { courseId = '', lessonId = '' } = {}) {
     return { courses: [], lessons: [], text: 'لا توجد دورات متاحة لهذا المستخدم.' };
   }
 
+  const canViewLessons =
+    req.user.role === 'student' ||
+    req.user.role === 'instructor' ||
+    LESSON_VIEW_ROLES.has(req.user.role);
+
+  if (lessonId && !canViewLessons) {
+    const err = new Error('لا تملك صلاحية الوصول إلى محتوى الدروس');
+    err.status = 403;
+    throw err;
+  }
+
   const lessonQuery = {
     academyId: req.academyId,
     courseId: { $in: courseIds }
@@ -106,10 +145,12 @@ async function courseContext(req, { courseId = '', lessonId = '' } = {}) {
     lessonQuery._id = lessonId;
   }
 
-  const lessons = await Lesson.find(lessonQuery)
-    .select('_id courseId title description order durationMinutes status')
-    .sort({ courseId: 1, order: 1, createdAt: 1 })
-    .limit(MAX_CONTEXT_LESSONS);
+  const lessons = canViewLessons
+    ? await Lesson.find(lessonQuery)
+      .select('_id courseId title description order durationMinutes status')
+      .sort({ courseId: 1, order: 1, createdAt: 1 })
+      .limit(MAX_CONTEXT_LESSONS)
+    : [];
 
   if (lessonId && !lessons.length) {
     const err = new Error('الدرس غير متاح ضمن نطاقك');
@@ -145,9 +186,18 @@ async function courseContext(req, { courseId = '', lessonId = '' } = {}) {
 }
 
 function baseDeveloperPrompt(role) {
-  const roleText = role === 'instructor'
-    ? 'أنت مساعد تعليمي للمدرب. ساعده في التحضير والشرح والتقييم وصياغة الأسئلة.'
-    : 'أنت مدرس مساعد للطالب. اشرح بوضوح وبأسلوب تعليمي يساعده على الفهم.';
+  const roleInstructions = {
+    student: 'أنت مدرس مساعد للطالب. اشرح بوضوح وبأسلوب تعليمي يساعده على الفهم.',
+    instructor: 'أنت مساعد تعليمي للمدرب. ساعده في التحضير والشرح والتقييم وصياغة الأسئلة.',
+    owner: 'أنت مساعد إداري لمالك الأكاديمية. ساعده على فهم حالة الأكاديمية والدورات والحضور والعمليات من البيانات المتاحة، وقدّم ملخصات واضحة دون تنفيذ تغييرات.',
+    admin: 'أنت مساعد إداري لمدير الأكاديمية. ساعده على فهم حالة الأكاديمية والدورات والحضور والعمليات من البيانات المتاحة، وقدّم ملخصات واضحة دون تنفيذ تغييرات.',
+    branch_manager: 'أنت مساعد لمدير الفرع. التزم فقط بالمعلومات المتاحة لهذا الدور ولا توسّع نطاق الصلاحيات.',
+    accountant: 'أنت مساعد للمحاسب. لا تعرض بيانات تعليمية أو إدارية غير متاحة لهذا الدور.',
+    reception: 'أنت مساعد لموظف الاستقبال. التزم بالمعلومات التشغيلية المتاحة لهذا الدور فقط.',
+    content_manager: 'أنت مساعد لإدارة المحتوى. ركز على الدورات والمحتوى المتاح لهذا الدور فقط.',
+    support: 'أنت مساعد لفريق الدعم. لا تعرض بيانات تشغيلية أو تعليمية غير متاحة لهذا الدور.'
+  };
+  const roleText = roleInstructions[role] || 'أنت مساعد داخل منصة AcademyFlow. التزم بصلاحيات المستخدم والبيانات المتاحة له فقط.';
 
   return `${roleText}
 أنت جزء من منصة AcademyFlow.
@@ -357,14 +407,33 @@ async function chat(req, { message, courseId = '', lessonId = '', history = [] }
     throw err;
   }
 
+  let liveContext = 'البيانات التشغيلية المباشرة غير متاحة مؤقتًا.';
+  try {
+    liveContext = await operationalContext(req, context.courses);
+  } catch (err) {
+    console.warn('[academyflow-ai-live-context]', err.message);
+  }
+
   const answer = await providerResponse({
-    system: `${baseDeveloperPrompt(req.user.role)}\n\nسياق المقررات:\n${context.text}`,
+    system: `${baseDeveloperPrompt(req.user.role)}
+    
+سياق المقررات:
+${context.text}
+
+بيانات تشغيلية مباشرة من AcademyFlow:
+${liveContext}
+
+تعليمات البيانات التشغيلية:
+- اعتبر الأرقام والمواعيد أعلاه هي المصدر المعتمد للأسئلة المتعلقة بحالة المستخدم داخل النظام.
+- لا تخترع أرقامًا أو مواعيد أو أسماء غير موجودة في البيانات.
+- إذا سأل المستخدم عن معلومة تشغيلية غير موجودة في السياق، قل إنها غير متوفرة حاليًا في البيانات المرسلة.
+- لا تعرض بيانات طالب آخر للطالب، ولا تتجاوز نطاق المدرب المسموح له.`,
     history,
     user: safeMessage,
     maxOutputTokens: 1400
   });
 
-  return { answer, provider: aiProvider(), model: aiModel() };
+  return { answer, provider: aiProvider(), model: aiModel(), liveData: true };
 }
 
 async function summarize(req, { courseId = '', lessonId = '' }) {
@@ -451,6 +520,7 @@ async function contextOptions(req) {
     provider: aiProvider(),
     model: aiModel(),
     role: req.user.role,
+    liveData: true,
     courses: courses.map(course => ({
       id: String(course._id),
       title: course.title,
