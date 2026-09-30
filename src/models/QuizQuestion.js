@@ -9,6 +9,7 @@ const QuizQuestionSchema = new mongoose.Schema({
   academyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Academy', required: true, index: true },
   assessmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Assessment', required: true, index: true },
   courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true, index: true },
+  lessonId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lesson', default: null, index: true },
   type: {
     type: String,
     enum: ['multiple_choice','true_false','short_answer'],
