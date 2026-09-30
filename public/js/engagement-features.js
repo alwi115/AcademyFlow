@@ -43,9 +43,13 @@
   }
 
   function target() {
-    return document.getElementById('pageContent')
-      || document.getElementById('studentPageContent')
-      || document.querySelector('.main-content')
+    const dynamic =
+      document.getElementById('pageContent') ||
+      document.getElementById('studentPageContent');
+
+    if (dynamic?.parentElement) return dynamic.parentElement;
+
+    return document.querySelector('.main-content')
       || document.querySelector('main')
       || document.body;
   }
