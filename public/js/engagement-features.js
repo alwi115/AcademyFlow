@@ -15,12 +15,21 @@
     }[ch]));
   }
 
+  const deviceTimeZone = (() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    } catch {
+      return 'UTC';
+    }
+  })();
+
   function fmtDate(value) {
     if (!value) return '—';
     try {
       return new Intl.DateTimeFormat('ar-OM', {
         dateStyle:'medium',
-        timeStyle:'short'
+        timeStyle:'short',
+        timeZone:deviceTimeZone
       }).format(new Date(value));
     } catch { return String(value); }
   }
