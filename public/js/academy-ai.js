@@ -62,7 +62,7 @@
 
     if (send) send.disabled = value;
     actions.forEach(button => { button.disabled = value; });
-    if (status) status.textContent = value ? (label || 'AcademyFlow AI يفكر...') : '';
+    if (status) status.textContent = value ? (label || 'علي يفكر...') : '';
   }
 
   function addMessage(kind, text, options = {}) {
@@ -126,7 +126,7 @@
         const keyName = context.provider === 'openai' ? 'OPENAI_API_KEY' : 'GEMINI_API_KEY';
         addLocalNotice(context.liveData
           ? `بيانات AcademyFlow المباشرة مربوطة، لكن الشرح والتوليد الذكي يحتاج ${keyName} في متغيرات الاستضافة.`
-          : `AcademyFlow AI مركّب في النظام، لكن يحتاج إضافة ${keyName} في متغيرات الاستضافة عشان يبدأ يرد.`);
+          : `علي مركّب في النظام، لكن يحتاج إضافة ${keyName} في متغيرات الاستضافة عشان يبدأ يرد.`);
       } else if (!context.courses?.length) {
         addLocalNotice(
           role === 'instructor'
@@ -276,23 +276,23 @@
     if (role === 'instructor') return 'مثال: كيف أشرح هذا الدرس بطريقة أسهل؟';
     if (role === 'student') return 'اسأل عن درسك أو اطلب شرح نقطة معينة...';
     if (role === 'owner' || role === 'admin') return 'مثال: عطني ملخص الأكاديمية اليوم أو حلل الحضور...';
-    return 'اسأل AcademyFlow AI ضمن صلاحيات حسابك...';
+    return 'اسأل علي ضمن صلاحيات حسابك...';
   }
 
   function welcomeMessage() {
     if (role === 'instructor') {
-      return 'هلا، أنا مساعد AcademyFlow. أقرأ بيانات دوراتك المباشرة مثل أعداد الطلاب والتقدم والحضور والجلسات القادمة، وأقدر أساعدك في الشرح والاختبارات.';
+      return 'هلا، أنا علي. أقرأ بيانات دوراتك المباشرة مثل أعداد الطلاب والتقدم والحضور والجلسات القادمة، وأقدر أساعدك في الشرح والاختبارات.';
     }
 
     if (role === 'student') {
-      return 'هلا، أنا مساعد AcademyFlow. أعرف تقدمك وحضورك والجلسات القادمة من بيانات النظام، وأقدر ألخّص لك الدروس وأشرحها بطريقة أبسط.';
+      return 'هلا، أنا علي. أعرف تقدمك وحضورك والجلسات القادمة من بيانات النظام، وأقدر ألخّص لك الدروس وأشرحها بطريقة أبسط.';
     }
 
     if (role === 'owner' || role === 'admin') {
-      return 'هلا، أنا مساعد AcademyFlow الإداري. أقدر ألخّص لك حالة الأكاديمية، التسجيلات، الحضور والجلسات القادمة من بيانات النظام، وأحللها للقراءة فقط بدون تنفيذ تغييرات تلقائية.';
+      return 'هلا، أنا علي، مساعدك الإداري في AcademyFlow. أقدر ألخّص لك حالة الأكاديمية، التسجيلات، الحضور والجلسات القادمة من بيانات النظام، وأحللها للقراءة فقط بدون تنفيذ تغييرات تلقائية.';
     }
 
-    return 'هلا، أنا مساعد AcademyFlow. بساعدك ضمن صلاحيات حسابك فقط، وما بعرض لك أي بيانات خارج نطاق دورك.';
+    return 'هلا، أنا علي. بساعدك ضمن صلاحيات حسابك فقط، وما بعرض لك أي بيانات خارج نطاق دورك.';
   }
 
   function mobileNavigationOpen() {
@@ -341,16 +341,16 @@
 
     const launcher = el('button', 'af-ai-launcher');
     launcher.type = 'button';
-    launcher.setAttribute('aria-label', 'فتح AcademyFlow AI');
-    launcher.innerHTML = '<span class="af-ai-launcher-mark">AI</span><span>المساعد الذكي</span>';
+    launcher.setAttribute('aria-label', 'فتح علي');
+    launcher.innerHTML = '<span class="af-ai-launcher-mark">ع</span><span>علي</span>';
 
     const panel = el('section', 'af-ai-panel');
-    panel.setAttribute('aria-label', 'AcademyFlow AI');
+    panel.setAttribute('aria-label', 'علي — مساعد AcademyFlow الذكي');
     panel.innerHTML = `
       <div class="af-ai-head">
         <div class="af-ai-brand">
-          <span class="af-ai-logo">AI</span>
-          <div><strong>AcademyFlow AI</strong><small>${roleSubtitle()}</small></div>
+          <span class="af-ai-logo">ع</span>
+          <div><strong>علي</strong><small>${roleSubtitle()} · AcademyFlow</small></div>
         </div>
         <div class="af-ai-head-actions">
           <span class="af-ai-state" id="afAiStateBadge">يتحقق...</span>
