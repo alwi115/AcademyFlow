@@ -2539,7 +2539,7 @@ const StudentPortal = (() => {
           <p>
             ${esc(data.session.course || '')}
             ${data.session.group ? ' · '+esc(data.session.group) : ''}
-            · ${esc(data.session.startAtDisplay || fmtDate(data.session.startAt,true))}
+            · ${esc(fmtDate(data.session.startAt,true))}
           </p>
 
           <div class="student-urgent-note">
@@ -2612,7 +2612,7 @@ const StudentPortal = (() => {
             <div class="student-list">
               ${d.upcomingLive?.length ? d.upcomingLive.map(x => `
                 <div class="student-list-row">
-                  <div><b>${esc(x.title)}</b><span>${esc(x.startAtDisplay || fmtDate(x.startAt,true))} · ${esc(x.course || '')}</span></div>
+                  <div><b>${esc(x.title)}</b><span>${esc(fmtDate(x.startAt,true))} · ${esc(x.course || '')}</span></div>
                   ${x.joinAvailable ? '<button class="btn primary student-join-live" data-session-id="'+esc(x.id)+'" type="button">انضم عبر AcademyFlow</button>' : status(x.status)}
                 </div>
               `).join('') : '<div class="student-empty">لا توجد محاضرات قادمة.</div>'}
@@ -3104,7 +3104,7 @@ const StudentPortal = (() => {
                   <div>
                     <b>${esc(session.title)}</b>
                     <span>
-                      ${esc(session.startAtDisplay || fmtDate(session.startAt,true))}
+                      ${esc(fmtDate(session.startAt,true))}
                       ${session.instructor?.name ? ' · '+esc(session.instructor.name) : ''}
                       ${session.group?.name ? ' · '+esc(session.group.name) : ''}
                     </span>
@@ -3203,7 +3203,7 @@ const StudentPortal = (() => {
               const joinable = x.joinAvailable && !['ended','cancelled'].includes(x.status);
               return `
                 <div class="student-list-row">
-                  <div><b>${esc(x.title)}</b><span>${esc(x.course?.title || '')} · ${esc(x.startAtDisplay || fmtDate(x.startAt,true))} · ${esc(x.instructor?.name || '')}</span></div>
+                  <div><b>${esc(x.title)}</b><span>${esc(x.course?.title || '')} · ${esc(fmtDate(x.startAt,true))} · ${esc(x.instructor?.name || '')}</span></div>
                   <div class="student-actions">
                     ${status(x.status)}
                     ${joinable ? '<button class="btn primary student-join-live" data-session-id="'+esc(x.id)+'" type="button">دخول Zoom</button>' : ''}
@@ -3237,7 +3237,7 @@ const StudentPortal = (() => {
             <p>${esc(x.description || 'لا توجد تعليمات إضافية.')}</p>
             <div class="student-meta">
               <span>الدرجة: ${esc(x.totalMarks)}</span>
-              <span>التسليم: ${esc(x.dueAtDisplay || fmtDate(x.dueAt,true))}</span>
+              <span>التسليم: ${esc(fmtDate(x.dueAt,true))}</span>
               ${x.submission?.score !== null && x.submission?.score !== undefined ? '<span>درجتك: '+esc(x.submission.score)+'</span>' : ''}
             </div>
             ${x.submission?.feedback ? '<div class="student-card" style="box-shadow:none;margin-top:10px;padding:10px"><small>تعليق المدرب</small><p style="margin:4px 0 0">'+esc(x.submission.feedback)+'</p></div>' : ''}
@@ -3305,7 +3305,7 @@ const StudentPortal = (() => {
             <span>الدرجة: ${esc(x.totalMarks)}</span>
             <span>النجاح: ${esc(x.passingMark)}</span>
             <span>المدة: ${esc(x.durationMinutes || 0)} دقيقة</span>
-            <span>الموعد: ${esc(x.dueAtDisplay || fmtDate(x.dueAt,true))}</span>
+            <span>الموعد: ${esc(fmtDate(x.dueAt,true))}</span>
           </div>
           <div class="student-card" style="box-shadow:none;margin-top:11px;padding:10px">
             <small style="color:var(--text-mute)">واجهة حل الأسئلة التفصيلية ستُفعل عندما تضيف الأكاديمية أسئلة للاختبار.</small>
