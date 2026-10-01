@@ -2328,14 +2328,29 @@ const StudentPortal = (() => {
       .replaceAll("'",'&#039;');
   }
 
+  const studentTimeZone = (() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    } catch {
+      return 'UTC';
+    }
+  })();
+
   function fmtDate(value, withTime = false) {
     if (!value) return '—';
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '—';
 
     return withTime
-      ? date.toLocaleString('ar-OM',{dateStyle:'medium',timeStyle:'short'})
-      : date.toLocaleDateString('ar-OM',{dateStyle:'medium'});
+      ? date.toLocaleString('ar-OM',{
+          dateStyle:'medium',
+          timeStyle:'short',
+          timeZone:studentTimeZone
+        })
+      : date.toLocaleDateString('ar-OM',{
+          dateStyle:'medium',
+          timeZone:studentTimeZone
+        });
   }
 
   function fmtMoney(value, currency='OMR') {
