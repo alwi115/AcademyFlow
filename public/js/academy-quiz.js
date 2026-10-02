@@ -733,6 +733,8 @@ window.AcademyQuizAdmin = (() => {
           };
         });
 
+        document.dispatchEvent(new CustomEvent('academyflow:quiz-builder-rendered'));
+
       }catch(err){
         target.innerHTML='<div class="academy-card academy-empty">'+esc(err.message)+'</div>';
       }

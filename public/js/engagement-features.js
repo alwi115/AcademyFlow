@@ -15,21 +15,13 @@
     }[ch]));
   }
 
-  const deviceTimeZone = (() => {
-    try {
-      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-    } catch {
-      return 'UTC';
-    }
-  })();
-
-  function fmtDate(value) {
+  function fmtDate(value, academyDisplay = '') {
+    if (academyDisplay) return academyDisplay;
     if (!value) return '—';
     try {
       return new Intl.DateTimeFormat('ar-OM', {
         dateStyle:'medium',
-        timeStyle:'short',
-        timeZone:deviceTimeZone
+        timeStyle:'short'
       }).format(new Date(value));
     } catch { return String(value); }
   }
@@ -56,7 +48,7 @@
       document.getElementById('pageContent') ||
       document.getElementById('studentPageContent');
 
-    if (dynamic?.parentElement) return dynamic.parentElement;
+    if (dynamic) return dynamic;
 
     return document.querySelector('.main-content')
       || document.querySelector('main')
@@ -151,7 +143,7 @@
         ${rows?.length ? '<div class="eng-grid">'+rows.map(row => `
           <article class="eng-item" data-comp-id="${esc(row.id)}">
             <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
-              <div><h3>${esc(row.title)}</h3><p>${esc(row.course?.title || '')} · ${fmtDate(row.sessionStartAt)}</p></div>
+              <div><h3>${esc(row.title)}</h3><p>${esc(row.course?.title || '')} · ${fmtDate(row.sessionStartAt, row.sessionStartAtDisplay)}</p></div>
               <span class="eng-pill ${row.status === 'completed' ? 'good' : 'warn'}">${row.status === 'completed' ? 'معوّض' : 'بانتظار التعويض'}</span>
             </div>
             <p style="margin-top:10px">${esc(row.summary)}</p>
@@ -187,7 +179,7 @@
         <div class="eng-grid">
           ${rows.map(row => `
             <form class="eng-item eng-feedback-form" data-session-id="${esc(row.id)}">
-              <h3>${esc(row.title)}</h3><p>${esc(row.course?.title || '')} · ${fmtDate(row.startAt)}</p>
+              <h3>${esc(row.title)}</h3><p>${esc(row.course?.title || '')} · ${fmtDate(row.startAt, row.startAtDisplay)}</p>
               <input type="hidden" name="rating">
               <div class="eng-feedback-buttons">
                 <button class="eng-face" type="button" data-rating="understood"><strong>🙂</strong>فهمت</button>
@@ -285,7 +277,7 @@
         <div class="eng-suite-head"><div><span class="eng-kicker">نبض الحصص</span><h2 style="margin-top:8px">كيف فهم الطلاب آخر الحصص؟</h2><p>ملخص فوري من تقييمات الطلاب بعد الحصة.</p></div></div>
         ${data.feedback?.length ? '<div class="eng-grid">'+data.feedback.map(row => `
           <article class="eng-item">
-            <h3>${esc(row.session.title)}</h3><p>${esc(row.session.course?.title || '')} · ${fmtDate(row.session.startAt)}</p>
+            <h3>${esc(row.session.title)}</h3><p>${esc(row.session.course?.title || '')} · ${fmtDate(row.session.startAt, row.session.startAtDisplay)}</p>
             <div class="eng-meta"><span>🙂 فهمت: ${row.understood}</span><span>😐 جزئياً: ${row.partial}</span><span>😵 ضايع: ${row.lost}</span><span>الردود: ${row.total}</span></div>
             ${row.hardestPoints?.length ? '<ul class="eng-points">'+row.hardestPoints.map(x => '<li>'+esc(x)+'</li>').join('')+'</ul>' : '<div class="eng-empty">ما انكتبت نقاط صعبة لهذه الحصة.</div>'}
           </article>
@@ -347,6 +339,7 @@
     const quizId = new URLSearchParams(location.search).get('id');
     if (!quizId) return;
 
+    document.getElementById('engQuizMapping')?.remove();
     const data = await api('/api/engagement/quizzes/'+encodeURIComponent(quizId)+'/mapping');
     const root = mount('engQuizMapping', `
       <div class="eng-suite-card">
@@ -394,6 +387,12 @@
     } catch (err) {
       console.error('[engagement-suite]', err);
     }
+  }
+
+  if (path.endsWith('/quiz-builder.html')) {
+    document.addEventListener('academyflow:quiz-builder-rendered', () => {
+      renderQuizMapping().catch(err => console.error('[engagement-suite]', err));
+    });
   }
 
   if (document.readyState === 'loading') {
