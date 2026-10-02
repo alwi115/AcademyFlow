@@ -43,6 +43,7 @@ app.use(helmet({
       styleSrcAttr: ["'unsafe-inline'"],
       fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
       imgSrc: ["'self'", 'data:', 'https:'],
+      mediaSrc: ["'self'", 'https:'],
       connectSrc: ["'self'"],
       frameSrc: ["'self'", 'https://www.youtube-nocookie.com', 'https://www.youtube.com'],
       formAction: ["'self'"]
