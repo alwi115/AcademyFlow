@@ -29,7 +29,6 @@ SUPERADMIN_USERNAME=<staging-admin>
 SUPERADMIN_EMAIL=<staging-email>
 SUPERADMIN_PASSWORD=<staging-password>
 
-BACKUP_DIR=/data/backups
 BACKUP_ENCRYPTION_KEY=<NEW STAGING KEY 32+ CHARS>
 AUTO_BACKUP_ENABLED=true
 BACKUP_INTERVAL_HOURS=24
@@ -44,6 +43,10 @@ ERROR_ALERT_WINDOW_MINUTES=15
 ERROR_ALERT_THRESHOLD=5
 STORAGE_FREE_PERCENT_ALERT=15
 ```
+
+تُخزّن النسخ الاحتياطية وملفات الشهادات في MongoDB GridFS، لذلك لا تحتاج بيئة
+Staging إلى `BACKUP_DIR` أو Railway Volume. يجب أن تعمل قاعدة MongoDB بنمط replica
+set حتى يكون Restore ذريًا وآمنًا.
 
 ## GitHub
 
