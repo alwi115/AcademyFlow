@@ -897,7 +897,7 @@ const SA = (() => {
                 <div><h2>النسخ الاحتياطي</h2><p>نسخ مضغوطة مع SHA-256 وتحقق قبل الاسترجاع.</p></div>
               </div>
               <div class="sa-config-list">
-                <div class="sa-config-row"><b>BACKUP_DIR دائم</b>${yesNo(h.configuration.backupDirectoryConfigured)}</div>
+                <div class="sa-config-row"><b>MongoDB GridFS</b>${yesNo(h.configuration.backupMongoConfigured)}</div>
                 <div class="sa-config-row"><b>تشفير AES-256-GCM</b>${yesNo(h.configuration.backupEncryptionConfigured)}</div>
                 <div class="sa-config-row"><b>التخزين قابل للكتابة</b>${yesNo(h.storage.writable)}</div>
                 <div class="sa-config-row"><b>النسخ التلقائي</b>${yesNo(h.backups.automaticEnabled)}</div>
@@ -909,9 +909,9 @@ const SA = (() => {
                     : '<span class="sa-status good">مغلق للأمان</span>'
                 }</div>
               </div>
-              ${!h.storage.explicitlyConfigured ? `
+              ${!h.configuration.backupMongoConfigured ? `
                 <div class="sa-note sa-danger-note" style="margin-top:14px">
-                  BACKUP_DIR غير مضبوط. اربطه بمسار Railway Volume دائم قبل الاعتماد على النسخ.
+                  تخزين النسخ في MongoDB GridFS غير جاهز. تحقق من MONGODB_URI والاتصال بقاعدة البيانات.
                 </div>
               ` : ''}
               ${!h.storage.encryptionConfigured ? `
