@@ -14,6 +14,7 @@ const academyRoutes = require('../src/routes/academy.routes');
 const instructorRoutes = require('../src/routes/instructor.routes');
 const studentRoutes = require('../src/routes/student.routes');
 const zoomRoutes = require('../src/routes/zoom.routes');
+const engagementRoutes = require('../src/routes/engagement.routes');
 const auditMiddleware = require('../src/middleware/audit');
 
 async function connectWithRetry() {
@@ -92,6 +93,7 @@ async function main() {
   app.use('/api/instructor', instructorRoutes);
   app.use('/api/student', studentRoutes);
   app.use('/api/zoom', zoomRoutes);
+  app.use('/api/engagement', engagementRoutes);
   app.use((err, req, res, next) => {
     res.status(Number(err.status || 500)).json({
       message: Number(err.status || 500) >= 500 ? 'Internal server error' : err.message
@@ -195,6 +197,14 @@ async function main() {
     })).data;
     assert.strictEqual(attendance.status, 'present');
 
+    const lesson = (await request(instructor, 'POST', '/api/instructor/lessons', {
+      courseId: course._id,
+      title: 'E2E Lesson',
+      order: 1,
+      status: 'published'
+    })).data;
+    assert(lesson._id);
+
     const quiz = (await request(owner, 'POST', '/api/academy/quizzes', {
       courseId: course._id,
       title: 'E2E Quiz',
@@ -221,6 +231,14 @@ async function main() {
 
     const question = questionResponse.question;
     assert(question._id);
+
+    const mappedQuestion = (await request(
+      owner,
+      'PATCH',
+      '/api/engagement/quizzes/' + quiz._id + '/questions/' + question._id + '/lesson',
+      { lessonId: lesson._id }
+    )).data;
+    assert.strictEqual(String(mappedQuestion.lessonId), String(lesson._id));
 
     const published = (await request(
       owner,

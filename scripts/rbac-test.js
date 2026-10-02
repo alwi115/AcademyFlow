@@ -20,6 +20,8 @@ const Branch = require('../src/models/Branch');
 const Group = require('../src/models/Group');
 const Enrollment = require('../src/models/Enrollment');
 const Assessment = require('../src/models/Assessment');
+const Lesson = require('../src/models/Lesson');
+const QuizQuestion = require('../src/models/QuizQuestion');
 const QuizAttempt = require('../src/models/QuizAttempt');
 const LiveSession = require('../src/models/LiveSession');
 
@@ -27,6 +29,7 @@ const academyRoutes = require('../src/routes/academy.routes');
 const instructorRoutes = require('../src/routes/instructor.routes');
 const liveRoutes = require('../src/routes/live.routes');
 const aiRoutes = require('../src/routes/ai.routes');
+const engagementRoutes = require('../src/routes/engagement.routes');
 
 async function connectWithRetry() {
   const uri = process.env.MONGODB_URI;
@@ -253,6 +256,25 @@ async function main() {
     requiresManualReview: true
   });
 
+  const quizLesson = await Lesson.create({
+    academyId: academy._id,
+    courseId: course._id,
+    title: 'RBAC Quiz Lesson',
+    order: 1,
+    status: 'published'
+  });
+
+  const quizQuestion = await QuizQuestion.create({
+    academyId: academy._id,
+    assessmentId: quiz._id,
+    courseId: course._id,
+    type: 'true_false',
+    prompt: 'RBAC mapping question',
+    correctBoolean: true,
+    marks: 1,
+    order: 1
+  });
+
   await LiveSession.create({
     academyId: academy._id,
     courseId: course._id,
@@ -262,6 +284,16 @@ async function main() {
     startAt: new Date(Date.now() + 60 * 60 * 1000),
     zoomJoinUrl: 'https://zoom.example.test/join/secret-a',
     status: 'scheduled'
+  });
+
+  await LiveSession.create({
+    academyId: academy._id,
+    courseId: course._id,
+    groupId: groupOnly._id,
+    title: 'Ended without attendance evidence',
+    instructorId: users.group_instructor._id,
+    startAt: new Date(Date.now() - 60 * 60 * 1000),
+    status: 'ended'
   });
 
   await LiveSession.create({
@@ -281,6 +313,7 @@ async function main() {
   app.use('/api/instructor', instructorRoutes);
   app.use('/api/live-sessions', liveRoutes);
   app.use('/api/ai', aiRoutes);
+  app.use('/api/engagement', engagementRoutes);
   app.use((err, req, res, next) => {
     res.status(Number(err.status || 500)).json({
       message: Number(err.status || 500) >= 500 ? 'Internal server error' : err.message
@@ -383,6 +416,14 @@ async function main() {
       title: 'Forbidden group-level quiz'
     });
 
+    await expect(
+      'group_instructor',
+      'PATCH',
+      '/api/engagement/quizzes/' + quiz._id + '/questions/' + quizQuestion._id + '/lesson',
+      403,
+      { lessonId: String(quizLesson._id) }
+    );
+
     await expect('group_instructor', 'POST', '/api/instructor/notifications', 403, {
       courseId: String(course._id),
       title: 'Forbidden course announcement',
@@ -431,6 +472,22 @@ async function main() {
       courseId: String(course._id),
       title: 'Direct instructor lesson'
     });
+
+    const assignment = await expect('instructor', 'POST', '/api/instructor/assignments', 201, {
+      courseId: String(course._id),
+      title: 'Direct instructor assignment',
+      dueAt: '2026-10-10T10:00',
+      status: 'published'
+    });
+    assert.strictEqual(new Date(assignment.body.dueAt).toISOString(), '2026-10-10T06:00:00.000Z');
+
+    await expect(
+      'instructor',
+      'PATCH',
+      '/api/engagement/quizzes/' + quiz._id + '/questions/' + quizQuestion._id + '/lesson',
+      200,
+      { lessonId: String(quizLesson._id) }
+    );
 
     await expect('instructor', 'POST', '/api/instructor/notifications', 201, {
       courseId: String(course._id),
@@ -745,6 +802,14 @@ async function main() {
     const ownerDashboard = await expect('owner', 'GET', '/api/academy/dashboard', 200);
     assert(ownerDashboard.body.upcomingSessions.length >= 1);
     assert(ownerDashboard.body.upcomingSessions[0].zoomJoinUrl);
+
+    const withdrawalRisk = await expect('owner', 'GET', '/api/engagement/academy/withdrawal-risk', 200);
+    const groupOnlyRisk = withdrawalRisk.body.find(
+      row => String(row.student.id) === String(groupOnlyStudent._id)
+    );
+    assert(groupOnlyRisk);
+    assert.strictEqual(groupOnlyRisk.metrics.totalSessions, 1);
+    assert.strictEqual(groupOnlyRisk.metrics.missedSessions, 0);
 
     console.log('RBAC regression tests passed.');
   } finally {
