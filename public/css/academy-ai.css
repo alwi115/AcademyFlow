@@ -1,3 +1,18 @@
+
+.af-ai-root.nav-obscured,
+body.af-ai-nav-open .af-ai-root {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(8px);
+}
+
+@media (max-width: 900px) {
+  .af-ai-root {
+    transition: opacity 140ms ease, transform 140ms ease, visibility 140ms ease;
+  }
+}
+
 .af-ai-root {
   position: fixed;
   left: max(20px, env(safe-area-inset-left));
