@@ -15,5 +15,6 @@ const CourseSchema = new mongoose.Schema({
   status: { type: String, enum: ['draft','active','archived'], default: 'draft' }
 }, { timestamps: true });
 
-CourseSchema.index({ academyId: 1, code: 1 }, { unique: true, partialFilterExpression: { code: { $type: 'string' } } });
+// Keep this definition aligned with the existing production index to avoid startup conflicts.
+CourseSchema.index({ academyId: 1, code: 1 }, { unique: true, sparse: true });
 module.exports = mongoose.model('Course', CourseSchema);
