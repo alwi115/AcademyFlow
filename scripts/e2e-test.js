@@ -269,6 +269,16 @@ async function main() {
     )).data;
     assert.strictEqual(published.status, 'published');
 
+    const studentQuizList = (await request(
+      student,
+      'GET',
+      '/api/student/quizzes'
+    )).data;
+    const listedQuiz = studentQuizList.find(row => String(row.id) === String(quiz._id));
+    assert(listedQuiz);
+    assert.strictEqual(listedQuiz.questionCount, 1);
+    assert.strictEqual(listedQuiz.listeningQuestionCount, 1);
+
     const started = (await request(
       student,
       'POST',
