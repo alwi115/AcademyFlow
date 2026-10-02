@@ -16,6 +16,8 @@ const QuizQuestionSchema = new mongoose.Schema({
     required: true
   },
   prompt: { type: String, required: true, trim: true, maxlength: 5000 },
+  audioUrl: { type: String, default: '', trim: true, maxlength: 2048 },
+  audioTitle: { type: String, default: '', trim: true, maxlength: 200 },
   options: { type: [OptionSchema], default: [] },
   correctBoolean: { type: Boolean, default: null, select: false },
   explanation: { type: String, default: '', trim: true, maxlength: 5000, select: false },
