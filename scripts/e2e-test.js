@@ -215,6 +215,23 @@ async function main() {
     })).data;
     assert.strictEqual(quiz.status, 'draft');
 
+    await assert.rejects(
+      () => request(
+        owner,
+        'POST',
+        '/api/academy/quizzes/' + quiz._id + '/questions',
+        {
+          type: 'true_false',
+          prompt: 'Unsafe listening URL',
+          correctBoolean: true,
+          marks: 1,
+          order: 1,
+          audioUrl: 'http://example.test/listening.mp3'
+        }
+      ),
+      /400|HTTPS/
+    );
+
     const questionResponse = (await request(
       owner,
       'POST',
@@ -222,6 +239,8 @@ async function main() {
       {
         type: 'true_false',
         prompt: '2 + 2 = 4',
+        audioUrl: 'https://cdn.example.test/listening/e2e-question.mp3',
+        audioTitle: 'E2E Listening Clip',
         correctBoolean: true,
         marks: 1,
         order: 1,
@@ -231,6 +250,8 @@ async function main() {
 
     const question = questionResponse.question;
     assert(question._id);
+    assert.strictEqual(question.audioUrl, 'https://cdn.example.test/listening/e2e-question.mp3');
+    assert.strictEqual(question.audioTitle, 'E2E Listening Clip');
 
     const mappedQuestion = (await request(
       owner,
@@ -258,6 +279,10 @@ async function main() {
 
     const attemptId = started.attempt.id;
     const studentQuestion = started.questions[0];
+    assert.deepStrictEqual(studentQuestion.audio, {
+      url: 'https://cdn.example.test/listening/e2e-question.mp3',
+      title: 'E2E Listening Clip'
+    });
 
     await request(
       student,
