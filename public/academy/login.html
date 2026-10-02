@@ -1,3 +1,106 @@
-<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f6f8fc"><meta name="color-scheme" content="light dark"><script src="/js/appearance.js?v=20260927-2"></script><meta name="description" content="AcademyFlow يجمع إدارة أكاديميتك وطلابك ودوراتك ومحاضراتك وتقاريرك في مساحة واحدة."><title>حيّاك في مساحتك | AcademyFlow</title><link rel="stylesheet" href="/css/academy-login.css?v=20260927-3"></head><body class="login-page"><a class="skip" href="#academyLoginForm">تخطّي إلى تسجيل الدخول</a><header class="login-nav"><a class="brand" href="/" aria-label="AcademyFlow الرئيسية"><span class="brand-symbol">a<span>f</span></span><span>Academy<span class="brand-light">Flow</span><small>مساحة للتعلّم. نظام للنمو.</small></span></a><div class="login-nav-actions"><button class="appearance-toggle" type="button" data-appearance-toggle aria-label="تشغيل الوضع الداكن" aria-pressed="false"><svg class="moon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.1A8.5 8.5 0 0 1 8.9 4a8.5 8.5 0 1 0 11.1 11.1Z"/></svg><svg class="sun-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg><span data-appearance-label>داكن</span></button><a class="text-link" href="/">الرجوع للرئيسية <span>↖</span></a></div></header><main class="login-main"><div class="login-heading"><span class="eyebrow">YOUR SPACE, YOUR NEXT CHAPTER</span><h1>رجعت، ورجع <em>التناغم.</em></h1><p>حيّاك في مساحة أكاديميتك.</p></div><div class="login-composition"><div class="login-orbit" aria-hidden="true"><div class="login-ring one"></div><div class="login-ring two"></div><span class="login-orbit-label label-one">◎ الطلاب</span><span class="login-orbit-label label-two">◷ المحاضرات</span><span class="login-orbit-label label-three">▥ التقارير</span><span class="login-orbit-label label-four">▤ الدورات</span><div class="login-orbit-copy"><small>ONE CONNECTED SPACE</small><b>التفاصيل تتلاقى.<br>وأنت تكمّل.</b><span>ACADEMYFLOW — 2026</span></div></div>
-<section class="login-form-panel" aria-labelledby="loginTitle"><div class="form-top"><span class="eyebrow">ACADEMY ACCESS / 01</span><span class="secure-label">◇ دخول آمن</span></div><h2 id="loginTitle">تسجيل الدخول</h2><p class="form-intro">بياناتك تفتح لك المساحة المناسبة لدورك.</p><form id="academyLoginForm" data-login-kind="academy" method="post" action="/api/auth/login"><input type="hidden" id="csrfToken" name="_csrf" value=""><div class="form-field"><label for="academyCode">كود الأكاديمية <small>ACADEMY CODE</small></label><input id="academyCode" name="academyCode" type="text" autocomplete="organization" autocapitalize="characters" spellcheck="false" maxlength="32" placeholder="AF-0001" aria-describedby="codeHint" required><small id="codeHint">تحصله مع بيانات الدخول من مسؤول الأكاديمية.</small></div><div class="form-field"><label for="academyEmail">البريد الإلكتروني</label><input id="academyEmail" name="email" type="email" inputmode="email" autocomplete="username" maxlength="254" placeholder="name@academy.com" required></div><div class="form-field"><label for="academyPassword">كلمة المرور</label><div class="password-wrap"><input id="academyPassword" name="password" type="password" autocomplete="current-password" maxlength="128" placeholder="أدخل كلمة المرور" required><button id="academyPasswordToggle" type="button" aria-controls="academyPassword" aria-pressed="false">إظهار</button></div></div><div class="form-options"><label><input type="checkbox" id="rememberLogin"> تذكّر بياناتي</label><button type="button" id="forgotPassword">نسيت كلمة المرور؟</button></div><small class="remember-hint">يحفظ الكود والبريد على جهازك، بدون كلمة المرور.</small><button class="button login-submit" type="submit">دخول الأكاديمية ↙</button><p id="msg" role="status" aria-live="polite"></p></form><div class="form-bottom"><span>ما عندك بيانات دخول؟</span><a href="/legal/support.html">تواصل مع الدعم ↙</a></div></section><aside class="login-side-note"><span>01 — IDENTIFY</span><b>أكاديميتك.<br>حسابك.<br>مساحتك.</b><p>دخول واحد يوصلك<br>للي تحتاجه.</p></aside></div><div class="login-assurance"><span>مساحة مستقلة لكل أكاديمية</span><i>·</i><span>صلاحيات حسب الدور</span></div></main>
-<dialog id="recoveryDialog" aria-labelledby="recoveryTitle"><form method="dialog"><button class="dialog-close" aria-label="إغلاق">×</button></form><span class="eyebrow">ACCOUNT HELP</span><h2 id="recoveryTitle">نرجّع لك الوصول.</h2><p>تواصل مع مسؤول أكاديميتك عشان يعيد تعيين كلمة المرور. جهّز كود الأكاديمية وبريد حسابك، ولا تشارك كلمة المرور مع أي شخص.</p><p>إذا ما قدرت تتواصل معه، استخدم قنوات دعم المنصة.</p><a class="button" href="/legal/support.html">افتح صفحة الدعم ↙</a></dialog><footer class="site-footer"><a class="wordmark" href="/">AcademyFlow<span>®</span></a><p>مساحة للتعلّم. نظام للنمو.</p><nav aria-label="روابط قانونية"><a href="/legal/privacy.html">الخصوصية</a><a href="/legal/terms.html">الشروط</a><a href="/legal/support.html">الدعم</a></nav><small>© 2026 AcademyFlow</small></footer><script src="/js/academy-login.js?v=20260927-2" defer></script><script src="/js/auth.js?v=2" defer></script></body></html>
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f5f7f9">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="تسجيل الدخول الآمن إلى مساحة أكاديميتك في AcademyFlow.">
+  <title>تسجيل دخول الأكاديمية | AcademyFlow</title>
+  <script src="/js/appearance.js?v=20261002"></script>
+  <link rel="stylesheet" href="/css/academy-login.css?v=20261002-gateway">
+</head>
+<body class="gateway-page">
+  <a class="skip-link" href="#academyLoginForm">تخطَّ إلى تسجيل الدخول</a>
+
+  <header class="gateway-nav">
+    <a class="brand" href="/" aria-label="AcademyFlow الرئيسية">
+      <span class="brand-mark" aria-hidden="true">af</span>
+      <span class="brand-name">Academy<span>Flow</span><small>نظام تشغيل الأكاديمية</small></span>
+    </a>
+    <div class="nav-actions">
+      <button class="appearance-toggle" type="button" data-appearance-toggle aria-label="تشغيل الوضع الداكن" aria-pressed="false">
+        <svg class="moon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.1A8.5 8.5 0 0 1 8.9 4a8.5 8.5 0 1 0 11.1 11.1Z"/></svg>
+        <svg class="sun-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg>
+        <span data-appearance-label>داكن</span>
+      </button>
+      <a class="back-link" href="/">العودة للرئيسية <span aria-hidden="true">↗</span></a>
+    </div>
+  </header>
+
+  <main class="gateway-main">
+    <section class="access-panel" aria-labelledby="loginTitle">
+      <div class="access-heading">
+        <p class="kicker">بوابة مساحة العمل</p>
+        <h1 id="loginTitle">تسجيل الدخول<br><em>إلى أكاديميتك.</em></h1>
+        <p>أدخل بياناتك لنفتح المساحة المناسبة لدورك وصلاحياتك.</p>
+      </div>
+
+      <form id="academyLoginForm" data-login-kind="academy" method="post" action="/api/auth/login" novalidate>
+        <input type="hidden" id="csrfToken" name="_csrf" value="">
+
+        <div class="form-field">
+          <label for="academyCode">كود الأكاديمية</label>
+          <input id="academyCode" name="academyCode" type="text" autocomplete="organization" autocapitalize="characters" spellcheck="false" maxlength="32" placeholder="AF-0001" aria-describedby="codeHint" required>
+          <small id="codeHint">تجده ضمن بيانات الدخول التي استلمتها من مسؤول الأكاديمية.</small>
+        </div>
+
+        <div class="form-field">
+          <label for="academyEmail">البريد الإلكتروني</label>
+          <input id="academyEmail" name="email" type="email" inputmode="email" autocomplete="username" maxlength="254" placeholder="name@academy.com" required>
+        </div>
+
+        <div class="form-field">
+          <label for="academyPassword">كلمة المرور</label>
+          <div class="password-wrap">
+            <input id="academyPassword" name="password" type="password" autocomplete="current-password" maxlength="128" placeholder="أدخل كلمة المرور" required>
+            <button id="academyPasswordToggle" type="button" aria-controls="academyPassword" aria-pressed="false">إظهار</button>
+          </div>
+        </div>
+
+        <div class="form-options">
+          <label class="remember-option"><input type="checkbox" id="rememberLogin"> <span>تذكّر الكود والبريد</span></label>
+          <button type="button" id="forgotPassword">نسيت كلمة المرور؟</button>
+        </div>
+
+        <p class="remember-hint">لن تُحفظ كلمة المرور على هذا الجهاز.</p>
+        <button class="login-submit" type="submit"><span>دخول الأكاديمية</span><i aria-hidden="true">←</i></button>
+        <p id="msg" role="status" aria-live="polite"></p>
+      </form>
+
+      <p class="support-line">ما عندك بيانات دخول؟ <a href="/legal/support.html">تواصل مع الدعم</a></p>
+    </section>
+
+    <section class="gateway-context" aria-labelledby="contextTitle">
+      <div class="context-heading">
+        <p class="kicker">بعد تسجيل الدخول</p>
+        <h2 id="contextTitle">بوابة واحدة.<br><em>والمساحة تتغيّر مع دورك.</em></h2>
+      </div>
+
+      <div class="day-stream" aria-label="معاينة توضيحية ليوم العمل">
+        <header><span class="context-mark">af</span><b>اليوم في الأكاديمية</b><small>الخميس، 2 أكتوبر</small></header>
+        <div class="stream-role"><span>الدور الحالي</span><b>إدارة الأكاديمية</b><i>صلاحيات الإدارة</i></div>
+        <ol>
+          <li class="complete"><time>09:00</time><span><b>اكتملت حصة اللغة الإنجليزية</b><small>حضور 94% · المجموعة أ</small></span><i>✓</i></li>
+          <li class="live"><time>12:30</time><span><b>برمجة للمبتدئين</b><small>مباشر الآن · 22 حاضرًا</small></span><i>الآن</i></li>
+          <li><time>04:30</time><span><b>أساسيات تصميم الواجهات</b><small>عبر Zoom · 18 طالبًا</small></span><i>قريبًا</i></li>
+        </ol>
+        <footer><span><b>06</b> واجبات للتصحيح</span><span><b>03</b> دفعات للمراجعة</span></footer>
+      </div>
+
+      <div class="role-route" aria-label="المساحات المتاحة بحسب الدور">
+        <span><i>01</i> الإدارة</span><span><i>02</i> المدرب</span><span><i>03</i> الطالب</span>
+      </div>
+    </section>
+  </main>
+
+  <footer class="gateway-footer">
+    <p>مساحة مستقلة لكل أكاديمية · صلاحيات بحسب الدور</p>
+    <nav aria-label="روابط قانونية"><a href="/legal/privacy.html">الخصوصية</a><a href="/legal/terms.html">الشروط</a><a href="/legal/support.html">الدعم</a></nav>
+    <small>© 2026 AcademyFlow</small>
+  </footer>
+
+  <script src="/js/academy-login.js?v=20261002-gateway" defer></script>
+  <script src="/js/auth.js?v=20261002-gateway" defer></script>
+</body>
+</html>
