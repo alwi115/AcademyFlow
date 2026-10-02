@@ -36,7 +36,10 @@
    npm run dev
 
 ## مهم: السوبر أدمن
-النسخة الحالية تحتاج إنشاء مستخدم `superadmin` في MongoDB يدويًا أو عبر seed script في المرحلة القادمة.
+عند أول تشغيل ينشئ AcademyFlow حساب `superadmin` تلقائيًا إذا كانت المتغيرات
+`SUPERADMIN_USERNAME` و`SUPERADMIN_EMAIL` و`SUPERADMIN_PASSWORD` مضبوطة. يجب أن
+تكون كلمة المرور 12 حرفًا على الأقل. في التشغيلات اللاحقة يزامن النظام اسم المستخدم
+والبريد، ولا يعيد ضبط كلمة مرور حساب موجود تلقائيًا.
 
 ## Zoom
 AcademyFlow يستخدم **User-managed OAuth** حتى تربط كل أكاديمية حساب Zoom الخاص بها بشكل مستقل.
@@ -114,22 +117,20 @@ AcademyFlow يستخدم **User-managed OAuth** حتى تربط كل أكادي�
 ### تنبيه الطالب قبل الحصة
 عامل التذكيرات داخل السيرفر يفحص الجلسات المجدولة كل 30 ثانية. عند الوصول إلى وقت التذكير:
 1. ينشئ إشعارًا داخل بوابة الطالب.
-2. يرسل بريدًا إلكترونيًا للطالب إذا كان SMTP مفعّلًا.
+2. يرسل بريدًا إلكترونيًا للطالب إذا كان SendGrid مفعّلًا.
 3. يستخدم سجل تسليم مستقل لمنع إرسال نفس التنبيه أكثر من مرة.
 4. إذا كانت الحصة لمجموعة محددة، يستهدف طلاب تلك المجموعة فقط.
 
-### إعداد SMTP على Railway
+### إعداد SendGrid على Railway
 أضف المتغيرات التالية:
 
 ```env
 PUBLIC_URL=https://your-domain.example
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=
-SMTP_PASS=
-SMTP_FROM_NAME=AcademyFlow
-SMTP_FROM_EMAIL=
+SENDGRID_API_KEY=
+SENDGRID_FROM_EMAIL=your-verified-sender@example.com
+SENDGRID_FROM_NAME=AcademyFlow
+# اختياري؛ الافتراضي هو SENDGRID_FROM_EMAIL
+SENDGRID_REPLY_TO=
 ```
 
-إذا لم يتم إعداد SMTP، تستمر إشعارات AcademyFlow الداخلية بالعمل، ويظهر SMTP كغير مفعّل في صفحة صحة النظام.
+إذا لم يتم إعداد SendGrid، تستمر إشعارات AcademyFlow الداخلية بالعمل، ويظهر البريد كغير مفعّل في صفحة صحة النظام.
