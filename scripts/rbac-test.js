@@ -489,6 +489,14 @@ async function main() {
       { lessonId: String(quizLesson._id) }
     );
 
+    await expect(
+      'instructor',
+      'PATCH',
+      '/api/engagement/quizzes/' + quiz._id + '/questions/' + quizQuestion._id + '/lesson',
+      400,
+      { lessonId: { $ne: null } }
+    );
+
     await expect('instructor', 'POST', '/api/instructor/notifications', 201, {
       courseId: String(course._id),
       title: 'Direct instructor announcement',
