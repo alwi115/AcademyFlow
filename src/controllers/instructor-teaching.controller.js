@@ -88,10 +88,6 @@ async function createLesson(req, res) {
 
   await assertDirectCourse(req, courseId);
 
-  const academy = await Academy.findById(req.academyId).select('timezone');
-  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
-  const normalizedDueAt = dueAt ? parseAcademyDateTime(dueAt, timezone) : null;
-
   let youtubeId = '';
   if (videoUrl) {
     youtubeId = youtubeIdFromUrl(videoUrl);
@@ -305,6 +301,10 @@ async function createAssignment(req, res) {
   }
 
   await assertDirectCourse(req, courseId);
+
+  const academy = await Academy.findById(req.academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
+  const normalizedDueAt = dueAt ? parseAcademyDateTime(dueAt, timezone) : null;
 
   const row = await Assessment.create({
     academyId: req.academyId,
