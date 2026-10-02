@@ -108,6 +108,107 @@ window.StudentQuiz = (() => {
     return a.status;
   }
 
+  function quizState(q){
+    const now=Date.now();
+    if(q.activeAttempt){
+      return {label:'محاولة جارية',tone:'warn',detail:'عندك محاولة بدأت من قبل. كملها من نفس المكان.'};
+    }
+    if(q.status==='closed'){
+      return {label:'مغلق',tone:'bad',detail:'هذا الاختبار مغلق حاليًا.'};
+    }
+    if(q.availableFrom && new Date(q.availableFrom).getTime()>now){
+      return {label:'قريبًا',tone:'info',detail:'يفتح '+fmtDate(q.availableFrom,true)};
+    }
+    if(q.dueAt && new Date(q.dueAt).getTime()<=now){
+      return {label:'انتهى',tone:'bad',detail:'انتهى موعد الاختبار.'};
+    }
+    if(Number(q.attempts?.length||0)>=Number(q.maxAttempts||1)){
+      return {label:'اكتملت المحاولات',tone:'bad',detail:'استخدمت كل المحاولات المتاحة.'};
+    }
+    if(q.canStart){
+      return {label:'جاهز للبدء',tone:'good',detail:'تقدر تبدأ الاختبار الآن.'};
+    }
+    return {label:'غير متاح',tone:'info',detail:'الاختبار غير متاح للبدء حاليًا.'};
+  }
+
+  function durationLabel(q){
+    return Number(q.durationMinutes||0)>0
+      ? Number(q.durationMinutes)+' دقيقة'
+      : 'بدون مؤقت مستقل';
+  }
+
+  function remainingAttempts(q){
+    return Math.max(0,Number(q.maxAttempts||1)-Number(q.attempts?.length||0));
+  }
+
+  function openStartDialog(quiz,onStart){
+    document.getElementById('studentQuizStartDialog')?.remove();
+    const state=quizState(quiz);
+    const overlay=document.createElement('div');
+    overlay.id='studentQuizStartDialog';
+    overlay.className='student-quiz-dialog-backdrop';
+    overlay.innerHTML=`
+      <div class="student-quiz-dialog" role="dialog" aria-modal="true" aria-labelledby="studentQuizDialogTitle">
+        <button class="student-quiz-dialog-close" type="button" aria-label="إغلاق">×</button>
+        <div class="student-quiz-dialog-icon">✓</div>
+        <span class="student-quiz-dialog-kicker">قبل ما تبدأ</span>
+        <h2 id="studentQuizDialogTitle">${esc(quiz.title)}</h2>
+        <p>راجع البيانات ذي بسرعة. <b>المؤقت يبدأ مباشرة</b> بعد ما تضغط «ابدأ الآن».</p>
+
+        <div class="student-quiz-dialog-facts">
+          <div><small>الأسئلة</small><strong>${esc(quiz.questionCount||0)}</strong></div>
+          <div><small>المدة</small><strong>${esc(durationLabel(quiz))}</strong></div>
+          <div><small>المحاولات الباقية</small><strong>${esc(remainingAttempts(quiz))}</strong></div>
+          <div><small>نسبة النجاح</small><strong>${esc(quiz.passingPercentage)}%</strong></div>
+        </div>
+
+        ${Number(quiz.listeningQuestionCount||0)>0?`
+          <div class="student-quiz-dialog-listening">
+            <span>🎧</span>
+            <div><b>الاختبار فيه استماع</b><small>${esc(quiz.listeningQuestionCount)} سؤال فيه مقطع صوتي. تأكد إن الصوت شغال عندك.</small></div>
+          </div>
+        `:''}
+
+        <div class="student-quiz-dialog-notes">
+          <span>• إجاباتك تنحفظ تلقائيًا أثناء الحل.</span>
+          <span>• تقدر تنتقل بين الأسئلة قبل التسليم.</span>
+          <span>• بعد التسليم ما تقدر تعدّل إجاباتك.</span>
+        </div>
+
+        <div class="student-quiz-dialog-actions">
+          <button class="btn ghost" id="studentQuizCancelStart" type="button">رجوع</button>
+          <button class="btn primary" id="studentQuizConfirmStart" type="button">ابدأ الآن</button>
+        </div>
+        <div class="student-quiz-dialog-state ${esc(state.tone)}">${esc(state.detail)}</div>
+      </div>
+    `;
+
+    const close=()=>{
+      overlay.remove();
+      document.body.classList.remove('student-quiz-dialog-open');
+    };
+
+    document.body.appendChild(overlay);
+    document.body.classList.add('student-quiz-dialog-open');
+
+    overlay.addEventListener('click',e=>{if(e.target===overlay)close();});
+    overlay.querySelector('.student-quiz-dialog-close').onclick=close;
+    overlay.querySelector('#studentQuizCancelStart').onclick=close;
+    overlay.querySelector('#studentQuizConfirmStart').onclick=async()=>{
+      const button=overlay.querySelector('#studentQuizConfirmStart');
+      button.disabled=true;
+      button.textContent='جاري البدء...';
+      try{
+        await onStart();
+        close();
+      }catch(err){
+        button.disabled=false;
+        button.textContent='ابدأ الآن';
+        toast(err.message,'error');
+      }
+    };
+  }
+
   async function renderList(){
     clearInterval(timerId);
     const target=document.getElementById('studentPageContent');
@@ -115,80 +216,110 @@ window.StudentQuiz = (() => {
 
     try{
       const rows=await api('/api/student/quizzes');
+      const readyCount=rows.filter(q=>q.canStart).length;
+      const activeCount=rows.filter(q=>q.activeAttempt).length;
 
       target.innerHTML=`
-        <section class="student-card">
-          <div class="student-card-head">
-            <div><h2>اختبارات دوراتك</h2><p>ابدأ الاختبار عندما تكون جاهزًا. المؤقت يبدأ من لحظة بدء المحاولة.</p></div>
+        <section class="student-quiz-welcome">
+          <div class="student-quiz-welcome-copy">
+            <span class="student-quiz-welcome-kicker">الاختبارات</span>
+            <h2>كل شيء واضح قبل ما تبدأ</h2>
+            <p>راجع وقت الاختبار والمحاولات ونسبة النجاح، وبعدها ابدأ وانت عارف وش بيصير خطوة بخطوة.</p>
+          </div>
+          <div class="student-quiz-welcome-stats">
+            <div><strong>${readyCount}</strong><span>جاهز الآن</span></div>
+            <div><strong>${activeCount}</strong><span>محاولة جارية</span></div>
+            <div><strong>${rows.length}</strong><span>كل الاختبارات</span></div>
+          </div>
+          <div class="student-quiz-guide">
+            <div><i>1</i><span><b>راجع البيانات</b><small>المدة والمحاولات والنجاح.</small></span></div>
+            <div><i>2</i><span><b>ابدأ لما تكون جاهز</b><small>المؤقت يبدأ بعد التأكيد.</small></span></div>
+            <div><i>3</i><span><b>جاوب براحتك</b><small>الإجابات تنحفظ تلقائيًا.</small></span></div>
+          </div>
+        </section>
+
+        <section class="student-card student-quiz-list-shell">
+          <div class="student-card-head student-quiz-list-head">
+            <div><h2>اختبارات دوراتك</h2><p>الاختبار الجاهز يبان لك بوضوح، والغير متاح يوضح لك السبب.</p></div>
+            <span class="student-quiz-count">${rows.length} اختبار</span>
           </div>
 
-          ${rows.length?'<div class="student-quiz-grid">'+rows.map((q,index)=>`
-            <article class="student-quiz-card">
-              <div class="student-quiz-card-head">
-                <div>
+          ${rows.length?'<div class="student-quiz-grid student-quiz-grid-v2">'+rows.map((q,index)=>{
+            const state=quizState(q);
+            const listening=Number(q.listeningQuestionCount||0);
+            return `
+              <article class="student-quiz-card student-quiz-card-v2 ${q.activeAttempt?'has-active':''}">
+                <div class="student-quiz-card-topline">
                   <span class="student-quiz-course">${esc(q.course?.title||'دورة')}</span>
-                  <h3>${esc(q.title)}</h3>
+                  <span class="student-quiz-state ${esc(state.tone)}">${esc(state.label)}</span>
                 </div>
-                ${status(q.status)}
-              </div>
-              <p>${esc(q.description||'لا توجد تعليمات إضافية.')}</p>
 
-              <div class="student-quiz-meta">
-                <span>المدة <b>${esc(q.durationMinutes||0)} د</b></span>
-                <span>المحاولات <b>${esc(q.attempts.length)} / ${esc(q.maxAttempts)}</b></span>
-                <span>النجاح <b>${esc(q.passingPercentage)}%</b></span>
-                <span>الدرجة <b>${esc(q.totalMarks)}</b></span>
-              </div>
+                <div class="student-quiz-card-title-row">
+                  <div>
+                    <h3>${esc(q.title)}</h3>
+                    <p>${esc(q.description||'اقرأ بيانات الاختبار تحت قبل ما تبدأ.')}</p>
+                  </div>
+                  <span class="student-quiz-score-chip"><b>${esc(q.totalMarks)}</b><small>درجة</small></span>
+                </div>
 
-              <div class="student-quiz-date">
-                <span>متاح: ${fmtDate(q.availableFrom,true)}</span>
-                <span>ينتهي: ${fmtDate(q.dueAt,true)}</span>
-              </div>
+                ${listening>0?`
+                  <div class="student-quiz-listening-chip">
+                    <span>🎧</span>
+                    <div><b>يتضمن استماع</b><small>${esc(listening)} سؤال صوتي</small></div>
+                  </div>
+                `:''}
 
-              <div class="student-quiz-actions">
-                ${q.activeAttempt
-                  ? '<a class="btn primary" href="/student/quiz.html?attempt='+encodeURIComponent(q.activeAttempt.id)+'">متابعة المحاولة</a>'
-                  : q.canStart
-                    ? '<button class="btn primary student-start-quiz" data-index="'+index+'" type="button">بدء الاختبار</button>'
-                    : '<button class="btn ghost" type="button" disabled>غير متاح للبدء</button>'}
-              </div>
+                <div class="student-quiz-facts">
+                  <div><span class="student-quiz-fact-icon">؟</span><small>الأسئلة</small><b>${esc(q.questionCount||0)}</b></div>
+                  <div><span class="student-quiz-fact-icon">◷</span><small>المدة</small><b>${esc(durationLabel(q))}</b></div>
+                  <div><span class="student-quiz-fact-icon">↻</span><small>المحاولات الباقية</small><b>${esc(remainingAttempts(q))} من ${esc(q.maxAttempts)}</b></div>
+                  <div><span class="student-quiz-fact-icon">✓</span><small>النجاح</small><b>${esc(q.passingPercentage)}%</b></div>
+                </div>
 
-              ${q.attempts.length?`
-                <div class="student-quiz-history">
-                  <b>المحاولات السابقة</b>
-                  ${q.attempts.map(a=>`
-                    <div>
-                      <span>#${esc(a.attemptNumber)} · ${esc(attemptLabel(a))}</span>
-                      <span>${a.status==='graded'||a.status==='pending_review'
-                        ? esc(a.percentage)+'%'
-                        : ''}
-                        ${a.status!=='in_progress'
-                          ? '<a href="/student/quiz.html?result='+encodeURIComponent(a.id)+'">النتيجة</a>'
-                          : ''}
-                      </span>
+                <div class="student-quiz-window">
+                  <div><small>يفتح</small><b>${q.availableFrom?fmtDate(q.availableFrom,true):'متاح الآن'}</b></div>
+                  <i></i>
+                  <div><small>يغلق</small><b>${q.dueAt?fmtDate(q.dueAt,true):'بدون موعد إغلاق'}</b></div>
+                </div>
+
+                <div class="student-quiz-state-note ${esc(state.tone)}">${esc(state.detail)}</div>
+
+                <div class="student-quiz-actions student-quiz-actions-v2">
+                  ${q.activeAttempt
+                    ? '<a class="btn primary" href="/student/quiz.html?attempt='+encodeURIComponent(q.activeAttempt.id)+'">كمل المحاولة ←</a>'
+                    : q.canStart
+                      ? '<button class="btn primary student-start-quiz" data-index="'+index+'" type="button">راجع ثم ابدأ الاختبار</button>'
+                      : '<button class="btn ghost" type="button" disabled>'+esc(state.label)+'</button>'}
+                </div>
+
+                ${q.attempts.length?`
+                  <details class="student-quiz-history student-quiz-history-v2">
+                    <summary>المحاولات السابقة <span>${q.attempts.length}</span></summary>
+                    <div class="student-quiz-history-list">
+                      ${q.attempts.map(a=>`
+                        <div>
+                          <span><b>#${esc(a.attemptNumber)}</b> · ${esc(attemptLabel(a))}</span>
+                          <span>${a.status==='graded'||a.status==='pending_review'?esc(a.percentage)+'%':''}
+                            ${a.status!=='in_progress'?'<a href="/student/quiz.html?result='+encodeURIComponent(a.id)+'">عرض النتيجة</a>':''}
+                          </span>
+                        </div>
+                      `).join('')}
                     </div>
-                  `).join('')}
-                </div>
-              `:''}
-            </article>
-          `).join('')+'</div>':'<div class="student-empty">لا توجد اختبارات منشورة في دوراتك حاليًا.</div>'}
+                  </details>
+                `:''}
+              </article>
+            `;
+          }).join('')+'</div>':'<div class="student-empty">لا توجد اختبارات منشورة في دوراتك حاليًا.</div>'}
         </section>
       `;
 
       document.querySelectorAll('.student-start-quiz').forEach(btn=>{
-        btn.onclick=async()=>{
+        btn.onclick=()=>{
           const quiz=rows[Number(btn.dataset.index)];
-          if(!confirm('سيبدأ المؤقت فور بدء المحاولة. هل تريد المتابعة؟'))return;
-          btn.disabled=true;
-          btn.textContent='جاري البدء...';
-          try{
+          openStartDialog(quiz,async()=>{
             const data=await api('/api/student/quizzes/'+quiz.id+'/start',{method:'POST'});
             location.href='/student/quiz.html?attempt='+encodeURIComponent(data.attempt.id);
-          }catch(err){
-            toast(err.message,'error');
-            btn.disabled=false;
-            btn.textContent='بدء الاختبار';
-          }
+          });
         };
       });
     }catch(err){
