@@ -191,11 +191,15 @@ app.use('/api', protectMutations);
 
 app.use(auditMiddleware);
 
-app.use(rateLimit({
+// Keep the general limiter on API traffic only. Applying it before the static
+// site also counts HTML, JavaScript, CSS, fonts and images, which can lock an
+// active user out after normal navigation between the multi-page portals.
+app.use('/api', rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 400,
   standardHeaders: 'draft-8',
-  legacyHeaders: false
+  legacyHeaders: false,
+  message: { message: 'Too many API requests. Retry shortly.' }
 }));
 
 const publicRoot = path.join(__dirname, '..', 'public');
