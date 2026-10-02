@@ -10,7 +10,7 @@ const AssignmentSubmission = require('../models/AssignmentSubmission');
 const Payment = require('../models/Payment');
 const Certificate = require('../models/Certificate');
 const Notification = require('../models/Notification');
-const { safeTimeZone, formatAcademyDisplay } = require('../services/timezone.service');
+const { safeTimeZone, formatAcademyInput, formatAcademyDisplay } = require('../services/timezone.service');
 const { enumValue } = require('../utils/security-input');
 
 function clean(value) {
@@ -298,7 +298,13 @@ async function courseDetails(req, res) {
     return res.status(404).json({ message: 'Course not found' });
   }
 
-  const [lessons, progressRows] = await Promise.all([
+  const academy = await Academy.findById(academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
+  const groupScope = enrollment.groupId
+    ? { $or: [{ groupId: null }, { groupId: enrollment.groupId }] }
+    : { groupId: null };
+
+  const [lessons, progressRows, courseLiveSessions] = await Promise.all([
     Lesson.find({
       academyId,
       courseId,
@@ -310,7 +316,16 @@ async function courseDetails(req, res) {
       courseId
     }).select(
       'lessonId completed completedAt lastOpenedAt durationSeconds watchedSeconds watchedPercent lastPositionSeconds maxPositionSeconds'
-    )
+    ),
+    LiveSession.find({
+      academyId,
+      courseId,
+      ...groupScope,
+      status: { $in: ['scheduled','live','ended'] }
+    })
+      .populate('groupId', 'name')
+      .populate('instructorId', 'name')
+      .sort({ startAt: -1 })
   ]);
 
   const progressMap = new Map(
@@ -353,6 +368,19 @@ async function courseDetails(req, res) {
           : Number(saved?.lastPositionSeconds || 0)
       };
     }),
+    liveSessions: courseLiveSessions.map(row => ({
+      id: row._id,
+      title: row.title,
+      description: row.description,
+      group: row.groupId,
+      instructor: row.instructorId,
+      startAt: row.startAt,
+      startAtDisplay: formatAcademyDisplay(row.startAt, timezone),
+      timezone,
+      durationMinutes: row.durationMinutes,
+      status: row.status,
+      joinAvailable: Boolean(row.zoomJoinUrl) && !['ended','cancelled'].includes(row.status)
+    })),
     progress: progressInfo
   });
 }
@@ -616,6 +644,8 @@ async function assessments(req, res) {
     return res.status(400).json({ message: 'Assessment type is required' });
   }
 
+  const academy = await Academy.findById(academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
   const courseIds = await enrolledCourseIds(academyId, studentId);
 
   const rows = await Assessment.find({
@@ -650,6 +680,9 @@ async function assessments(req, res) {
       title: row.title,
       description: row.description,
       dueAt: row.dueAt,
+      dueAtLocal: formatAcademyInput(row.dueAt, timezone),
+      dueAtDisplay: formatAcademyDisplay(row.dueAt, timezone),
+      timezone,
       totalMarks: row.totalMarks,
       passingMark: row.passingMark,
       durationMinutes: row.durationMinutes,

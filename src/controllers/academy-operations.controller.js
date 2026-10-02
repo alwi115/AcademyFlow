@@ -4,6 +4,8 @@ const Assessment = require('../models/Assessment');
 const Branch = require('../models/Branch');
 const User = require('../models/User');
 const AssignmentSubmission = require('../models/AssignmentSubmission');
+const Academy = require('../models/Academy');
+const { safeTimeZone, parseAcademyDateTime, formatAcademyInput, formatAcademyDisplay } = require('../services/timezone.service');
 const { objectId } = require('../utils/security-input');
 
 function clean(value) {
@@ -314,7 +316,11 @@ async function updateAssignment(req, res) {
 
   if (req.body.title !== undefined) row.title = clean(req.body.title);
   if (req.body.description !== undefined) row.description = clean(req.body.description);
-  if (req.body.dueAt !== undefined) row.dueAt = req.body.dueAt || null;
+  if (req.body.dueAt !== undefined) {
+    const academy = await Academy.findById(req.academyId).select('timezone');
+    const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
+    row.dueAt = req.body.dueAt ? parseAcademyDateTime(req.body.dueAt, timezone) : null;
+  }
 
   if (req.body.totalMarks !== undefined) {
     const total = Number(req.body.totalMarks);
@@ -350,7 +356,14 @@ async function updateAssignment(req, res) {
   await row.save();
   await row.populate('courseId', 'title code');
 
-  res.json(row);
+  const academy = await Academy.findById(req.academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
+  res.json({
+    ...row.toObject(),
+    dueAtLocal: formatAcademyInput(row.dueAt, timezone),
+    dueAtDisplay: formatAcademyDisplay(row.dueAt, timezone),
+    timezone
+  });
 }
 
 module.exports = {

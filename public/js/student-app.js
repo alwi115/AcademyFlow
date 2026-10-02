@@ -53,14 +53,22 @@ const StudentPortal = (() => {
       .replaceAll("'",'&#039;');
   }
 
+  const studentTimeZone = (() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    } catch {
+      return 'UTC';
+    }
+  })();
+
   function fmtDate(value, withTime = false) {
     if (!value) return '—';
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '—';
 
     return withTime
-      ? date.toLocaleString('ar-OM',{dateStyle:'medium',timeStyle:'short'})
-      : date.toLocaleDateString('ar-OM',{dateStyle:'medium'});
+      ? date.toLocaleString('ar-OM',{dateStyle:'medium',timeStyle:'short',timeZone:studentTimeZone})
+      : date.toLocaleDateString('ar-OM',{dateStyle:'medium',timeZone:studentTimeZone});
   }
 
   function fmtMoney(value, currency='OMR') {
@@ -398,7 +406,7 @@ const StudentPortal = (() => {
           <p>
             ${esc(data.session.course || '')}
             ${data.session.group ? ' · '+esc(data.session.group) : ''}
-            · ${esc(data.session.startAtDisplay || fmtDate(data.session.startAt,true))}
+            · ${esc(fmtDate(data.session.startAt,true))}
           </p>
 
           <div class="student-urgent-note">
@@ -471,7 +479,7 @@ const StudentPortal = (() => {
             <div class="student-list">
               ${d.upcomingLive?.length ? d.upcomingLive.map(x => `
                 <div class="student-list-row">
-                  <div><b>${esc(x.title)}</b><span>${esc(x.startAtDisplay || fmtDate(x.startAt,true))} · ${esc(x.course || '')}</span></div>
+                  <div><b>${esc(x.title)}</b><span>${esc(fmtDate(x.startAt,true))} · ${esc(x.course || '')}</span></div>
                   ${x.joinAvailable ? '<button class="btn primary student-join-live" data-session-id="'+esc(x.id)+'" type="button">انضم عبر AcademyFlow</button>' : status(x.status)}
                 </div>
               `).join('') : '<div class="student-empty">لا توجد محاضرات قادمة.</div>'}
@@ -767,6 +775,17 @@ const StudentPortal = (() => {
     try {
       const data = await api('/api/student/courses/'+encodeURIComponent(courseId));
       const lessons = data.lessons || [];
+      const liveSessions = [...(data.liveSessions || [])].sort((a,b) => {
+        const rank = value => value === 'live' ? 0 : value === 'scheduled' ? 1 : 2;
+        const rankDiff = rank(a.status) - rank(b.status);
+        if (rankDiff) return rankDiff;
+
+        const aTime = new Date(a.startAt || 0).getTime();
+        const bTime = new Date(b.startAt || 0).getTime();
+
+        return a.status === 'ended' ? bTime - aTime : aTime - bTime;
+      });
+      const videoCount = lessons.filter(x => x.youtubeId).length;
       const completionThreshold = Number(data.videoCompletionPercent || 95);
 
       const requestedLesson = new URLSearchParams(location.search).get('lesson');
@@ -844,6 +863,19 @@ const StudentPortal = (() => {
               </div>
             </div>
             <div id="courseProgressWrap">${progressBar(data.progress.progress)}</div>
+          </section>
+
+          <section class="student-card" style="margin-bottom:11px">
+            <div class="student-card-head">
+              <div>
+                <h2>فيديوهات ودروس الدورة</h2>
+                <p>كل المحتوى هنا تابع لدورة «${esc(data.course.title)}».</p>
+              </div>
+              <div class="student-meta">
+                <span>${esc(videoCount)} فيديو</span>
+                <span>${esc(lessons.length)} درس</span>
+              </div>
+            </div>
           </section>
 
           ${lessons.length ? `
@@ -924,7 +956,42 @@ const StudentPortal = (() => {
               </aside>
             </section>
           ` : '<div class="student-card student-empty">لم تنشر الأكاديمية دروسًا في هذه الدورة حتى الآن.</div>'}
+
+          <section class="student-card student-section">
+            <div class="student-card-head">
+              <div>
+                <h2>حصص Zoom للدورة</h2>
+                <p>هذه الحصص مرتبطة بدورة «${esc(data.course.title)}» وبمجموعتك الدراسية.</p>
+              </div>
+              <a class="btn soft" href="/student/live.html">كل المحاضرات</a>
+            </div>
+
+            <div class="student-list">
+              ${liveSessions.length ? liveSessions.map(session => `
+                <div class="student-list-row">
+                  <div>
+                    <b>${esc(session.title)}</b>
+                    <span>
+                      ${esc(fmtDate(session.startAt,true))}
+                      ${session.instructor?.name ? ' · '+esc(session.instructor.name) : ''}
+                      ${session.group?.name ? ' · '+esc(session.group.name) : ''}
+                    </span>
+                    ${session.description ? '<small style="display:block;margin-top:4px">'+esc(session.description)+'</small>' : ''}
+                  </div>
+
+                  <div class="student-actions">
+                    ${status(session.status)}
+                    ${session.joinAvailable
+                      ? '<button class="btn primary student-join-live" data-session-id="'+esc(session.id)+'" type="button">دخول Zoom</button>'
+                      : ''}
+                  </div>
+                </div>
+              `).join('') : '<div class="student-empty">لا توجد حصص Zoom مرتبطة بهذه الدورة حتى الآن.</div>'}
+            </div>
+          </section>
         `;
+
+        bindLiveJoinButtons();
 
         document.querySelectorAll('.student-lesson').forEach(btn => {
           btn.onclick = () => {
@@ -1004,7 +1071,7 @@ const StudentPortal = (() => {
               const joinable = x.joinAvailable && !['ended','cancelled'].includes(x.status);
               return `
                 <div class="student-list-row">
-                  <div><b>${esc(x.title)}</b><span>${esc(x.course?.title || '')} · ${esc(x.startAtDisplay || fmtDate(x.startAt,true))} · ${esc(x.instructor?.name || '')}</span></div>
+                  <div><b>${esc(x.title)}</b><span>${esc(x.course?.title || '')} · ${esc(fmtDate(x.startAt,true))} · ${esc(x.instructor?.name || '')}</span></div>
                   <div class="student-actions">
                     ${status(x.status)}
                     ${joinable ? '<button class="btn primary student-join-live" data-session-id="'+esc(x.id)+'" type="button">دخول Zoom</button>' : ''}

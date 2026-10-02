@@ -1,4 +1,5 @@
 const LiveAttendance = require('../models/LiveAttendance');
+const CompensationProgress = require('../models/CompensationProgress');
 
 function lateInfo(session, joinedAt) {
   const start = new Date(session.startAt).getTime();
@@ -66,6 +67,14 @@ async function recordPortalJoin({
   row.source = row.verifiedByZoom ? 'portal_zoom' : 'portal';
 
   await row.save();
+
+  await CompensationProgress.deleteMany({
+    academyId,
+    liveSessionId: session._id,
+    studentId,
+    status: 'pending'
+  });
+
   return row;
 }
 

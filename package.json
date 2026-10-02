@@ -21,7 +21,8 @@
     "test:legal": "node scripts/legal-readiness-test.js",
     "migrate:storage": "node scripts/migrate-storage-to-mongodb.js",
     "test:mongodb-storage": "node scripts/mongodb-storage-test.js",
-    "test:learning": "node scripts/test-local.js learning-tools-test.js"
+    "test:learning": "node scripts/test-local.js learning-tools-test.js",
+    "test:timezone": "node scripts/timezone-test.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.883.0",

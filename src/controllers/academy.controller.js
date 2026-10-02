@@ -16,6 +16,7 @@ const Notification = require('../models/Notification');
 const SupportTicket = require('../models/SupportTicket');
 const LiveSession = require('../models/LiveSession');
 const auditService = require('../services/audit.service');
+const { safeTimeZone, parseAcademyDateTime, formatAcademyInput, formatAcademyDisplay } = require('../services/timezone.service');
 const { createWithQuota, withQuota } = require('../services/subscription.service');
 const { saveAttendance } = require('../services/attendance.service');
 const { objectId, enumValue } = require('../utils/security-input');
@@ -147,6 +148,8 @@ async function branchScope(req) {
 async function dashboard(req, res) {
   const academyId = req.academyId;
   const objectId = new mongoose.Types.ObjectId(academyId);
+  const academy = await Academy.findById(academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
   const now = new Date();
   const role = req.user.role;
 
@@ -182,6 +185,8 @@ async function dashboard(req, res) {
         id: x._id,
         title: x.title,
         startAt: x.startAt,
+        startAtDisplay: formatAcademyDisplay(x.startAt, timezone),
+        timezone,
         durationMinutes: x.durationMinutes,
         course: x.courseId?.title || '',
         instructor: x.instructorId?.name || '',
@@ -249,6 +254,8 @@ async function dashboard(req, res) {
       id: x._id,
       title: x.title,
       startAt: x.startAt,
+        startAtDisplay: formatAcademyDisplay(x.startAt, timezone),
+        timezone,
       durationMinutes: x.durationMinutes,
       course: x.courseId?.title || '',
       instructor: x.instructorId?.name || '',
@@ -960,12 +967,16 @@ async function createAttendance(req, res) {
     ? enumValue(status, ['present','absent','late','excused'], 'حالة الحضور غير صحيحة')
     : 'present';
 
+  const academy = await Academy.findById(academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
+  const attendanceDate = parseAcademyDateTime(date, timezone);
+
   const row = await saveAttendance({
     academyId,
     studentId: safeStudentId,
     courseId: safeCourseId,
     groupId: resolvedGroupId,
-    date,
+    date: attendanceDate,
     status: safeAttendanceStatus,
     note: clean(note)
   });
@@ -981,11 +992,21 @@ async function listAssessments(req, res) {
     return res.status(400).json({ message: 'Assessment type is required' });
   }
 
+  const academy = await Academy.findById(req.academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
+
   const rows = await Assessment.find({ academyId: req.academyId, type })
     .populate('courseId', 'title code')
     .sort({ createdAt: -1 });
 
-  res.json(rows);
+  res.json(rows.map(row => ({
+    ...row.toObject(),
+    dueAtLocal: formatAcademyInput(row.dueAt, timezone),
+    dueAtDisplay: formatAcademyDisplay(row.dueAt, timezone),
+    availableFromLocal: formatAcademyInput(row.availableFrom, timezone),
+    availableFromDisplay: formatAcademyDisplay(row.availableFrom, timezone),
+    timezone
+  })));
 }
 
 async function createAssessment(req, res) {
@@ -998,13 +1019,17 @@ async function createAssessment(req, res) {
 
   await assertOwned(Course, courseId, academyId, 'Course');
 
+  const academy = await Academy.findById(academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
+  const normalizedDueAt = dueAt ? parseAcademyDateTime(dueAt, timezone) : null;
+
   const row = await Assessment.create({
     academyId,
     courseId,
     type,
     title: clean(title),
     description: clean(description),
-    dueAt: dueAt || null,
+    dueAt: normalizedDueAt,
     totalMarks: Number(totalMarks || 100),
     passingMark: Number(passingMark || 50),
     durationMinutes: Number(durationMinutes || 0),
@@ -1252,6 +1277,10 @@ async function updateSettings(req, res) {
 
   for (const key of allowed) {
     if (req.body[key] !== undefined) update[key] = clean(req.body[key]);
+  }
+
+  if (update.timezone !== undefined) {
+    update.timezone = safeTimeZone(update.timezone);
   }
 
   if (req.body.branding && typeof req.body.branding === 'object') {
