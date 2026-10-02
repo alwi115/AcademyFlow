@@ -380,15 +380,70 @@ window.StudentQuiz = (() => {
     return `
       <div class="student-quiz-listening">
         <div class="student-quiz-listening-head">
-          <span>🎧 اختبار استماع</span>
+          <span>🎧 سؤال استماع</span>
           <b>${esc(question.audio.title||'مقطع الاستماع')}</b>
         </div>
         <audio controls preload="metadata" controlsList="nodownload" src="${esc(question.audio.url)}">
           متصفحك لا يدعم تشغيل الصوت.
         </audio>
-        <small>اسمع المقطع ثم جاوب على السؤال.</small>
+        <small>شغّل المقطع، اسمعه زين، وبعدها جاوب على السؤال تحت.</small>
       </div>
     `;
+  }
+
+  function questionTypeLabel(question){
+    if(question.type==='multiple_choice')return 'اختيار من متعدد';
+    if(question.type==='true_false')return 'صح أو خطأ';
+    return 'إجابة كتابية';
+  }
+
+  function questionInstruction(question){
+    if(question.type==='multiple_choice')return 'اختر إجابة واحدة فقط من الخيارات.';
+    if(question.type==='true_false')return 'حدد إذا كانت العبارة صحيحة أو خاطئة.';
+    return 'اكتب إجابتك في المربع، وبتنحفظ تلقائيًا.';
+  }
+
+  function openSubmitDialog(answeredCount,total,onSubmit){
+    document.getElementById('studentQuizSubmitDialog')?.remove();
+    const unanswered=Math.max(0,total-answeredCount);
+    const overlay=document.createElement('div');
+    overlay.id='studentQuizSubmitDialog';
+    overlay.className='student-quiz-dialog-backdrop';
+    overlay.innerHTML=`
+      <div class="student-quiz-dialog student-quiz-submit-dialog" role="dialog" aria-modal="true" aria-labelledby="studentQuizSubmitTitle">
+        <button class="student-quiz-dialog-close" type="button" aria-label="إغلاق">×</button>
+        <div class="student-quiz-dialog-icon submit">✓</div>
+        <span class="student-quiz-dialog-kicker">مراجعة أخيرة</span>
+        <h2 id="studentQuizSubmitTitle">متأكد إنك تبا تسلّم؟</h2>
+        <p>بعد التسليم ما تقدر ترجع تغيّر إجاباتك.</p>
+        <div class="student-quiz-submit-summary">
+          <div class="done"><strong>${answeredCount}</strong><span>سؤال مجاب</span></div>
+          <div class="${unanswered?'warn':'done'}"><strong>${unanswered}</strong><span>سؤال بدون إجابة</span></div>
+        </div>
+        ${unanswered?`<div class="student-quiz-dialog-warning">عندك ${unanswered} سؤال ما جاوبت عليه. تقدر ترجع تراجعه قبل التسليم.</div>`:''}
+        <div class="student-quiz-dialog-actions">
+          <button class="btn ghost" id="studentQuizBackToExam" type="button">ارجع راجع</button>
+          <button class="btn primary" id="studentQuizSubmitNow" type="button">سلّم الاختبار</button>
+        </div>
+      </div>
+    `;
+
+    const close=()=>{
+      overlay.remove();
+      document.body.classList.remove('student-quiz-dialog-open');
+    };
+
+    document.body.appendChild(overlay);
+    document.body.classList.add('student-quiz-dialog-open');
+    overlay.addEventListener('click',e=>{if(e.target===overlay)close();});
+    overlay.querySelector('.student-quiz-dialog-close').onclick=close;
+    overlay.querySelector('#studentQuizBackToExam').onclick=close;
+    overlay.querySelector('#studentQuizSubmitNow').onclick=()=>{
+      const button=overlay.querySelector('#studentQuizSubmitNow');
+      button.disabled=true;
+      button.textContent='جاري التسليم...';
+      onSubmit();
+    };
   }
 
   function questionInput(question,attemptId,onChanged){
@@ -397,10 +452,10 @@ window.StudentQuiz = (() => {
     if(question.type==='multiple_choice'){
       return `
         <div class="student-quiz-options">
-          ${question.options.map(option=>`
+          ${question.options.map((option,index)=>`
             <label class="student-quiz-option">
               <input type="radio" name="quizAnswer" value="${esc(option.id)}" ${String(a.selectedOptionId||'')===String(option.id)?'checked':''}>
-              <span><i></i>${esc(option.text)}</span>
+              <span><i></i><em>${String.fromCharCode(65+index)}</em><b>${esc(option.text)}</b></span>
             </label>
           `).join('')}
         </div>
@@ -412,11 +467,11 @@ window.StudentQuiz = (() => {
         <div class="student-quiz-options student-quiz-boolean">
           <label class="student-quiz-option">
             <input type="radio" name="quizBoolean" value="true" ${a.booleanAnswer===true?'checked':''}>
-            <span><i></i>صح</span>
+            <span><i></i><b>صح</b></span>
           </label>
           <label class="student-quiz-option">
             <input type="radio" name="quizBoolean" value="false" ${a.booleanAnswer===false?'checked':''}>
-            <span><i></i>خطأ</span>
+            <span><i></i><b>خطأ</b></span>
           </label>
         </div>
       `;
@@ -426,7 +481,7 @@ window.StudentQuiz = (() => {
       <div class="field student-quiz-text">
         <label>إجابتك</label>
         <textarea id="quizTextAnswer" maxlength="10000" placeholder="اكتب إجابتك هنا...">${esc(a.textAnswer||'')}</textarea>
-        <small>يتم حفظ الإجابة تلقائيًا أثناء الكتابة.</small>
+        <small>ما تحتاج تضغط حفظ — الإجابة تنحفظ تلقائيًا.</small>
       </div>
     `;
   }
@@ -443,75 +498,117 @@ window.StudentQuiz = (() => {
         return;
       }
 
-      let index=0;
       const questions=data.questions;
       const attempt=data.attempt;
+      const firstUnanswered=questions.findIndex(item=>!answered(item));
+      let index=firstUnanswered>=0?firstUnanswered:0;
       let seconds=attempt.remainingSeconds;
       let submitted=false;
 
       const draw=()=>{
         const q=questions[index];
         const answeredCount=questions.filter(answered).length;
+        const progress=questions.length?Math.round((answeredCount/questions.length)*100):0;
 
         target.innerHTML=`
-          <section class="student-quiz-exam-head">
-            <div>
-              <a href="/student/quizzes.html" class="student-quiz-exit">← الاختبارات</a>
+          <section class="student-quiz-exam-head student-quiz-exam-head-v2">
+            <div class="student-quiz-exam-copy">
+              <a href="/student/quizzes.html" class="student-quiz-exit">← رجوع للاختبارات</a>
               <span class="student-quiz-course">${esc(data.quiz.course?.title||'')}</span>
               <h2>${esc(data.quiz.title)}</h2>
-              <p>المحاولة #${esc(attempt.attemptNumber)} · ${answeredCount} من ${questions.length} مجاب</p>
+              <p>المحاولة #${esc(attempt.attemptNumber)} · جاوب على راحتك، وكل إجابة تنحفظ تلقائيًا.</p>
+              <div class="student-quiz-progress">
+                <div class="student-quiz-progress-copy">
+                  <span>تقدمك</span>
+                  <b><span id="quizAnsweredCount">${answeredCount}</span> من ${questions.length} مجاب</b>
+                </div>
+                <div class="student-quiz-progress-track"><i id="quizProgressBar" style="width:${progress}%"></i></div>
+              </div>
             </div>
             <div class="student-quiz-timer ${seconds!==null&&seconds<=300?'danger':''}">
               <small>الوقت المتبقي</small>
               <b id="quizTimer">${seconds===null?'بدون مؤقت':formatTime(seconds)}</b>
+              <span>${seconds===null?'خذ وقتك وراجع قبل التسليم':'لا تقفل الصفحة أثناء الاختبار'}</span>
             </div>
           </section>
 
-          <section class="student-quiz-exam-layout">
-            <article class="student-card student-quiz-question">
-              <div class="student-quiz-question-head">
-                <span>السؤال ${index+1} من ${questions.length}</span>
-                <b>${esc(q.marks)} درجة</b>
+          <section class="student-quiz-exam-layout student-quiz-exam-layout-v2">
+            <article class="student-card student-quiz-question student-quiz-question-v2">
+              <div class="student-quiz-question-head student-quiz-question-head-v2">
+                <div>
+                  <span class="student-quiz-question-number-label">السؤال ${index+1} من ${questions.length}</span>
+                  <span class="student-quiz-question-type">${esc(questionTypeLabel(q))}${q.audio?' · استماع':''}</span>
+                </div>
+                <b>${esc(q.marks)} ${Number(q.marks)===1?'درجة':'درجات'}</b>
               </div>
+
               ${listeningAudio(q)}
-              <h3>${esc(q.prompt)}</h3>
+
+              <div class="student-quiz-prompt">
+                <h3>${esc(q.prompt)}</h3>
+                <p>${esc(questionInstruction(q))}</p>
+              </div>
+
               ${questionInput(q,attemptId)}
 
-              <div class="student-quiz-nav">
-                <button class="btn ghost" id="quizPrev" type="button" ${index===0?'disabled':''}>السابق</button>
-                <div class="student-quiz-save-state" id="quizSaveState">محفوظ</div>
+              <div class="student-quiz-nav student-quiz-nav-v2">
+                <button class="btn ghost" id="quizPrev" type="button" ${index===0?'disabled':''}>السؤال السابق</button>
+                <div class="student-quiz-save-state saved" id="quizSaveState"><span>✓</span> محفوظ</div>
                 ${index<questions.length-1
-                  ? '<button class="btn primary" id="quizNext" type="button">التالي</button>'
-                  : '<button class="btn primary" id="quizSubmit" type="button">تسليم الاختبار</button>'}
+                  ? '<button class="btn primary" id="quizNext" type="button">السؤال التالي</button>'
+                  : '<button class="btn primary" id="quizSubmit" type="button">راجع وسلّم</button>'}
               </div>
             </article>
 
-            <aside class="student-card student-quiz-map">
-              <h3>الأسئلة</h3>
+            <aside class="student-card student-quiz-map student-quiz-map-v2">
+              <div class="student-quiz-map-head">
+                <div><h3>التنقل بين الأسئلة</h3><p>اضغط رقم أي سؤال عشان ترجع له.</p></div>
+                <strong><span id="quizMapAnsweredCount">${answeredCount}</span>/${questions.length}</strong>
+              </div>
               <div class="student-quiz-map-grid">
                 ${questions.map((item,i)=>`
-                  <button class="${i===index?'active':''} ${answered(item)?'answered':''}" data-index="${i}" type="button">${i+1}</button>
+                  <button class="${i===index?'active':''} ${answered(item)?'answered':''}" data-index="${i}" type="button" aria-label="السؤال ${i+1}">${i+1}</button>
                 `).join('')}
               </div>
-              <div class="student-quiz-map-legend"><span><i class="answered"></i>مجاب</span><span><i></i>غير مجاب</span></div>
+              <div class="student-quiz-map-legend">
+                <span><i class="answered"></i>مجاب</span>
+                <span><i class="current"></i>الحالي</span>
+                <span><i></i>غير مجاب</span>
+              </div>
+              <div class="student-quiz-map-tip">تقدر تغيّر أي إجابة قبل ما تسلّم الاختبار.</div>
             </aside>
           </section>
         `;
 
-        const setSaving=txt=>{
+        const setSaving=(txt,state='')=>{
           const el=document.getElementById('quizSaveState');
-          if(el)el.textContent=txt;
+          if(!el)return;
+          el.className='student-quiz-save-state '+state;
+          el.innerHTML=(state==='saved'?'<span>✓</span> ':'')+esc(txt);
+        };
+
+        const refreshProgress=()=>{
+          const count=questions.filter(answered).length;
+          const pct=questions.length?Math.round((count/questions.length)*100):0;
+          const answeredEl=document.getElementById('quizAnsweredCount');
+          const mapCount=document.getElementById('quizMapAnsweredCount');
+          const bar=document.getElementById('quizProgressBar');
+          if(answeredEl)answeredEl.textContent=count;
+          if(mapCount)mapCount.textContent=count;
+          if(bar)bar.style.width=pct+'%';
+          const mapButton=document.querySelector('.student-quiz-map-grid button[data-index="'+index+'"]');
+          if(mapButton)mapButton.classList.toggle('answered',answered(q));
         };
 
         document.querySelectorAll('input[name="quizAnswer"]').forEach(input=>{
           input.onchange=async()=>{
             q.answer={...(q.answer||{}),selectedOptionId:input.value,booleanAnswer:null,textAnswer:''};
-            setSaving('جاري الحفظ...');
+            refreshProgress();
+            setSaving('جاري الحفظ...','saving');
             try{
               await saveAnswer(attemptId,q,{selectedOptionId:input.value},true);
-              setSaving('تم الحفظ');
-              setTimeout(draw,180);
-            }catch{setSaving('تعذر الحفظ');}
+              setSaving('محفوظ','saved');
+            }catch{setSaving('تعذر الحفظ','error');}
           };
         });
 
@@ -519,12 +616,12 @@ window.StudentQuiz = (() => {
           input.onchange=async()=>{
             const value=input.value==='true';
             q.answer={...(q.answer||{}),booleanAnswer:value,selectedOptionId:'',textAnswer:''};
-            setSaving('جاري الحفظ...');
+            refreshProgress();
+            setSaving('جاري الحفظ...','saving');
             try{
               await saveAnswer(attemptId,q,{booleanAnswer:value},true);
-              setSaving('تم الحفظ');
-              setTimeout(draw,180);
-            }catch{setSaving('تعذر الحفظ');}
+              setSaving('محفوظ','saved');
+            }catch{setSaving('تعذر الحفظ','error');}
           };
         });
 
@@ -532,13 +629,14 @@ window.StudentQuiz = (() => {
         if(text){
           text.oninput=()=>{
             q.answer={...(q.answer||{}),textAnswer:text.value,selectedOptionId:'',booleanAnswer:null};
-            setSaving('جاري الحفظ...');
+            refreshProgress();
+            setSaving('جاري الحفظ...','saving');
             clearTimeout(saveTimer);
             saveTimer=setTimeout(async()=>{
               try{
                 await saveAnswer(attemptId,q,{textAnswer:text.value},true);
-                setSaving('تم الحفظ');
-              }catch{setSaving('تعذر الحفظ');}
+                setSaving('محفوظ','saved');
+              }catch{setSaving('تعذر الحفظ','error');}
             },650);
           };
         }
@@ -558,10 +656,11 @@ window.StudentQuiz = (() => {
 
         const submit=document.getElementById('quizSubmit');
         if(submit)submit.onclick=()=>{
-          if(confirm('هل أنت متأكد من تسليم الاختبار؟ لن تتمكن من تعديل الإجابات بعد التسليم.')){
+          const count=questions.filter(answered).length;
+          openSubmitDialog(count,questions.length,()=>{
             submitted=true;
             submitAttempt(attemptId,false);
-          }
+          });
         };
 
         document.querySelectorAll('.student-quiz-map button').forEach(btn=>{
