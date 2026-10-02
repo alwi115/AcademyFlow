@@ -24,7 +24,7 @@ async function main() {
         await page.goto(base + endpoint);
         await page.waitForLoadState('networkidle');
         assert.equal(await page.locator('body').evaluate(element => element.scrollWidth <= window.innerWidth + 2), true, `Horizontal page overflow: ${endpoint}, ${viewport.width}`);
-        if (endpoint.includes('calendar')) assert.equal(await page.locator('[data-calendar-date]').count(), 42);
+        if (endpoint.includes('calendar')) assert.equal(await page.locator('.learning-day').count(), 42);
         if (endpoint.includes('security')) assert.equal(await page.locator('#mfaStatus').innerText(), 'غير مفعّلة');
         await page.screenshot({ path: path.join(directory, endpoint.replace(/\W/g, '_') + '-' + viewport.width + '.png'), fullPage: true });
       }
