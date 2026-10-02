@@ -117,6 +117,29 @@ app.use((req, res, next) => {
   next();
 });
 
+function injectEngagementAssets(html, requestPath, nonce) {
+  const blockedPaths = new Set([
+    '/academy/login.html',
+    '/academy/legal-acceptance.html'
+  ]);
+
+  if (blockedPaths.has(requestPath)) return html;
+
+  const internal =
+    requestPath.startsWith('/academy/') ||
+    requestPath.startsWith('/student/') ||
+    requestPath.startsWith('/instructor/');
+
+  if (!internal || html.includes('/js/engagement-features.js')) return html;
+
+  const styleTag = '<link rel="stylesheet" href="/css/engagement-features.css">';
+  const scriptTag = `<script nonce="${nonce}" src="/js/engagement-features.js" defer></script>`;
+
+  return html
+    .replace('</head>', `  ${styleTag}\n</head>`)
+    .replace('</body>', `  ${scriptTag}\n</body>`);
+}
+
 app.use(async (req, res, next) => {
   const restoring = req.path !== '/api/health' && req.path.startsWith('/api/') && await backupService.restoreInProgress();
   if ((!backupService.isBusy() && !restoring) || !req.path.startsWith('/api/')) {
@@ -258,7 +281,8 @@ app.use(async (req, res, next) => {
     const source = await fs.promises.readFile(htmlFile, 'utf8');
     const securedSource = source.replace(/<head([^>]*)>/i, '<head$1><script src="/js/secure-fetch.js"></script><script src="/js/account-navigation.js" defer></script>');
     const withNonce = injectCspNonce(securedSource, res.locals.cspNonce);
-    const html = injectAcademyAiAssets(withNonce, req.path, res.locals.cspNonce);
+    const withAi = injectAcademyAiAssets(withNonce, req.path, res.locals.cspNonce);
+    const html = injectEngagementAssets(withAi, req.path, res.locals.cspNonce);
 
     res.type('html');
     res.setHeader('Cache-Control', 'no-store, max-age=0');
@@ -307,6 +331,7 @@ app.use('/api/academy', require('./routes/academy.routes'));
 app.use('/api/student', require('./routes/student.routes'));
 app.use('/api/instructor', require('./routes/instructor.routes'));
 app.use('/api/ai', require('./routes/ai.routes'));
+app.use('/api/engagement', require('./routes/engagement.routes'));
 app.use('/api/live-sessions', require('./routes/live.routes'));
 app.use('/api/zoom', require('./routes/zoom.routes'));
 
