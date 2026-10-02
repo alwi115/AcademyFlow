@@ -227,12 +227,16 @@ async function createAttendance(req, res) {
     resolvedGroupId = group._id;
   }
 
+  const academy = await Academy.findById(req.academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
+  const attendanceDate = parseAcademyDateTime(date, timezone);
+
   const row = await saveAttendance({
     academyId: req.academyId,
     studentId,
     courseId,
     groupId: resolvedGroupId,
-    date,
+    date: attendanceDate,
     status: ['present','absent','late','excused'].includes(status)
       ? status
       : 'present',
