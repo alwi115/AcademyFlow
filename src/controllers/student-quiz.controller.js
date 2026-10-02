@@ -189,6 +189,17 @@ async function listQuizzes(req, res) {
 
     const refreshed = quizAttempts.map(attemptSummary);
     const active = refreshed.find(row => row.status === 'in_progress');
+    const [questionCount, listeningQuestionCount] = await Promise.all([
+      QuizQuestion.countDocuments({
+        academyId,
+        assessmentId: quiz._id
+      }),
+      QuizQuestion.countDocuments({
+        academyId,
+        assessmentId: quiz._id,
+        audioUrl: { $type: 'string', $ne: '' }
+      })
+    ]);
 
     rows.push({
       id: quiz._id,
@@ -206,6 +217,8 @@ async function listQuizzes(req, res) {
       maxAttempts: quiz.maxAttempts,
       passingPercentage: quiz.passingPercentage,
       totalMarks: quiz.totalMarks,
+      questionCount,
+      listeningQuestionCount,
       status: quiz.status,
       canStart:
         quiz.status === 'published' &&
