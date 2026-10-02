@@ -1,3 +1,13 @@
+function academyFlowLoginMessage(kind, response, data) {
+  if (kind !== 'academy') return data.message || 'تعذر تسجيل الدخول';
+  if (data.code === 'MFA_REQUIRED') return 'أدخل رمز المصادقة المكوّن من 6 أرقام لإكمال الدخول.';
+  if (response.status === 429) return 'تكررت محاولات الدخول. انتظر قليلًا ثم حاول مرة أخرى.';
+  if (response.status === 403 && data.code === 'CSRF_INVALID') return 'انتهت جلسة الدخول الآمن. حاول مرة أخرى.';
+  if (response.status === 403) return 'هذا الحساب غير متاح حاليًا. تواصل مع إدارة المنصة.';
+  if (response.status >= 500) return 'خدمة تسجيل الدخول غير متاحة الآن. حاول مرة أخرى بعد قليل.';
+  return 'تعذر تسجيل الدخول. تأكد من كود الأكاديمية والبريد وكلمة المرور ثم حاول مرة أخرى.';
+}
+
 async function academyFlowLogin(event, kind){
   event.preventDefault();
 
@@ -13,7 +23,7 @@ async function academyFlowLogin(event, kind){
 
   if (message) {
     message.textContent = '';
-    message.classList.remove('success');
+    message.classList.remove('success', 'error');
   }
 
   if (button) {
@@ -79,16 +89,21 @@ async function academyFlowLogin(event, kind){
 
     if (!response.ok) {
       if (data.code === 'MFA_REQUIRED' && !form.querySelector('[name="otp"]')) {
+        const field = document.createElement('div');
+        field.className = 'form-field mfa-field';
         const label = document.createElement('label');
+        label.htmlFor = 'academyOtp';
         label.textContent = 'رمز تطبيق المصادقة';
         const input = document.createElement('input');
+        input.id = 'academyOtp';
         input.name = 'otp'; input.inputMode = 'numeric'; input.autocomplete = 'one-time-code';
         input.pattern = '[0-9]{6}'; input.maxLength = 6; input.required = true;
-        label.appendChild(input); form.insertBefore(label, button); input.focus();
+        field.append(label, input); form.insertBefore(field, button); input.focus();
       }
       if (response.status === 403 && csrfInput) csrfInput.value = '';
       if (message) {
-        message.textContent = data.message || 'تعذر تسجيل الدخول';
+        message.classList.add('error');
+        message.textContent = academyFlowLoginMessage(kind, response, data);
       }
       return;
     }
@@ -116,9 +131,11 @@ async function academyFlowLogin(event, kind){
 
     try { localStorage.setItem('af_user', JSON.stringify(verified.user)); } catch {}
     if (message) {
+      message.classList.remove('error');
       message.classList.add('success');
       message.textContent = 'تم الدخول، بنفتح مساحتك الحين…';
     }
+    if (kind === 'academy') document.body.classList.add('login-success');
 
     if (verified.user.role === 'owner' && verified.user.legalAcceptanceRequired) {
       location.replace('/academy/legal-acceptance.html');
@@ -135,7 +152,10 @@ async function academyFlowLogin(event, kind){
   } catch (error) {
     console.error('AcademyFlow login error:', error);
     if (message) {
-      message.textContent = error?.message || 'تعذر الاتصال بالخادم، حاول مرة أخرى.';
+      message.classList.add('error');
+      message.textContent = kind === 'academy'
+        ? 'تعذر الاتصال بالخادم. تحقق من اتصالك وحاول مرة أخرى.'
+        : (error?.message || 'تعذر الاتصال بالخادم، حاول مرة أخرى.');
     }
   } finally {
     form.dataset.submitting = '0';
