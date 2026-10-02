@@ -244,6 +244,22 @@ window.StudentQuiz = (() => {
     }
   }
 
+  function listeningAudio(question){
+    if(!question?.audio?.url)return '';
+    return `
+      <div class="student-quiz-listening">
+        <div class="student-quiz-listening-head">
+          <span>🎧 اختبار استماع</span>
+          <b>${esc(question.audio.title||'مقطع الاستماع')}</b>
+        </div>
+        <audio controls preload="metadata" controlsList="nodownload" src="${esc(question.audio.url)}">
+          متصفحك لا يدعم تشغيل الصوت.
+        </audio>
+        <small>اسمع المقطع ثم جاوب على السؤال.</small>
+      </div>
+    `;
+  }
+
   function questionInput(question,attemptId,onChanged){
     const a=question.answer||{};
 
@@ -326,6 +342,7 @@ window.StudentQuiz = (() => {
                 <span>السؤال ${index+1} من ${questions.length}</span>
                 <b>${esc(q.marks)} درجة</b>
               </div>
+              ${listeningAudio(q)}
               <h3>${esc(q.prompt)}</h3>
               ${questionInput(q,attemptId)}
 
@@ -507,6 +524,7 @@ window.StudentQuiz = (() => {
                   <div><small>السؤال ${i+1}</small><h3>${esc(q.prompt)}</h3></div>
                   <span>${esc(q.answer?.awardedMarks ?? '—')} / ${esc(q.marks)}</span>
                 </div>
+                ${listeningAudio(q)}
                 <p><b>إجابتك:</b> ${esc(resultAnswerText(q))}</p>
                 ${q.answer?.needsManualReview?'<div class="academy-note">بانتظار تصحيح المدرب.</div>':''}
                 ${q.answer?.feedback?'<div class="academy-note">تعليق المدرب: '+esc(q.answer.feedback)+'</div>':''}
