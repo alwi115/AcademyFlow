@@ -10,7 +10,7 @@ const AssignmentSubmission = require('../models/AssignmentSubmission');
 const Payment = require('../models/Payment');
 const Certificate = require('../models/Certificate');
 const Notification = require('../models/Notification');
-const { safeTimeZone, formatAcademyDisplay } = require('../services/timezone.service');
+const { safeTimeZone, formatAcademyInput, formatAcademyDisplay } = require('../services/timezone.service');
 const { enumValue } = require('../utils/security-input');
 
 function clean(value) {
@@ -644,6 +644,8 @@ async function assessments(req, res) {
     return res.status(400).json({ message: 'Assessment type is required' });
   }
 
+  const academy = await Academy.findById(academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
   const courseIds = await enrolledCourseIds(academyId, studentId);
 
   const rows = await Assessment.find({
@@ -678,6 +680,9 @@ async function assessments(req, res) {
       title: row.title,
       description: row.description,
       dueAt: row.dueAt,
+      dueAtLocal: formatAcademyInput(row.dueAt, timezone),
+      dueAtDisplay: formatAcademyDisplay(row.dueAt, timezone),
+      timezone,
       totalMarks: row.totalMarks,
       passingMark: row.passingMark,
       durationMinutes: row.durationMinutes,
