@@ -2,7 +2,9 @@ const Assessment = require('../models/Assessment');
 const Course = require('../models/Course');
 const QuizQuestion = require('../models/QuizQuestion');
 const QuizAttempt = require('../models/QuizAttempt');
+const Academy = require('../models/Academy');
 const { getSettings: getEngagementSettings } = require('../services/engagement.service');
+const { safeTimeZone, parseAcademyDateTime, formatAcademyInput, formatAcademyDisplay } = require('../services/timezone.service');
 const { objectId } = require('../utils/security-input');
 const {
   recalcQuizMarks,
@@ -95,6 +97,8 @@ async function ensureQuestionsEditable(quiz) {
 
 async function listQuizzes(req, res) {
   const courseIds = await manageableCourseIds(req);
+  const academy = await Academy.findById(req.academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
   const query = {
     academyId: req.academyId,
     type: 'quiz'
@@ -132,6 +136,11 @@ async function listQuizzes(req, res) {
 
     return {
       ...quiz.toObject(),
+      availableFromLocal: formatAcademyInput(quiz.availableFrom, timezone),
+      availableFromDisplay: formatAcademyDisplay(quiz.availableFrom, timezone),
+      dueAtLocal: formatAcademyInput(quiz.dueAt, timezone),
+      dueAtDisplay: formatAcademyDisplay(quiz.dueAt, timezone),
+      timezone,
       questionCount,
       attemptCount,
       gradedCount,
@@ -164,14 +173,23 @@ async function createQuiz(req, res) {
 
   await assertCourseManagementAccess(req, courseId);
 
+  const academy = await Academy.findById(req.academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
+  const normalizedAvailableFrom = availableFrom
+    ? parseAcademyDateTime(availableFrom, timezone)
+    : null;
+  const normalizedDueAt = dueAt
+    ? parseAcademyDateTime(dueAt, timezone)
+    : null;
+
   const quiz = await Assessment.create({
     academyId: req.academyId,
     courseId,
     type: 'quiz',
     title: clean(title),
     description: clean(description),
-    availableFrom: availableFrom || null,
-    dueAt: dueAt || null,
+    availableFrom: normalizedAvailableFrom,
+    dueAt: normalizedDueAt,
     durationMinutes: Math.max(0, Number(durationMinutes || 0)),
     maxAttempts: Math.max(1, Number(maxAttempts || 1)),
     passingPercentage: Math.max(0, Math.min(100, Number(passingPercentage ?? 50))),
@@ -211,8 +229,19 @@ async function quizDetails(req, res) {
     )
   ]);
 
+  const academy = await Academy.findById(req.academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
+  const quizView = {
+    ...quiz.toObject(),
+    availableFromLocal: formatAcademyInput(quiz.availableFrom, timezone),
+    availableFromDisplay: formatAcademyDisplay(quiz.availableFrom, timezone),
+    dueAtLocal: formatAcademyInput(quiz.dueAt, timezone),
+    dueAtDisplay: formatAcademyDisplay(quiz.dueAt, timezone),
+    timezone
+  };
+
   res.json({
-    quiz,
+    quiz: quizView,
     questions,
     hasAttempts: Boolean(hasAttempts),
     attempts: attempts.map(row => ({
@@ -253,8 +282,22 @@ async function updateQuiz(req, res) {
     if (req.body[key] !== undefined) quiz[key] = clean(req.body[key]);
   }
 
-  if (req.body.availableFrom !== undefined) quiz.availableFrom = req.body.availableFrom || null;
-  if (req.body.dueAt !== undefined) quiz.dueAt = req.body.dueAt || null;
+  if (req.body.availableFrom !== undefined || req.body.dueAt !== undefined) {
+    const academy = await Academy.findById(req.academyId).select('timezone');
+    const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
+
+    if (req.body.availableFrom !== undefined) {
+      quiz.availableFrom = req.body.availableFrom
+        ? parseAcademyDateTime(req.body.availableFrom, timezone)
+        : null;
+    }
+
+    if (req.body.dueAt !== undefined) {
+      quiz.dueAt = req.body.dueAt
+        ? parseAcademyDateTime(req.body.dueAt, timezone)
+        : null;
+    }
+  }
 
   if (req.body.durationMinutes !== undefined) {
     quiz.durationMinutes = Math.max(0, Number(req.body.durationMinutes || 0));
@@ -307,7 +350,17 @@ async function updateQuiz(req, res) {
   }
 
   await quiz.save();
-  res.json(quiz);
+
+  const academy = await Academy.findById(req.academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
+  res.json({
+    ...quiz.toObject(),
+    availableFromLocal: formatAcademyInput(quiz.availableFrom, timezone),
+    availableFromDisplay: formatAcademyDisplay(quiz.availableFrom, timezone),
+    dueAtLocal: formatAcademyInput(quiz.dueAt, timezone),
+    dueAtDisplay: formatAcademyDisplay(quiz.dueAt, timezone),
+    timezone
+  });
 }
 
 async function createQuestion(req, res) {
