@@ -522,6 +522,7 @@ async function quizResult(req, res) {
         type: question.type,
         prompt: question.prompt,
         marks: question.marks,
+        audio: studentQuestion(question, attempt.optionOrders?.[String(question._id)] || []).audio,
         options: studentQuestion(question, attempt.optionOrders?.[String(question._id)] || []).options,
         answer: answer ? {
           selectedOptionId: answer.selectedOptionId || '',
