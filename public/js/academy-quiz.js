@@ -336,6 +336,14 @@ window.AcademyQuizAdmin = (() => {
         <option value="short_answer" ${initialType==='short_answer'?'selected':''}>إجابة قصيرة</option>
       </select></div>
       <div class="field full"><label>نص السؤال</label><textarea name="prompt" required>${esc(question?.prompt || '')}</textarea></div>
+      <div class="field full quiz-listening-field">
+        <label>مقطع الاستماع <small>اختياري — إذا أضفته يظهر مشغل الصوت للطالب فوق السؤال.</small></label>
+        <input name="audioUrl" type="url" inputmode="url" placeholder="https://example.com/listening.mp3" value="${esc(question?.audioUrl || '')}">
+      </div>
+      <div class="field full">
+        <label>عنوان المقطع <small>اختياري</small></label>
+        <input name="audioTitle" maxlength="200" placeholder="مثال: Conversation 1" value="${esc(question?.audioTitle || '')}">
+      </div>
       <div class="field"><label>الدرجة</label><input name="marks" type="number" min="0.25" step="0.25" value="${esc(question?.marks ?? 1)}" required></div>
       <div class="field"><label>الترتيب</label><input name="order" type="number" min="1" value="${esc(question?.order ?? 1)}" required></div>
 
@@ -397,6 +405,8 @@ window.AcademyQuizAdmin = (() => {
       const data=Object.fromEntries(new FormData(form).entries());
 
       data.correctBoolean=data.correctBoolean==='true';
+      data.audioUrl=String(data.audioUrl||'').trim();
+      data.audioTitle=String(data.audioTitle||'').trim();
 
       if(data.type==='multiple_choice'){
         const rows=[...optionBox.querySelectorAll('[data-option-row]')];
@@ -658,13 +668,14 @@ window.AcademyQuizAdmin = (() => {
                   <div class="quiz-question-number">${index+1}</div>
                   <div class="quiz-question-content">
                     <div class="quiz-question-head">
-                      <div><span>${questionType(q.type)} · ${esc(q.marks)} درجة</span><h3>${esc(q.prompt)}</h3></div>
+                      <div><span>${questionType(q.type)} · ${esc(q.marks)} درجة${q.audioUrl?' · 🎧 استماع':''}</span><h3>${esc(q.prompt)}</h3></div>
                       ${editable?`
                         <div class="academy-actions">
                           <button class="btn soft quiz-edit-question" data-id="${esc(q._id)}" type="button">تعديل</button>
                           <button class="btn ghost quiz-delete-question" data-id="${esc(q._id)}" type="button">حذف</button>
                         </div>`:''}
                     </div>
+                    ${q.audioUrl?`<div class="quiz-listening-preview"><div><b>🎧 ${esc(q.audioTitle||'مقطع الاستماع')}</b><small>استمع للمقطع للتأكد قبل النشر</small></div><audio controls preload="metadata" src="${esc(q.audioUrl)}"></audio></div>`:''}
                     ${q.type==='multiple_choice'?'<div class="quiz-answer-options">'+(q.options||[]).map(o=>'<span class="'+(o.isCorrect?'correct':'')+'">'+esc(o.text)+(o.isCorrect?' ✓':'')+'</span>').join('')+'</div>':''}
                     ${q.type!=='multiple_choice'?'<div class="quiz-correct-answer">الإجابة: '+esc(renderQuestionCorrect(q))+'</div>':''}
                     ${q.explanation?'<p class="quiz-explanation">'+esc(q.explanation)+'</p>':''}
