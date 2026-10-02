@@ -583,7 +583,7 @@ const AF = (() => {
       ],
       columns:[
         [isQuiz ? 'الاختبار':'الواجب','title'],['الدورة','courseId.title'],
-        ['الدرجة','totalMarks'],['الموعد','dueAt',v => fmtDate(v,true)],['الحالة','status',status]
+        ['الدرجة','totalMarks'],['الموعد','dueAt',(v,row) => esc(row.dueAtDisplay || fmtDate(v,true))],['الحالة','status',status]
       ]
     };
   }
@@ -666,7 +666,7 @@ const AF = (() => {
       : (config.fields || []);
 
     for (const field of formFields) {
-      fields.push(await fieldHtml(field, editing ? val(row, field[0]) : ''));
+      fields.push(await fieldHtml(field, editing ? (field[2] === 'datetime-local' ? (row[field[0]+'Local'] || val(row, field[0])) : val(row, field[0])) : ''));
     }
 
     form.innerHTML = fields.join('') + `
@@ -737,6 +737,7 @@ const AF = (() => {
     const value = val(row,name);
 
     if (value === null || value === undefined || value === '') return '—';
+    if (row[name+'Display']) return row[name+'Display'];
     if (name === 'startAt' && row.startAtDisplay) return row.startAtDisplay;
     if (type === 'date') return fmtDate(value);
     if (type === 'datetime-local') return fmtDate(value,true);
@@ -791,7 +792,7 @@ const AF = (() => {
       'حدد الموعد الجديد ثم احفظ.';
 
     form.innerHTML =
-      await fieldHtml(field, val(row,fieldName)) +
+      await fieldHtml(field, field[2] === 'datetime-local' ? (row[fieldName+'Local'] || val(row,fieldName)) : val(row,fieldName)) +
       '<div class="academy-form-message" id="academyFormMessage"></div>'+
       '<div class="academy-form-actions"><button class="btn ghost" id="academyExtendCancel" type="button">إلغاء</button><button class="btn primary" type="submit">حفظ التمديد</button></div>';
 
