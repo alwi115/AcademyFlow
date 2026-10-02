@@ -16,9 +16,10 @@ const CompensationProgress = require('../models/CompensationProgress');
 const SessionFeedback = require('../models/SessionFeedback');
 const {
   instructorScope,
-  assertCourse: assertInstructorCourse,
+  assertDirectCourse: assertDirectInstructorCourse,
   studentCourseAccessFilter
 } = require('./instructor-scope.service');
+const { safeTimeZone, formatAcademyDisplay } = require('./timezone.service');
 
 const ACTIVE_ENROLLMENT_STATUSES = ['active','paused','completed'];
 const FINAL_ATTEMPT_STATUSES = ['graded'];
@@ -89,18 +90,12 @@ function sessionMatchesEnrollment(session, enrollment) {
   return String(session.groupId) === String(enrollment.groupId || '');
 }
 
-function attendanceCoversSession(row) {
-  if (!row) return false;
-  if (row.attendanceStatus === 'compensated' || row.attendanceStatus === 'excused') return true;
-  if (
-    row.verifiedByZoom &&
-    ['present','late'].includes(row.attendanceStatus)
-  ) return true;
-  if (
-    row.manualOverride &&
-    ['present','late'].includes(row.attendanceStatus)
-  ) return true;
-  return false;
+function attendanceConfirmsAbsence(row) {
+  return Boolean(
+    row &&
+    row.attendanceStatus === 'absent' &&
+    (row.verifiedByZoom || row.manualOverride)
+  );
 }
 
 function buildChoiceQuestion(lesson, lessons, index, sessionTitle) {
@@ -247,7 +242,7 @@ async function ensureSessionCompensations(session) {
   );
 
   const missed = enrollments.filter(enrollment =>
-    !attendanceCoversSession(attendanceMap.get(String(enrollment.studentId)))
+    attendanceConfirmsAbsence(attendanceMap.get(String(enrollment.studentId)))
   );
 
   if (!missed.length) return 0;
@@ -334,7 +329,7 @@ async function syncStudentCompensations(academyId, studentId) {
     if (!matchingEnrollment) continue;
 
     const attendance = attendanceMap.get(String(session._id));
-    if (attendanceCoversSession(attendance)) continue;
+    if (!attendanceConfirmsAbsence(attendance)) continue;
 
     const module = await buildCompensationModule(
       session,
@@ -377,7 +372,7 @@ async function syncStudentCompensations(academyId, studentId) {
     .limit(30);
 }
 
-function serializeCompensation(progress) {
+function serializeCompensation(progress, timezone) {
   const module = progress.moduleId;
   const session = progress.liveSessionId;
   if (!module || !session) return null;
@@ -388,6 +383,7 @@ function serializeCompensation(progress) {
     title: module.title,
     sessionTitle: session.title,
     sessionStartAt: session.startAt,
+    sessionStartAtDisplay: formatAcademyDisplay(session.startAt, timezone),
     course: session.courseId
       ? {
           id: String(session.courseId._id || session.courseId),
@@ -601,7 +597,7 @@ async function studentGapMap(academyId, studentId) {
   return gapRowsFromAttempts(academyId, attempts);
 }
 
-async function pendingFeedbackSessions(academyId, studentId) {
+async function pendingFeedbackSessions(academyId, studentId, timezone) {
   const cutoff = new Date(Date.now() - FEEDBACK_LOOKBACK_DAYS * 86400000);
 
   const attendance = await LiveAttendance.find({
@@ -638,6 +634,7 @@ async function pendingFeedbackSessions(academyId, studentId) {
       id: String(session._id),
       title: session.title,
       startAt: session.startAt,
+      startAtDisplay: formatAcademyDisplay(session.startAt, timezone),
       course: session.courseId
         ? {
             id: String(session.courseId._id || session.courseId),
@@ -650,6 +647,8 @@ async function pendingFeedbackSessions(academyId, studentId) {
 
 async function studentOverview(req) {
   const featureSettings = await getSettings(req.academyId);
+  const academy = await Academy.findById(req.academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
   const [compensations, gaps, feedbackSessions] = await Promise.all([
     featureSettings.compensationEnabled
       ? syncStudentCompensations(req.academyId, req.user.sub)
@@ -657,12 +656,13 @@ async function studentOverview(req) {
     featureSettings.gapMapEnabled
       ? studentGapMap(req.academyId, req.user.sub)
       : [],
-    pendingFeedbackSessions(req.academyId, req.user.sub)
+    pendingFeedbackSessions(req.academyId, req.user.sub, timezone)
   ]);
 
   return {
     settings: featureSettings,
-    compensations: compensations.map(serializeCompensation).filter(Boolean),
+    timezone,
+    compensations: compensations.map(row => serializeCompensation(row, timezone)).filter(Boolean),
     gaps,
     feedbackSessions
   };
@@ -730,6 +730,8 @@ async function submitSessionFeedback(req, body = {}) {
 async function instructorInsights(req) {
   const scope = await instructorScope(req);
   const courseIds = uniq(scope.contentCourseIds);
+  const academy = await Academy.findById(req.academyId).select('timezone');
+  const timezone = safeTimeZone(academy?.timezone || 'Asia/Muscat');
 
   const sessionOr = [];
   if (scope.directCourseIds.length) {
@@ -802,6 +804,7 @@ async function instructorInsights(req) {
 
   return {
     settings: featureSettings,
+    timezone,
     feedback: sessions.map(session => {
       const stats = feedbackBySession.get(String(session._id)) || {
         understood: 0,
@@ -815,6 +818,7 @@ async function instructorInsights(req) {
           id: String(session._id),
           title: session.title,
           startAt: session.startAt,
+          startAtDisplay: formatAcademyDisplay(session.startAt, timezone),
           course: session.courseId
         },
         total,
@@ -936,7 +940,7 @@ async function withdrawalRisk(req) {
     let missedSessions = 0;
     for (const session of applicableSessions) {
       const attendance = attendanceMap.get(`${sid}:${session._id}`);
-      if (!attendanceCoversSession(attendance)) missedSessions += 1;
+      if (attendanceConfirmsAbsence(attendance)) missedSessions += 1;
     }
 
     const absenceRate = applicableSessions.length
@@ -1019,7 +1023,7 @@ async function assertQuizAccess(req, quizId) {
   }
 
   if (req.user.role === 'instructor') {
-    await assertInstructorCourse(req, quiz.courseId);
+    await assertDirectInstructorCourse(req, quiz.courseId);
   } else if (!['owner','admin','content_manager'].includes(req.user.role)) {
     const err = new Error('غير مصرح لك بإدارة ربط الأسئلة بالدروس');
     err.status = 403;
