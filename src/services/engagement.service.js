@@ -14,6 +14,7 @@ const QuizAttempt = require('../models/QuizAttempt');
 const CompensationModule = require('../models/CompensationModule');
 const CompensationProgress = require('../models/CompensationProgress');
 const SessionFeedback = require('../models/SessionFeedback');
+const { objectId } = require('../utils/security-input');
 const {
   instructorScope,
   assertDirectCourse: assertDirectInstructorCourse,
@@ -1010,9 +1011,11 @@ async function withdrawalRisk(req) {
 }
 
 async function assertQuizAccess(req, quizId) {
+  const safeQuizId = objectId(quizId, 'معرف الاختبار غير صحيح');
+  const safeAcademyId = objectId(req.academyId, 'معرف الأكاديمية غير صحيح');
   const quiz = await Assessment.findOne({
-    _id: quizId,
-    academyId: req.academyId,
+    _id: { $eq: safeQuizId },
+    academyId: { $eq: safeAcademyId },
     type: 'quiz'
   }).select('_id courseId title');
 
@@ -1036,15 +1039,16 @@ async function assertQuizAccess(req, quizId) {
 async function quizLessonMapping(req, quizId) {
   const featureSettings = await getSettings(req.academyId);
   const quiz = await assertQuizAccess(req, quizId);
+  const safeAcademyId = objectId(req.academyId, 'معرف الأكاديمية غير صحيح');
 
   const [lessons, questions] = await Promise.all([
     Lesson.find({
-      academyId: req.academyId,
-      courseId: quiz.courseId
+      academyId: { $eq: safeAcademyId },
+      courseId: { $eq: quiz.courseId }
     }).select('_id title order status').sort({ order: 1, createdAt: 1 }),
     QuizQuestion.find({
-      academyId: req.academyId,
-      assessmentId: quiz._id
+      academyId: { $eq: safeAcademyId },
+      assessmentId: { $eq: quiz._id }
     }).select('_id prompt order lessonId').sort({ order: 1, createdAt: 1 })
   ]);
 
@@ -1075,10 +1079,13 @@ async function updateQuestionLesson(req, quizId, questionId, lessonId) {
   }
 
   const quiz = await assertQuizAccess(req, quizId);
+  const safeAcademyId = objectId(req.academyId, 'معرف الأكاديمية غير صحيح');
+  const safeQuestionId = objectId(questionId, 'معرف السؤال غير صحيح');
+  const safeLessonId = objectId(lessonId, 'معرف الدرس غير صحيح');
   const lesson = await Lesson.findOne({
-    _id: lessonId,
-    academyId: req.academyId,
-    courseId: quiz.courseId
+    _id: { $eq: safeLessonId },
+    academyId: { $eq: safeAcademyId },
+    courseId: { $eq: quiz.courseId }
   }).select('_id');
 
   if (!lesson) {
@@ -1089,10 +1096,10 @@ async function updateQuestionLesson(req, quizId, questionId, lessonId) {
 
   const question = await QuizQuestion.findOneAndUpdate(
     {
-      _id: questionId,
-      academyId: req.academyId,
-      assessmentId: quiz._id,
-      courseId: quiz.courseId
+      _id: { $eq: safeQuestionId },
+      academyId: { $eq: safeAcademyId },
+      assessmentId: { $eq: quiz._id },
+      courseId: { $eq: quiz.courseId }
     },
     { $set: { lessonId: lesson._id } },
     { new: true }

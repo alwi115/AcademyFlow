@@ -28,7 +28,16 @@ async function saveAttendance(data = {}) {
   }
   date.setUTCHours(0, 0, 0, 0);
 
-  const filter = { academyId, studentId, courseId, groupId, date };
+  // Keep every externally-derived value behind an explicit literal comparison.
+  // This prevents MongoDB operators supplied by a caller from becoming part of
+  // the query, even if this service is called outside the HTTP controllers.
+  const filter = {
+    academyId: { $eq: academyId },
+    studentId: { $eq: studentId },
+    courseId: { $eq: courseId },
+    groupId: { $eq: groupId },
+    date: { $eq: date }
+  };
   const update = { $set: { status, note: safeNote(data.note) } };
 
   try {
