@@ -12,13 +12,18 @@ window.StudentQuiz = (() => {
       .replaceAll("'",'&#039;');
   }
 
+  const studentTimeZone=(()=>{
+    try{return Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';}
+    catch{return 'UTC';}
+  })();
+
   function fmtDate(value,withTime=false){
     if(!value)return '—';
     const d=new Date(value);
     if(Number.isNaN(d.getTime()))return '—';
     return withTime
-      ? d.toLocaleString('ar-OM',{dateStyle:'medium',timeStyle:'short'})
-      : d.toLocaleDateString('ar-OM',{dateStyle:'medium'});
+      ? d.toLocaleString('ar-OM',{dateStyle:'medium',timeStyle:'short',timeZone:studentTimeZone})
+      : d.toLocaleDateString('ar-OM',{dateStyle:'medium',timeZone:studentTimeZone});
   }
 
   function status(value){
