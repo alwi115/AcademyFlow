@@ -10,6 +10,50 @@ function shuffle(list) {
   return arr;
 }
 
+function normalizeAudioUrl(value) {
+  if (value === undefined || value === null || value === '') return '';
+  if (typeof value !== 'string') {
+    const err = new Error('رابط مقطع الاستماع غير صحيح');
+    err.status = 400;
+    throw err;
+  }
+
+  const input = value.trim();
+  if (!input) return '';
+  if (input.length > 2048) {
+    const err = new Error('رابط مقطع الاستماع طويل جدًا');
+    err.status = 400;
+    throw err;
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(input);
+  } catch {
+    const err = new Error('رابط مقطع الاستماع غير صحيح');
+    err.status = 400;
+    throw err;
+  }
+
+  if (parsed.protocol !== 'https:' || parsed.username || parsed.password) {
+    const err = new Error('مقطع الاستماع يجب أن يستخدم رابط HTTPS آمنًا');
+    err.status = 400;
+    throw err;
+  }
+
+  return parsed.toString();
+}
+
+function normalizeAudioTitle(value) {
+  if (value === undefined || value === null || value === '') return '';
+  if (typeof value !== 'string') {
+    const err = new Error('عنوان مقطع الاستماع غير صحيح');
+    err.status = 400;
+    throw err;
+  }
+  return value.trim().slice(0, 200);
+}
+
 async function recalcQuizMarks(academyId, assessmentId) {
   const rows = await QuizQuestion.find({
     academyId,
@@ -35,6 +79,8 @@ function normalizeQuestionPayload(body = {}) {
   const marks = Number(body.marks || 1);
   const order = Number(body.order || 1);
   const explanation = String(body.explanation || '').trim();
+  const audioUrl = normalizeAudioUrl(body.audioUrl);
+  const audioTitle = normalizeAudioTitle(body.audioTitle);
 
   if (!['multiple_choice','true_false','short_answer'].includes(type)) {
     const err = new Error('نوع السؤال غير صحيح');
@@ -66,6 +112,8 @@ function normalizeQuestionPayload(body = {}) {
     marks,
     order,
     explanation,
+    audioUrl,
+    audioTitle,
     options: [],
     correctBoolean: null
   };
@@ -141,6 +189,10 @@ function studentQuestion(question, optionOrder = []) {
     prompt: question.prompt,
     marks: question.marks,
     order: question.order,
+    audio: question.audioUrl ? {
+      url: question.audioUrl,
+      title: question.audioTitle || 'مقطع الاستماع'
+    } : null,
     options
   };
 }
@@ -264,6 +316,7 @@ function correctAnswerPayload(question) {
 
 module.exports = {
   shuffle,
+  normalizeAudioUrl,
   recalcQuizMarks,
   normalizeQuestionPayload,
   orderedQuestions,
